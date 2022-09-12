@@ -27,11 +27,9 @@ func NewVegaNetwork(
 	switch name {
 	case "devnet":
 		network.DNSSuffix = "d.vega.xyz"
-	case "stagnet":
-		network.DNSSuffix = "s.vega.xyz"
 	case "testnet",
 		"fairground":
-		network.DNSSuffix = "s.vega.xyz"
+		network.DNSSuffix = "testnet.vega.xyz"
 	case
 		"devnet1",
 		"devnet2",
