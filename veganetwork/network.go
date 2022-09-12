@@ -21,7 +21,7 @@ func NewVegaNetwork(
 	var network = VegaNetwork{
 		Name:        name,
 		logger:      logger,
-		restTimeout: time.Millisecond * 500,
+		restTimeout: time.Second,
 	}
 
 	switch name {

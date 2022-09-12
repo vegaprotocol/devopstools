@@ -38,3 +38,14 @@ go run main.go \
     --network devnet3 \
     --command "pwd"
 ```
+
+### Vega Network statistics
+
+```bash
+# all stats
+go run main.go network stats --network devnet3
+# version only
+go run main.go network stats --network devnet3 --version
+# block only
+go run main.go network stats --network devnet3 --block
+```

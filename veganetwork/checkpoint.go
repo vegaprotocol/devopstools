@@ -35,9 +35,14 @@ func (network *VegaNetwork) FindLatestCheckpoint(
 			network.logger.Debug("failed to get latest checkpoint from host", zap.String("host", sshResult.Host), zap.Error(sshResult.Err))
 			continue
 		}
+		output := strings.TrimSpace(sshResult.Output)
+		if len(output) == 0 {
+			network.logger.Debug("no checkpoint on host", zap.String("host", sshResult.Host), zap.Error(sshResult.Err))
+			continue
+		}
 		newResult := Checkpoint{
 			ServerHost: sshResult.Host,
-			Filepath:   strings.TrimSpace(sshResult.Output),
+			Filepath:   output,
 		}
 		if result == nil {
 			result = &newResult
