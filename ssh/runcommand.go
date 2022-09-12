@@ -29,10 +29,9 @@ func RunCommandWithClient(
 }
 
 type RunResults struct {
-	Host          string
-	Output        string
-	Err           error
-	ConnectionErr bool
+	Host   string
+	Output string
+	Err    error
 }
 
 func RunCommandOnEveryHost(
@@ -50,7 +49,7 @@ func RunCommandOnEveryHost(
 
 			conn, err := GetSSHConnection(hostName, sshUsername, sshPrivateKeyfile)
 			if err != nil {
-				resultsChannel <- RunResults{Host: hostName, Err: err, ConnectionErr: true}
+				resultsChannel <- RunResults{Host: hostName, Err: err}
 				return
 			}
 			defer conn.Close()

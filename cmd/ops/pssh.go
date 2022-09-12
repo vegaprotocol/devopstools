@@ -70,12 +70,10 @@ func RunPSSH(
 	)
 
 	for host, result := range sshResults {
-		if !result.ConnectionErr {
-			if result.Err != nil {
-				fmt.Printf("#-ERROR-# %s #-ERROR-#\n%s\n%v\n\n", result.Host, result.Output, result.Err)
-			} else {
-				fmt.Printf("### %s ###\n%s\n\n", result.Host, result.Output)
-			}
+		if result.Err != nil {
+			fmt.Printf("#-ERROR-# %s #-ERROR-#\n%s\n%v\n\n", result.Host, result.Output, result.Err)
+		} else {
+			fmt.Printf("### %s ###\n%s\n\n", result.Host, result.Output)
 		}
 		logger.Debug("Execution results", zap.String("host", host), zap.String("result", result.Output), zap.Error(result.Err))
 	}

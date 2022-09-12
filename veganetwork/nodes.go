@@ -1,15 +1,29 @@
 package veganetwork
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vegaprotocol/devopstools/tools"
+)
 
 func (network *VegaNetwork) GetNetworkNodes() []string {
 	switch network.Name {
 	case "mainnet":
 		return []string{"mainnet-observer.ops.vega.xyz"}
 	}
-	hosts := make([]string, 21)
-	for i := 0; i < 21; i++ {
-		hosts[i] = fmt.Sprintf("n%02d.%s", i, network.DNSSuffix)
+	hosts := []string{}
+	previousMissing := false
+	for i := 0; i < 100; i++ {
+		host := fmt.Sprintf("n%02d.%s", i, network.DNSSuffix)
+		if _, err := tools.GetIP(host); err != nil {
+			if previousMissing {
+				break
+			} else {
+				previousMissing = true
+			}
+		} else {
+			hosts = append(hosts, host)
+		}
 	}
 	return hosts
 }
