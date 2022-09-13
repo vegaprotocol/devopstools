@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"io"
 	"os/exec"
 	"time"
 
@@ -31,13 +30,11 @@ func Download(
 			fmt.Sprintf("%s@%s:%s", sshUsername, serverHost, srcFilepath),
 			dstFilepath,
 		)
-		out, err := rsyncCmd.Output()
-		if err == nil {
+		if err := rsyncCmd.Run(); err == nil {
 			return nil
+		} else {
+			logger.Error("Failed to download file", zap.Error(err))
 		}
-		data, _ := io.ReadAll(rsyncCmd.Stdin)
-		logger.Error("Failed to download file",
-			zap.String("out", string(out)), zap.String("stdin", string(data)), zap.Error(err))
 	}
 	return fmt.Errorf("Failed to download file")
 }
