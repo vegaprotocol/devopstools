@@ -3,7 +3,6 @@ package ethutils
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -134,39 +133,39 @@ func storeSmartContractImmutableData(
 		return fmt.Errorf("failed to create directory %s. %w", dir, err)
 	}
 
-	if err = ioutil.WriteFile(downloadURLFile, []byte(data.DownloadURL), 0644); err != nil {
+	if err = os.WriteFile(downloadURLFile, []byte(data.DownloadURL), 0644); err != nil {
 		return fmt.Errorf("failed to write Download URL to file %s for %s. %w", downloadURLFile, name, err)
 	}
 
 	// Save Source Code
 	for sourceCodeName, sourceCode := range data.SourceCode {
 		sourceCodeFile := filepath.Join(dir, sourceCodeName)
-		if err = ioutil.WriteFile(sourceCodeFile, []byte(sourceCode), 0644); err != nil {
+		if err = os.WriteFile(sourceCodeFile, []byte(sourceCode), 0644); err != nil {
 			return fmt.Errorf("failed to write Source Code to file %s for %s. %w", sourceCodeFile, name, err)
 		}
 		fmt.Printf("- %s: updated Source Code: %s\n", name, sourceCodeFile)
 	}
 
 	// Save Byte Code
-	if err = ioutil.WriteFile(binaryFile, []byte(data.CreationHexByteCode[2:]), 0644); err != nil {
+	if err = os.WriteFile(binaryFile, []byte(data.CreationHexByteCode[2:]), 0644); err != nil {
 		return fmt.Errorf("failed to write Byte Code to file %s for %s. %w", binaryFile, name, err)
 	}
 	fmt.Printf("- %s: updated Binary Code: %s\n", name, binaryFile)
 
 	// Save Byte Code Hash
-	if err = ioutil.WriteFile(hashFile, []byte(data.ByteCodeHash), 0644); err != nil {
+	if err = os.WriteFile(hashFile, []byte(data.ByteCodeHash), 0644); err != nil {
 		return fmt.Errorf("failed to write Byte Code Hash to file %s for %s. %w", hashFile, name, err)
 	}
 	fmt.Printf("- %s: updated Hash: %s\n", name, hashFile)
 
 	// Save ABI
-	if err = ioutil.WriteFile(abiFile, []byte(data.ABI), 0644); err != nil {
+	if err = os.WriteFile(abiFile, []byte(data.ABI), 0644); err != nil {
 		return fmt.Errorf("failed to write ABI to file %s for %s. %w", abiFile, name, err)
 	}
 	fmt.Printf("- %s: updated ABI: %s\n", name, abiFile)
 
 	// Save Go Bindings
-	if err = ioutil.WriteFile(goBindingsFile, []byte(data.GoBindings), 0644); err != nil {
+	if err = os.WriteFile(goBindingsFile, []byte(data.GoBindings), 0644); err != nil {
 		return fmt.Errorf("failed to write Go Bindings to file %s for %s. %w", goBindingsFile, name, err)
 	}
 	fmt.Printf("- %s: updated Go Bindings: %s\n", name, goBindingsFile)
