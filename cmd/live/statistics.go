@@ -6,13 +6,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
 type StatisticsArgs struct {
-	LiveArgs
+	*LiveArgs
 	Version     bool
 	BlockHeight bool
 	All         bool
@@ -26,29 +25,24 @@ var statisticsCmd = &cobra.Command{
 	Short: "Get Vega Network /statistics",
 	Long:  `Get Vega Network /statistics`,
 	Run: func(cmd *cobra.Command, args []string) {
-		statisticsArgs.LiveArgs = liveArgs
-		if err := RunStatistics(
-			statisticsArgs,
-			rootCmd.Logger,
-		); err != nil {
-			rootCmd.Logger.Error("Error", zap.Error(err))
+		if err := RunStatistics(statisticsArgs); err != nil {
+			statisticsArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
+	statisticsArgs.LiveArgs = &liveArgs
+
 	LiveCmd.AddCommand(statisticsCmd)
 	statisticsCmd.PersistentFlags().BoolVar(&statisticsArgs.All, "all", false, "Get statistics for all hosts")
 	statisticsCmd.PersistentFlags().BoolVar(&statisticsArgs.Version, "version", false, "Print version only")
 	statisticsCmd.PersistentFlags().BoolVar(&statisticsArgs.BlockHeight, "block", false, "Print block height only")
 }
 
-func RunStatistics(
-	args StatisticsArgs,
-	logger *zap.Logger,
-) error {
-	network, err := veganetwork.NewVegaNetwork(args.VegaNetworkName, logger)
+func RunStatistics(args StatisticsArgs) error {
+	network, err := veganetwork.NewVegaNetwork(args.VegaNetworkName, args.Logger)
 	if err != nil {
 		return err
 	}

@@ -4,9 +4,11 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 )
 
 type LiveArgs struct {
+	*rootCmd.RootArgs
 	VegaNetworkName string
 }
 
@@ -20,6 +22,8 @@ var LiveCmd = &cobra.Command{
 }
 
 func init() {
+	liveArgs.RootArgs = &rootCmd.Args
+
 	LiveCmd.PersistentFlags().StringVar(&liveArgs.VegaNetworkName, "network", "", "Vega Network name")
 	if err := LiveCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)

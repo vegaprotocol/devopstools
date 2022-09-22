@@ -5,16 +5,13 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	debug  bool
-	Logger *zap.Logger
-)
+var Args RootArgs
 
-// rootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "devopstools",
 	Short: "Scripts to drive Vega Networks",
@@ -22,12 +19,12 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		var err error
 		cfg := zap.NewProductionConfig()
-		if debug {
+		if Args.Debug {
 			cfg.Level.SetLevel(zap.DebugLevel)
 		}
 		cfg.Encoding = "console"
 		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-		Logger, err = cfg.Build()
+		Args.Logger, err = cfg.Build()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup logger: %s\n", err)
 			os.Exit(1)
@@ -44,5 +41,9 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Print debug logs")
+	RootCmd.CompletionOptions.DisableDefaultCmd = true
+	RootCmd.PersistentFlags().BoolVar(&Args.Debug, "debug", false, "Print debug logs")
+	RootCmd.PersistentFlags().StringVar(&Args.GitHubToken, "github-token", viper.GetString("GITHUB_TOKEN"), "GitHub token to access HashiCorp Vault")
+	RootCmd.PersistentFlags().StringVar(&Args.FileWithGitHubToken, "github-token-file", "secret.txt", "file containing GitHub token to access HashiCorp Vault")
+	RootCmd.PersistentFlags().StringVar(&Args.HCVaultURL, "hc-vault-url", "https://vault.ops.vega.xyz", "url to HashiCorp Vault")
 }

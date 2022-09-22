@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
 type PsshArgs struct {
+	*OpsArgs
 	Network           string
 	Command           string
 	SSHUsername       string
@@ -26,17 +26,16 @@ var psshCmd = &cobra.Command{
 	Short: "Run command on every node in network",
 	Long:  `Run command on remote machines`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := RunPSSH(
-			psshArgs,
-			rootCmd.Logger,
-		); err != nil {
-			rootCmd.Logger.Error("Error", zap.Error(err))
+		if err := RunPSSH(psshArgs); err != nil {
+			psshArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
+	psshArgs.OpsArgs = &opsArgs
+
 	OpsCmd.AddCommand(psshCmd)
 
 	psshCmd.PersistentFlags().StringVar(&psshArgs.Network, "network", "", "Vega Network name")
@@ -57,11 +56,8 @@ func init() {
 	}
 }
 
-func RunPSSH(
-	args PsshArgs,
-	logger *zap.Logger,
-) error {
-	network, err := veganetwork.NewVegaNetwork(args.Network, logger)
+func RunPSSH(args PsshArgs) error {
+	network, err := veganetwork.NewVegaNetwork(args.Network, args.Logger)
 	if err != nil {
 		return err
 	}
@@ -75,7 +71,7 @@ func RunPSSH(
 		} else {
 			fmt.Printf("### %s ###\n%s\n\n", result.Host, result.Output)
 		}
-		logger.Debug("Execution results", zap.String("host", host), zap.String("result", result.Output), zap.Error(result.Err))
+		args.Logger.Debug("Execution results", zap.String("host", host), zap.String("result", result.Output), zap.Error(result.Err))
 	}
 	return nil
 }

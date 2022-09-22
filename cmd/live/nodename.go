@@ -10,13 +10,12 @@ import (
 	"crypto/rand"
 
 	"github.com/spf13/cobra"
-	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
 type NodenameArgs struct {
-	LiveArgs
+	*LiveArgs
 	Random bool
 	All    bool
 }
@@ -29,28 +28,23 @@ var nodenameCmd = &cobra.Command{
 	Short: "Get nodenames of running nodes",
 	Long:  `Get nodenames of running nodes`,
 	Run: func(cmd *cobra.Command, args []string) {
-		nodenameArgs.LiveArgs = liveArgs
-		if err := RunNodename(
-			nodenameArgs,
-			rootCmd.Logger,
-		); err != nil {
-			rootCmd.Logger.Error("Error", zap.Error(err))
+		if err := RunNodename(nodenameArgs); err != nil {
+			nodenameArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
+	nodenameArgs.LiveArgs = &liveArgs
+
 	LiveCmd.AddCommand(nodenameCmd)
 	nodenameCmd.PersistentFlags().BoolVar(&nodenameArgs.Random, "random", false, "Randomly selects one")
 	nodenameCmd.PersistentFlags().BoolVar(&nodenameArgs.All, "all", false, "Include all nodes, even unhealthy. By default only healthy nodes are returned")
 }
 
-func RunNodename(
-	args NodenameArgs,
-	logger *zap.Logger,
-) error {
-	network, err := veganetwork.NewVegaNetwork(args.VegaNetworkName, logger)
+func RunNodename(args NodenameArgs) error {
+	network, err := veganetwork.NewVegaNetwork(args.VegaNetworkName, args.Logger)
 	if err != nil {
 		return err
 	}
