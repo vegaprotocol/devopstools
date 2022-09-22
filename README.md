@@ -35,7 +35,7 @@ go run main.go \
     ops pssh \
     --ssh-user fryderyk \
     --ssh-private-keyfile ~/.ssh/id_ed25519 \
-    --network devnet3 \
+    --network devnet1 \
     --command "pwd"
 ```
 
@@ -43,9 +43,20 @@ go run main.go \
 
 ```bash
 # all stats
-go run main.go network stats --network devnet3
+go run main.go live statistics --network devnet1
 # version only
-go run main.go network stats --network devnet3 --version
+go run main.go live statistics --network devnet1 --version
 # block only
-go run main.go network stats --network devnet3 --block
+go run main.go live statistics --network devnet1 --block
+# from all nodes
+go run main.go live statistics --network devnet1 --all
+```
+
+### Vega Network - list of nodes
+
+```bash
+# list all healthy nodes
+go run main.go live nodename --network fairground
+# list all nodes
+go run main.go live nodename --network devnet1 --all
 ```
