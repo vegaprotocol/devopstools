@@ -59,4 +59,6 @@ go run main.go live statistics --network devnet1 --all
 go run main.go live nodename --network fairground
 # list all nodes
 go run main.go live nodename --network devnet1 --all
+# get one random healthy node
+go run main.go live nodename --network devnet1 --random
 ```
