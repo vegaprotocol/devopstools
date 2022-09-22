@@ -27,3 +27,12 @@ func (network *VegaNetwork) GetNetworkNodes() []string {
 	}
 	return hosts
 }
+
+func (network *VegaNetwork) GetNetworkHealthyNodes() []string {
+	hostStats := network.GetRunningStatisticsForAllHosts()
+	nodenames := make([]string, 0, len(hostStats))
+	for oneNodename := range hostStats {
+		nodenames = append(nodenames, oneNodename)
+	}
+	return nodenames
+}

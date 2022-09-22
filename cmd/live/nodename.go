@@ -58,11 +58,7 @@ func RunNodename(
 	if args.All {
 		nodenames = network.GetNetworkNodes()
 	} else {
-		hostStats := network.GetRunningStatisticsForAllHosts()
-		nodenames = make([]string, 0, len(hostStats))
-		for oneNodename := range hostStats {
-			nodenames = append(nodenames, oneNodename)
-		}
+		nodenames = network.GetNetworkHealthyNodes()
 	}
 
 	if args.Random {
