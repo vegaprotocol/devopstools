@@ -36,7 +36,18 @@ func (network *VegaNetwork) GetRunningStatistics() (*Statistics, error) {
 }
 
 func (network *VegaNetwork) GetRunningStatisticsForAllHosts() map[string]Statistics {
-	hosts := network.GetNetworkNodes()
+	return network.GetRunningStatisticsForHosts(
+		network.GetNetworkNodes(), false,
+	)
+}
+
+func (network *VegaNetwork) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
+	return network.GetRunningStatisticsForHosts(
+		network.GetNetworkDataNodes(), true,
+	)
+}
+
+func (network *VegaNetwork) GetRunningStatisticsForHosts(hosts []string, tlsOnly bool) map[string]Statistics {
 
 	type hostStats struct {
 		Host       string
@@ -50,7 +61,7 @@ func (network *VegaNetwork) GetRunningStatisticsForAllHosts() map[string]Statist
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			stats, err := network.GetRunningStatisticsForHost(host)
+			stats, err := network.GetRunningStatisticsForHost(host, tlsOnly)
 			resultsChannel <- hostStats{
 				Host:       host,
 				Statistics: stats,
@@ -72,11 +83,13 @@ func (network *VegaNetwork) GetRunningStatisticsForAllHosts() map[string]Statist
 	return result
 }
 
-func (network *VegaNetwork) GetRunningStatisticsForHost(host string) (*Statistics, error) {
+func (network *VegaNetwork) GetRunningStatisticsForHost(host string, tlsOnly bool) (*Statistics, error) {
 	statsURLs := []string{
 		fmt.Sprintf("https://%s/statistics", host),
-		fmt.Sprintf("http://%s:3003/statistics", host),
-		fmt.Sprintf("http://%s:3009/statistics", host),
+	}
+	if !tlsOnly {
+		statsURLs = append(statsURLs, fmt.Sprintf("http://%s:3003/statistics", host))
+		statsURLs = append(statsURLs, fmt.Sprintf("http://%s:3009/statistics", host))
 	}
 	httpClient := http.Client{
 		Timeout: network.restTimeout,

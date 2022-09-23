@@ -6,6 +6,10 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
+//
+// Vega Core endpoints
+//
+
 func (network *VegaNetwork) GetNetworkNodes() []string {
 	switch network.Name {
 	case "mainnet":
@@ -35,4 +39,43 @@ func (network *VegaNetwork) GetNetworkHealthyNodes() []string {
 		nodenames = append(nodenames, oneNodename)
 	}
 	return nodenames
+}
+
+//
+// Data-Node endpoints
+//
+
+func (network *VegaNetwork) GetNetworkDataNodes() []string {
+	switch network.Name {
+	case "mainnet":
+		return []string{"api.vega.xyz"}
+	}
+	hosts := []string{}
+	previousMissing := false
+	for i := 0; i < 100; i++ {
+		host := fmt.Sprintf("api.n%02d.%s", i, network.DNSSuffix)
+		if _, err := tools.GetIP(host); err != nil {
+			if previousMissing {
+				break
+			} else {
+				previousMissing = true
+			}
+		} else {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts
+}
+
+//
+// GRPC
+//
+
+func (network *VegaNetwork) GetNetworkGRPCDataNodes() []string {
+	nodes := network.GetNetworkDataNodes()
+	addresses := make([]string, len(nodes))
+	for i, node := range nodes {
+		addresses[i] = fmt.Sprintf("%s:3007", node)
+	}
+	return addresses
 }
