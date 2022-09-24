@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/secrets/hcvault"
+	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"go.uber.org/zap"
 )
 
@@ -45,4 +49,20 @@ func (ra *RootArgs) GetServiceSecretStore() (secrets.ServiceSecretStore, error) 
 
 func (ra *RootArgs) GetWalletSecretStore() (secrets.WalletSecretStore, error) {
 	return ra.getHCVaultSecretStore()
+}
+
+func (ra *RootArgs) GetEthereumClientManager() (*ethutils.EthereumClientManager, error) {
+	serviceSecretStore, err := ra.GetServiceSecretStore()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EthereumClientManager, %w", err)
+	}
+	return ethutils.NewEthereumClientManager(serviceSecretStore), nil
+}
+
+func (ra *RootArgs) GetSmartContractsManager() (*smartcontracts.SmartContractsManager, error) {
+	ethClientManager, err := ra.GetEthereumClientManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SmartContractsManager, %w", err)
+	}
+	return smartcontracts.NewSmartContractsManager(ethClientManager), nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/live"
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
@@ -21,4 +22,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(secrets.SecretsCmd)
 	rootCmd.RootCmd.AddCommand(smartcontracts.SmartContractsCmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
+	rootCmd.RootCmd.AddCommand(erc20token.ERC20tokenCmd)
 }
