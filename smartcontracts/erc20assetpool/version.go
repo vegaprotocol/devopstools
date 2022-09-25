@@ -7,12 +7,12 @@ import (
 type ERC20AssetPoolVersion string
 
 const (
-	V1 ERC20AssetPoolVersion = "v1"
+	ERC20AssetPoolV1 ERC20AssetPoolVersion = "v1"
 )
 
 func (n ERC20AssetPoolVersion) IsValid() error {
 	switch n {
-	case V1:
+	case ERC20AssetPoolV1:
 		return nil
 	}
 	return fmt.Errorf("Invalid ERC20 Token Version %s", n)

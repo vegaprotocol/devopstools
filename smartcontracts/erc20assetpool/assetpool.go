@@ -41,7 +41,7 @@ func NewERC20AssetPool(
 		client:  ethClient,
 	}
 	switch version {
-	case V1:
+	case ERC20AssetPoolV1:
 		result.v1, err = ERC20AssetPool_V1.NewERC20AssetPool(result.Address, result.client)
 		if err != nil {
 			return nil, err

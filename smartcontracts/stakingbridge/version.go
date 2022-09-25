@@ -7,12 +7,12 @@ import (
 type StakingBridgeVersion string
 
 const (
-	V1 StakingBridgeVersion = "v1"
+	StakingBridgeV1 StakingBridgeVersion = "v1"
 )
 
 func (n StakingBridgeVersion) IsValid() error {
 	switch n {
-	case V1:
+	case StakingBridgeV1:
 		return nil
 	}
 	return fmt.Errorf("Invalid Staking Bridge Version %s", n)

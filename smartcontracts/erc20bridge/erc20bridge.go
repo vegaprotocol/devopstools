@@ -70,13 +70,13 @@ func NewERC20Bridge(
 		client:  ethClient,
 	}
 	switch version {
-	case V1:
+	case ERC20BridgeV1:
 		result.v1, err = ERC20Bridge_V1.NewERC20Bridge(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
 		result.ERC20BridgeCommon = result.v1
-	case V2:
+	case ERC20BridgeV2:
 		result.v2, err = ERC20Bridge_V2.NewERC20BridgeRestricted(result.Address, result.client)
 		if err != nil {
 			return nil, err

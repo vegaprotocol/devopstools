@@ -7,13 +7,13 @@ import (
 type ERC20BridgeVersion string
 
 const (
-	V1 ERC20BridgeVersion = "v1"
-	V2 ERC20BridgeVersion = "v2"
+	ERC20BridgeV1 ERC20BridgeVersion = "v1"
+	ERC20BridgeV2 ERC20BridgeVersion = "v2"
 )
 
 func (n ERC20BridgeVersion) IsValid() error {
 	switch n {
-	case V1, V2:
+	case ERC20BridgeV1, ERC20BridgeV2:
 		return nil
 	}
 	return fmt.Errorf("Invalid ERC20 Bridge Version %s", n)

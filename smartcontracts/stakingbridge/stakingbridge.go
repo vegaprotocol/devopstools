@@ -42,7 +42,7 @@ func NewStakingBridge(
 		client:  ethClient,
 	}
 	switch version {
-	case V1:
+	case StakingBridgeV1:
 		result.v1, err = StakingBridge_V1.NewStakingBridge(result.Address, result.client)
 		if err != nil {
 			return nil, err
