@@ -88,3 +88,29 @@ func (c *HCVaultSecretStore) UpsertSecretWithPath(path string, secret map[string
 	}
 	return nil
 }
+
+//
+// List
+//
+
+func (c *HCVaultSecretStore) GetSecretList(root string, path string) ([]string, error) {
+	fullPath := fmt.Sprintf("%s/metadata/%s", root, path)
+	resp, err := c.Client.Logical().List(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret list for '%s/%s' from Vega Vault %w", root, path, err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("empty response for get secret list for '%s/%s' from Vega Vault", root, path)
+	}
+
+	respList := resp.Data["keys"].([]interface{})
+	if respList == nil {
+		return nil, fmt.Errorf("list of secrets for '%s/%s' is empty", root, path)
+	}
+	secretNameList := make([]string, len(respList))
+	for i, name := range respList {
+		secretNameList[i] = name.(string)
+	}
+
+	return secretNameList, nil
+}

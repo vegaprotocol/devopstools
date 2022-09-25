@@ -40,9 +40,6 @@ func init() {
 		log.Fatalf("%v\n", err)
 	}
 	nodeCmd.PersistentFlags().StringVar(&nodeArgs.NodeId, "node", "", "Node id, e.g. n01")
-	if err := nodeCmd.MarkPersistentFlagRequired("node"); err != nil {
-		log.Fatalf("%v\n", err)
-	}
 }
 
 func RunNode(args NodeArgs) error {
@@ -50,14 +47,19 @@ func RunNode(args NodeArgs) error {
 	if err != nil {
 		return err
 	}
-	secret, err := secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
+	var result interface{}
+	if len(args.NodeId) == 0 {
+		result, err = secretStore.GetAllVegaNode(args.VegaNetworkName)
+	} else {
+		result, err = secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
+	}
 	if err != nil {
 		return err
 	}
-	byteSecret, err := json.MarshalIndent(secret, "", "\t")
+	byteResult, err := json.MarshalIndent(result, "", "\t")
 	if err != nil {
 		return fmt.Errorf("failed to parse node '%s' secret data for network '%s', %w", args.NodeId, args.VegaNetworkName, err)
 	}
-	fmt.Println(string(byteSecret))
+	fmt.Println(string(byteResult))
 	return nil
 }

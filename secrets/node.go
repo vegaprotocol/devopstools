@@ -39,4 +39,6 @@ type NodeSecretStore interface {
 	GetVegaNode(network string, node string) (*VegaNodePrivate, error)
 	StoreVegaNode(network string, node string, privateData *VegaNodePrivate) error
 	DoesVegaNodeExist(network string, node string) (bool, error)
+	GetVegaNodeList(network string) ([]string, error)
+	GetAllVegaNode(network string) (map[string]VegaNodePrivate, error)
 }
