@@ -1,4 +1,4 @@
-package veganetwork
+package networktools
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (network *VegaNetwork) GetDataNodeClient() (*vegaapi.DataNode, error) {
+func (network *NetworkTools) GetDataNodeClient() (*vegaapi.DataNode, error) {
 	addresses := network.GetNetworkGRPCDataNodes()
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy GRPC endpoint for '%s'", network.Name)

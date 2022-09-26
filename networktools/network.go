@@ -1,4 +1,4 @@
-package veganetwork
+package networktools
 
 import (
 	"fmt"
@@ -7,18 +7,18 @@ import (
 	"go.uber.org/zap"
 )
 
-type VegaNetwork struct {
+type NetworkTools struct {
 	Name        string
 	DNSSuffix   string
 	logger      *zap.Logger
 	restTimeout time.Duration
 }
 
-func NewVegaNetwork(
+func NewNetworkTools(
 	name string,
 	logger *zap.Logger,
-) (*VegaNetwork, error) {
-	var network = VegaNetwork{
+) (*NetworkTools, error) {
+	var network = NetworkTools{
 		Name:        name,
 		logger:      logger,
 		restTimeout: time.Second,

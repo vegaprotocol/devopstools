@@ -1,4 +1,4 @@
-package veganetwork
+package networktools
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ type Statistics struct {
 	AppVersion  string `json:"appVersion"`
 }
 
-func (network *VegaNetwork) GetRunningStatistics() (*Statistics, error) {
+func (network *NetworkTools) GetRunningStatistics() (*Statistics, error) {
 	allHostsStats := network.GetRunningStatisticsForAllHosts()
 	var result *Statistics
 	for hostname, stats := range allHostsStats {
@@ -35,19 +35,19 @@ func (network *VegaNetwork) GetRunningStatistics() (*Statistics, error) {
 	return nil, fmt.Errorf("failed to get statistics for network %s, network might be down.", network.Name)
 }
 
-func (network *VegaNetwork) GetRunningStatisticsForAllHosts() map[string]Statistics {
+func (network *NetworkTools) GetRunningStatisticsForAllHosts() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
 		network.GetNetworkNodes(), false,
 	)
 }
 
-func (network *VegaNetwork) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
+func (network *NetworkTools) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
 		network.GetNetworkDataNodes(), true,
 	)
 }
 
-func (network *VegaNetwork) GetRunningStatisticsForHosts(hosts []string, tlsOnly bool) map[string]Statistics {
+func (network *NetworkTools) GetRunningStatisticsForHosts(hosts []string, tlsOnly bool) map[string]Statistics {
 
 	type hostStats struct {
 		Host       string
@@ -83,7 +83,7 @@ func (network *VegaNetwork) GetRunningStatisticsForHosts(hosts []string, tlsOnly
 	return result
 }
 
-func (network *VegaNetwork) GetRunningStatisticsForHost(host string, tlsOnly bool) (*Statistics, error) {
+func (network *NetworkTools) GetRunningStatisticsForHost(host string, tlsOnly bool) (*Statistics, error) {
 	statsURLs := []string{
 		fmt.Sprintf("https://%s/statistics", host),
 	}
@@ -136,7 +136,7 @@ func (network *VegaNetwork) GetRunningStatisticsForHost(host string, tlsOnly boo
 	return nil, fmt.Errorf("failed to get statistics for host %s", host)
 }
 
-func (network *VegaNetwork) GetRunningVersion() (string, error) {
+func (network *NetworkTools) GetRunningVersion() (string, error) {
 	stats, err := network.GetRunningStatistics()
 	if err != nil {
 		return "", err

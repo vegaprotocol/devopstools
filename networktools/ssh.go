@@ -1,8 +1,8 @@
-package veganetwork
+package networktools
 
 import "github.com/vegaprotocol/devopstools/ssh"
 
-func (network *VegaNetwork) RunCommandOnEveryNode(
+func (network *NetworkTools) RunCommandOnEveryNode(
 	sshUsername string,
 	sshPrivateKeyfile string,
 	command string,

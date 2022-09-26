@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ func init() {
 }
 
 func RunStats(args StatsArgs) error {
-	network, err := veganetwork.NewVegaNetwork(args.VegaNetworkName, args.Logger)
+	network, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
 	if err != nil {
 		return err
 	}

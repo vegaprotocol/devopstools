@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"go.uber.org/zap"
 )
 
@@ -57,7 +57,7 @@ func init() {
 }
 
 func RunPSSH(args PsshArgs) error {
-	network, err := veganetwork.NewVegaNetwork(args.Network, args.Logger)
+	network, err := networktools.NewNetworkTools(args.Network, args.Logger)
 	if err != nil {
 		return err
 	}

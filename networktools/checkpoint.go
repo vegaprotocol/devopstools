@@ -1,4 +1,4 @@
-package veganetwork
+package networktools
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (network *VegaNetwork) GetCheckpointPath(vegaHome string) string {
+func (network *NetworkTools) GetCheckpointPath(vegaHome string) string {
 	if len(vegaHome) > 0 {
 		return fmt.Sprintf("%s/state/node/checkpoints", vegaHome)
 	}
@@ -20,7 +20,7 @@ type Checkpoint struct {
 	Filepath   string `json:"file"`
 }
 
-func (network *VegaNetwork) FindLatestCheckpoint(
+func (network *NetworkTools) FindLatestCheckpoint(
 	vegaHome string,
 	sshUsername string,
 	sshPrivateKeyfile string,

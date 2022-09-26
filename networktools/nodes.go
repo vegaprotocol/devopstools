@@ -1,4 +1,4 @@
-package veganetwork
+package networktools
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 // Vega Core endpoints
 //
 
-func (network *VegaNetwork) GetNetworkNodes() []string {
+func (network *NetworkTools) GetNetworkNodes() []string {
 	switch network.Name {
 	case "mainnet":
 		return []string{"mainnet-observer.ops.vega.xyz"}
@@ -32,7 +32,7 @@ func (network *VegaNetwork) GetNetworkNodes() []string {
 	return hosts
 }
 
-func (network *VegaNetwork) GetNetworkHealthyNodes() []string {
+func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 	hostStats := network.GetRunningStatisticsForAllHosts()
 	nodenames := make([]string, 0, len(hostStats))
 	for oneNodename := range hostStats {
@@ -45,7 +45,7 @@ func (network *VegaNetwork) GetNetworkHealthyNodes() []string {
 // Data-Node endpoints
 //
 
-func (network *VegaNetwork) GetNetworkDataNodes() []string {
+func (network *NetworkTools) GetNetworkDataNodes() []string {
 	switch network.Name {
 	case "mainnet":
 		return []string{"api.vega.xyz"}
@@ -71,7 +71,7 @@ func (network *VegaNetwork) GetNetworkDataNodes() []string {
 // GRPC
 //
 
-func (network *VegaNetwork) GetNetworkGRPCDataNodes() []string {
+func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
 	nodes := network.GetNetworkDataNodes()
 	addresses := make([]string, len(nodes))
 	for i, node := range nodes {
