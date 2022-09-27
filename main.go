@@ -7,6 +7,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
 	"github.com/vegaprotocol/devopstools/cmd/party"
+	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
 )
@@ -23,4 +24,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(smartcontracts.SmartContractsCmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(erc20token.ERC20tokenCmd)
+	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 }

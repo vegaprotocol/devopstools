@@ -11,6 +11,7 @@ type VegaNodePrivate struct {
 	EthereumPrivateKey string `json:"ethereum_private_key"`
 	EthereumMnemonic   string `json:"ethereum_mnemonic"`
 	// Vega
+	VegaId             string `json:"vega_id"`
 	VegaPubKey         string `json:"vega_public_key"`
 	VegaPrivateKey     string `json:"vega_private_key"`
 	VegaRecoveryPhrase string `json:"vega_recovery_phrase"`

@@ -47,7 +47,7 @@ func RunGetStake(args GetStakeArgs) error {
 		return err
 	}
 
-	stake, err := api.GetPartyStake(args.PartyId)
+	stake, err := api.GetPartyTotalStake(args.PartyId)
 	if err != nil {
 		return err
 	}
