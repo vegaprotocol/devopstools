@@ -33,6 +33,7 @@ var pullArgs = PullArgs{
 		{Name: "VestingBridge", Version: "v1", Network: types.ETHMainnet, HexAddress: "0x23d1bFE8fA50a167816fBD79D7932577c06011f4", HomeDir: "vestingbridge"},
 		{Name: "ERC20BridgeRestricted", Version: "v2", Network: types.ETHMainnet, HexAddress: "0x124Dd8a6044ef048614AEA0AAC86643a8Ae1312D", HomeDir: "erc20bridge"},
 		{Name: "MultisigControl", Version: "v2", Network: types.ETHMainnet, HexAddress: "0xDD2df0E7583ff2acfed5e49Df4a424129cA9B58F", HomeDir: "multisigcontrol"},
+		{Name: "ClaimCodes", Version: "v1", Network: types.ETHMainnet, HexAddress: "0x0ee1fb382caf98e86e97e51f9f42f8b4654020f3", HomeDir: "claimcodes"},
 	},
 }
 
