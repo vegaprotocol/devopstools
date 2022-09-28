@@ -22,11 +22,16 @@ func (ra *RootArgs) ConnectToVegaNetwork(network string) (*veganetwork.VegaNetwo
 	if err != nil {
 		return nil, err
 	}
+	walletManager, err := ra.GetWalletManager()
+	if err != nil {
+		return nil, err
+	}
 	return veganetwork.NewVegaNetwork(
 		network,
 		dataNodeClient,
 		nodeSecretStore,
 		smartContractsManager,
+		walletManager,
 		ra.Logger,
 	)
 }

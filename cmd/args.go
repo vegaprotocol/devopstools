@@ -7,6 +7,7 @@ import (
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/secrets/hcvault"
 	"github.com/vegaprotocol/devopstools/smartcontracts"
+	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
@@ -65,4 +66,16 @@ func (ra *RootArgs) GetSmartContractsManager() (*smartcontracts.SmartContractsMa
 		return nil, fmt.Errorf("failed to get SmartContractsManager, %w", err)
 	}
 	return smartcontracts.NewSmartContractsManager(ethClientManager), nil
+}
+
+func (ra *RootArgs) GetWalletManager() (*wallet.WalletManager, error) {
+	ethClientManager, err := ra.GetEthereumClientManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SmartContractsManager, %w", err)
+	}
+	walletSecretStore, err := ra.GetWalletSecretStore()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get WalletSecretStore, %w", err)
+	}
+	return wallet.NewWalletManager(ethClientManager, walletSecretStore), nil
 }
