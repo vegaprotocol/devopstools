@@ -2,19 +2,19 @@ package topup
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"sync"
 
+	"code.vegaprotocol.io/vega/protos/vega"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/ethutils"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -50,7 +50,11 @@ func init() {
 }
 
 func RunTopUpTraderbot(args TraderbotArgs) error {
-	traders, err := getTraders(args.VegaNetworkName)
+	networktools, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
+	if err != nil {
+		return err
+	}
+	traders, err := networktools.GetTraderbotTraders()
 	if err != nil {
 		return err
 	}
@@ -59,6 +63,10 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 		return err
 	}
 	defer network.Disconnect()
+	networkAssets, err := network.DataNodeClient.GetAssets()
+	if err != nil {
+		return err
+	}
 
 	ethBalanceBefore, err := network.EthClient.BalanceAt(context.Background(), network.NetworkMainWallet.Address, nil)
 	if err != nil {
@@ -94,12 +102,13 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 	}
 	// Trigger Fake Assets TopUps
 	for assetId, vegaPubKeys := range traders.ByFakeAssetId {
+		asset := networkAssets[assetId]
 		wg.Add(1)
-		go func(assetId string, vegaPubKeys []string) {
+		go func(assetId string, asset *vega.AssetDetails, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositFakeAssetToParties(network, assetId, vegaPubKeys, args.Logger)
+			err := depositFakeAssetToParties(networktools, assetId, asset, vegaPubKeys, args.Logger)
 			resultsChannel <- err
-		}(assetId, vegaPubKeys)
+		}(assetId, asset, vegaPubKeys)
 	}
 	wg.Wait()
 	close(resultsChannel)
@@ -117,64 +126,6 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 	}
 	fmt.Printf("DONE\n")
 	return nil
-}
-
-type traderbotResponse struct {
-	Traders map[string]struct {
-		PubKey     string `json:"pubKey"`
-		Parameters struct {
-			// MarketBase                              string `json:"marketBase"`
-			// MarketQuote                             string `json:"marketQuote"`
-			MarketSettlementEthereumContractAddress string `json:"marketSettlementEthereumContractAddress"`
-			MarketSettlementVegaAssetID             string `json:"marketSettlementVegaAssetID"`
-		} `json:"parameters"`
-	} `json:"traders"`
-}
-
-type Traders struct {
-	ByERC20TokenHexAddress map[string][]string
-	ByFakeAssetId          map[string][]string
-}
-
-func getTraders(network string) (*Traders, error) {
-	// TODO curl the traderbot endpoint - easy
-	byteAssets, err := ioutil.ReadFile("traderbot.json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file with traders, %w", err)
-	}
-
-	payload := traderbotResponse{}
-
-	if err = json.Unmarshal(byteAssets, &payload); err != nil {
-		return nil, fmt.Errorf("failed to parse file with traders, %w", err)
-	}
-
-	result := Traders{
-		ByERC20TokenHexAddress: map[string][]string{},
-		ByFakeAssetId:          map[string][]string{},
-	}
-
-	for _, trader := range payload.Traders {
-		tokenHexAddress := trader.Parameters.MarketSettlementEthereumContractAddress
-		if len(tokenHexAddress) > 0 {
-			_, ok := result.ByERC20TokenHexAddress[tokenHexAddress]
-			if ok {
-				result.ByERC20TokenHexAddress[tokenHexAddress] = append(result.ByERC20TokenHexAddress[tokenHexAddress], trader.PubKey)
-			} else {
-				result.ByERC20TokenHexAddress[tokenHexAddress] = []string{trader.PubKey}
-			}
-		} else {
-			assetId := trader.Parameters.MarketSettlementVegaAssetID
-			_, ok := result.ByFakeAssetId[assetId]
-			if ok {
-				result.ByFakeAssetId[assetId] = append(result.ByFakeAssetId[assetId], trader.PubKey)
-			} else {
-				result.ByFakeAssetId[assetId] = []string{trader.PubKey}
-			}
-		}
-	}
-
-	return &result, nil
 }
 
 func depositERC20TokenToParties(
@@ -320,8 +271,54 @@ func depositERC20TokenToParties(
 	return nil
 }
 
-func depositFakeAssetToParties(network *veganetwork.VegaNetwork, assetId string, vegaPubKeys []string, logger *zap.Logger) error {
-	logger.Debug("topping up fake", zap.String("assetId", assetId), zap.Int("parties-count", len(vegaPubKeys)))
-	// TODO implement - easy
+func depositFakeAssetToParties(networktools *networktools.NetworkTools, assetId string, asset *vega.AssetDetails, vegaPubKeys []string, logger *zap.Logger) error {
+	var (
+		humanMintAmount = big.NewFloat(1)
+		mintAmount      = ethutils.TokenFromFullTokens(humanMintAmount, uint8(asset.Decimals))
+		flowId          = rand.Int()
+	)
+	if maxFaucetMintAmount, ok := new(big.Int).SetString(asset.GetBuiltinAsset().MaxFaucetAmountMint, 0); ok {
+		if maxFaucetMintAmount.Cmp(mintAmount) < 0 {
+			mintAmount = maxFaucetMintAmount
+		}
+	}
+	logger.Info("topping up fake", zap.Int("flow", flowId), zap.String("mint amount", mintAmount.String()), zap.String("asset", asset.Name), zap.Int("parties-count", len(vegaPubKeys)))
+
+	resultsChannel := make(chan error, len(vegaPubKeys))
+	var wg sync.WaitGroup
+
+	// Trigger ERC20 TopUps
+	for _, vegaPubKeys := range vegaPubKeys {
+		wg.Add(1)
+		go func(vegaAssetId string, vegaPubKey string) {
+			defer wg.Done()
+			err := networktools.MintFakeTokens(vegaPubKey, vegaAssetId, mintAmount)
+			resultsChannel <- err
+			if err != nil {
+				logger.Error("failed to mint", zap.Int("flow", flowId), zap.String("assetId", vegaAssetId), zap.String("vegaPubKey", vegaPubKey), zap.Error(err))
+			}
+		}(assetId, vegaPubKeys)
+	}
+	wg.Wait()
+	close(resultsChannel)
+
+	var (
+		success, failure int
+		failed           = false
+	)
+	for err := range resultsChannel {
+		if err != nil {
+			failed = true
+			failure += 1
+		} else {
+			success += 1
+		}
+	}
+	logger.Info("Summary fake asset", zap.Int("flow", flowId), zap.String("sssetId", assetId),
+		zap.Int("success-count", success), zap.Int("fail-count", failure))
+	if failed {
+		return fmt.Errorf("failed to top up all the parties (success: %d, failure: %d)", success, failure)
+	}
+
 	return nil
 }

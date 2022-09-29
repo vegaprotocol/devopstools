@@ -49,6 +49,11 @@ func (c *HCVaultSecretStore) GetVegaNodeList(network string) ([]string, error) {
 
 func (c *HCVaultSecretStore) GetAllVegaNode(network string) (map[string]secrets.VegaNodePrivate, error) {
 
+	// TODO: remove once not needed
+	if network == "devnet" {
+		network = "devnet1"
+	}
+
 	nodeList, err := c.GetVegaNodeList(network)
 	if err != nil {
 		return nil, err
