@@ -138,7 +138,7 @@ type Traders struct {
 
 func getTraders(network string) (*Traders, error) {
 	// TODO curl the traderbot endpoint - easy
-	byteAssets, err := ioutil.ReadFile("traderbot.json")
+	byteAssets, err := ioutil.ReadFile("traderbot-fairground.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file with traders, %w", err)
 	}
@@ -187,7 +187,7 @@ func depositERC20TokenToParties(
 	// Setup
 	//
 	var (
-		humanDepositAmount = big.NewFloat(1000) // in full tokens, i.e. without decimals zeros
+		humanDepositAmount = big.NewFloat(0.00001) // in full tokens, i.e. without decimals zeros
 		errMsg             = fmt.Sprintf("failed to deposit %s to %d parites on %s network", tokenHexAddress, len(vegaPubKeys), network.Network)
 		minterWallet       = network.NetworkMainWallet
 		erc20bridge        = network.SmartContracts.ERC20Bridge
@@ -259,14 +259,14 @@ func depositERC20TokenToParties(
 	}
 	// wait
 	if mintTx != nil {
-		if err = ethutils.WaitForTransact(network.EthClient, mintTx); err != nil {
+		if err = ethutils.WaitForTransaction(network.EthClient, mintTx); err != nil {
 			logger.Error("failed to mint", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mint, %s: %w", errMsg, err)
 		}
 		logger.Info("successfully minted", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name))
 	}
 	if allowanceTx != nil {
-		if err = ethutils.WaitForTransact(network.EthClient, allowanceTx); err != nil {
+		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx); err != nil {
 			logger.Error("failed to increase allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance, %s: %w", errMsg, err)
 		}
@@ -301,7 +301,7 @@ func depositERC20TokenToParties(
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransact(network.EthClient, tx); err != nil {
+		if err = ethutils.WaitForTransaction(network.EthClient, tx); err != nil {
 			failure += 1
 			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
 				zap.Any("tx", tx),

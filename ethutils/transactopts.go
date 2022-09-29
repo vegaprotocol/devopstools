@@ -96,7 +96,7 @@ func GetNextTransactionData(ethClient *ethclient.Client) (*TransactionData, erro
 	return result, nil
 }
 
-func WaitForTransact(
+func WaitForTransaction(
 	ethClient *ethclient.Client,
 	tx *types.Transaction,
 ) error {
