@@ -2,6 +2,7 @@ package topup
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -234,12 +235,17 @@ func depositERC20TokenToParties(
 		success, failure int
 	)
 	for i, pubKey := range vegaPubKeys {
-		var bytePubKey [32]byte
-		copy(bytePubKey[:], []byte(pubKey))
+		bytePubKey, err := hex.DecodeString(pubKey)
+		if err != nil {
+			return err
+		}
+		var byte32PubKey [32]byte
+		copy(byte32PubKey[:], bytePubKey)
+
 		opts := minterWallet.GetTransactOpts()
 		logger.Debug("depositing", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
 			zap.String("vegaPubKey", pubKey), zap.String("amount", depositAmount.String()))
-		depositTxs[i], err = erc20bridge.DepositAsset(opts, token.Address, depositAmount, bytePubKey)
+		depositTxs[i], err = erc20bridge.DepositAsset(opts, token.Address, depositAmount, byte32PubKey)
 		if err != nil {
 			failure += 1
 			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
