@@ -42,14 +42,26 @@ var (
 	}
 )
 
+var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC}
+
 func (m *SmartContractsManager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
 	name = strings.ToLower(name)
-	for _, asset := range []VegaAsset{TEURO, TDAI, TUSDC, TBTC} {
+	for _, asset := range allAssets {
 		if strings.ToLower(asset.Name) == name {
 			return m.GetAsset(asset.HexAddress, asset.EthNetwork, asset.Version)
 		}
 	}
 	return nil, fmt.Errorf("there is not token with name %s", name)
+}
+
+func (m *SmartContractsManager) GetAssetWithAddress(hexAddress string) (*erc20token.ERC20Token, error) {
+	hexAddress = strings.ToLower(hexAddress)
+	for _, asset := range allAssets {
+		if strings.ToLower(asset.HexAddress) == hexAddress {
+			return m.GetAsset(asset.HexAddress, asset.EthNetwork, asset.Version)
+		}
+	}
+	return nil, fmt.Errorf("there is not token with address %s", hexAddress)
 }
 
 func (m *SmartContractsManager) GetAsset(

@@ -9,6 +9,7 @@ import (
 	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
@@ -20,8 +21,8 @@ type VegaNetwork struct {
 
 	// wallets
 	NodeSecrets       map[string]secrets.VegaNodePrivate
-	NetworkMainWallet *secrets.EthereumWalletPrivate
-	AssetMainWallet   *secrets.EthereumWalletPrivate
+	NetworkMainWallet *wallet.EthWallet
+	AssetMainWallet   *wallet.EthWallet
 
 	MarketsCreator *secrets.VegaWalletPrivate
 	VegaTokenWhale *secrets.VegaWalletPrivate
@@ -34,6 +35,7 @@ type VegaNetwork struct {
 	// clients
 	DataNodeClient        *vegaapi.DataNode
 	SmartContractsManager *smartcontracts.SmartContractsManager
+	WalletManager         *wallet.WalletManager
 	EthClient             *ethclient.Client
 	NodeSecretStore       secrets.NodeSecretStore
 }
@@ -43,6 +45,7 @@ func NewVegaNetwork(
 	dataNodeClient *vegaapi.DataNode,
 	nodeSecretStore secrets.NodeSecretStore,
 	smartContractsManager *smartcontracts.SmartContractsManager,
+	walletManager *wallet.WalletManager,
 	logger *zap.Logger,
 ) (*VegaNetwork, error) {
 	var (
@@ -50,6 +53,7 @@ func NewVegaNetwork(
 			Network:               network,
 			DataNodeClient:        dataNodeClient,
 			SmartContractsManager: smartContractsManager,
+			WalletManager:         walletManager,
 			NodeSecretStore:       nodeSecretStore,
 		}
 		errMsg = "failed to create VegaNetwork for: %w"
@@ -99,6 +103,16 @@ func NewVegaNetwork(
 	n.ValidatorsById = make(map[string]*vega.Node)
 	for _, validator := range epoch.Validators {
 		n.ValidatorsById[validator.Id] = validator
+	}
+
+	// Wallets
+	n.AssetMainWallet, err = n.WalletManager.GetAssetMainEthWallet(n.EthNetwork)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+	n.NetworkMainWallet, err = n.WalletManager.GetNetworkMainEthWallet(n.EthNetwork, n.Network)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
 	}
 
 	return n, nil

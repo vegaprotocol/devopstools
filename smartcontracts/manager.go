@@ -1,6 +1,8 @@
 package smartcontracts
 
-import "github.com/vegaprotocol/devopstools/ethutils"
+import (
+	"github.com/vegaprotocol/devopstools/ethutils"
+)
 
 type SmartContractsManager struct {
 	ethClientManager *ethutils.EthereumClientManager

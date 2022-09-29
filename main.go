@@ -10,6 +10,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
+	"github.com/vegaprotocol/devopstools/cmd/topup"
 )
 
 func main() {
@@ -25,4 +26,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(erc20token.ERC20tokenCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
+	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
 }
