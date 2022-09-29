@@ -96,11 +96,12 @@ func GetNextTransactionData(ethClient *ethclient.Client) (*TransactionData, erro
 	return result, nil
 }
 
-func WaitForTransact(
+func WaitForTransaction(
 	ethClient *ethclient.Client,
 	tx *types.Transaction,
+	timeout time.Duration,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	receipt, err := bind.WaitMined(ctx, ethClient, tx)
 	if err != nil {

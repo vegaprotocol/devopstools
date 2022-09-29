@@ -40,9 +40,35 @@ var (
 		EthNetwork: types.ETHSepolia,
 		Version:    erc20token.ERC20TokenBase,
 	}
+
+	// OLD Deprecated to be removed
+	TEURORopsten VegaAsset = VegaAsset{
+		Name:       "tEURO",
+		HexAddress: "0xD52b6C949E35A6E4C64b987B1B192A8608931a7b",
+		EthNetwork: types.ETHRopsten,
+		Version:    erc20token.ERC20TokenOld,
+	}
+	TDAIRopsten VegaAsset = VegaAsset{
+		Name:       "tDAI TEST",
+		HexAddress: "0xF4A2bcC43D24D14C4189Ef45fCf681E870675333",
+		EthNetwork: types.ETHRopsten,
+		Version:    erc20token.ERC20TokenOld,
+	}
+	TUSDCRopsten VegaAsset = VegaAsset{
+		Name:       "tUSDC",
+		HexAddress: "0x3773A5c7aFF77e014cBF067dd31801b4C6dc4136",
+		EthNetwork: types.ETHRopsten,
+		Version:    erc20token.ERC20TokenOld,
+	}
+	TBTCRopsten VegaAsset = VegaAsset{
+		Name:       "tBTC",
+		HexAddress: "0xC912F059b4eCCEF6C969B2E0e2544A1A2581C094",
+		EthNetwork: types.ETHRopsten,
+		Version:    erc20token.ERC20TokenOld,
+	}
 )
 
-var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC}
+var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten}
 
 func (m *SmartContractsManager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
 	name = strings.ToLower(name)

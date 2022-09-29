@@ -10,6 +10,7 @@ import (
 
 	ERC20Token_IERC20 "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/IERC20"
 	ERC20Token_TokenBase "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenBase"
+	ERC20Token_TokenOld "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOld"
 	ERC20Token_TokenOther "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOther"
 )
 
@@ -71,6 +72,8 @@ type ERC20Token struct {
 	v_IERC20 *ERC20Token_IERC20.IERC20
 	// Most common implementation
 	v_TokenOther *ERC20Token_TokenOther.TokenOther
+	// deprecated - don't ever use
+	v_TokenOld *ERC20Token_TokenOld.TokenOld
 	// For our testing implementation
 	v_TokenBase *ERC20Token_TokenBase.TokenBase
 }
@@ -100,6 +103,13 @@ func NewERC20Token(
 		}
 		result.ERC20TokenStandard = result.v_TokenOther
 		result.ERC20TokenCommon = result.v_TokenOther
+	case ERC20TokenOld:
+		result.v_TokenOld, err = ERC20Token_TokenOld.NewTokenOld(result.Address, result.client)
+		if err != nil {
+			return nil, err
+		}
+		result.ERC20TokenStandard = result.v_TokenOld
+		result.ERC20TokenCommon = result.v_TokenOld
 	case ERC20TokenBase:
 		result.v_TokenBase, err = ERC20Token_TokenBase.NewTokenBase(result.Address, result.client)
 		if err != nil {
