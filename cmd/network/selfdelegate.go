@@ -254,15 +254,15 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 				zap.String("StakedByOperator", validator.StakedByOperator))
 			continue
 		}
-		// TODO: check if the stake for party is already visible
 		partyTotalStake, err := network.DataNodeClient.GetPartyTotalStake(nodeSecrets.VegaId)
 		if err != nil {
 			return err
 		}
 		if partyTotalStake.Cmp(minValidatorStake) < 0 {
-			logger.Warn("party doesn't have visible stake yet - you might need to wait till ??", zap.String("node", name),
+			logger.Warn("party doesn't have visible stake yet - you might need to wait till next epoch", zap.String("node", name),
 				zap.String("partyTotalStake", partyTotalStake.String()))
-			continue
+			// TODO: write wait functionality
+			//continue
 		}
 
 		wg.Add(1)
