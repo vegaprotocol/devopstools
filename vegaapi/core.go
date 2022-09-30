@@ -79,3 +79,23 @@ func (n *DataNode) ObserveEventBus(ctx context.Context) (client vegaapipb.CoreSe
 	}
 	return
 }
+
+func (n *DataNode) Statistics() (*vegaapipb.StatisticsResponse, error) {
+	msg := "gRPC call failed: Statistics: %w"
+	if n == nil {
+		return nil, fmt.Errorf(msg, e.ErrNil)
+	}
+
+	if n.conn.GetState() != connectivity.Ready {
+		return nil, fmt.Errorf(msg, e.ErrConnectionNotReady)
+	}
+
+	c := vegaapipb.NewCoreServiceClient(n.conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	defer cancel()
+	response, err := c.Statistics(ctx, &vegaapipb.StatisticsRequest{})
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return response, err
+}

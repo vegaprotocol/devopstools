@@ -1,21 +1,27 @@
 package network
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
+	"sync"
 	"time"
 
+	"code.vegaprotocol.io/vega/protos/vega"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	v1 "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
-	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
+
+	vgcrypto "code.vegaprotocol.io/shared/libs/crypto"
 )
 
 type SelfDelegateArgs struct {
@@ -215,101 +221,126 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	logger.Info("Stake summary", zap.Int("success", stakeSuccessCount), zap.Int("failure", stakeFailureCount),
 		zap.Int("already ok", stakeOKCount))
 
-	// for name, _ := range network.NodeSecrets {
-	// 	if err := SelfDelegate(name, network); err != nil {
-	// 		return err
-	// 	}
-	// }
-	return nil
-}
-
-func SelfDelegate(name string, network *veganetwork.VegaNetwork) error {
-	minValidatorStake, err := network.NetworkParams.GetMinimumValidatorStake()
+	//
+	// Delegate
+	//
+	var (
+		minValidatorStake = ethutils.VegaTokenFromFullTokens(humanMinValidatorStake)
+	)
+	lastBlockData, err := network.DataNodeClient.LastBlockData()
 	if err != nil {
 		return err
 	}
-	node := network.NodeSecrets[name]
-
-	// General info
-	fmt.Printf(" - %s ", name)
-	nodeData, isValidator := network.ValidatorsById[node.VegaId]
-	if isValidator {
-		fmt.Printf("[validator]")
-	} else {
-		fmt.Printf("[non-validator]")
-	}
-	fmt.Printf(":\n")
-
-	// ETH
-	fmt.Printf("    ethereum balance: ")
-	balance, err := network.EthClient.BalanceAt(context.Background(), common.HexToAddress(node.EthereumAddress), nil)
+	statistics, err := network.DataNodeClient.Statistics()
 	if err != nil {
 		return err
 	}
-	hBalance := ethutils.WeiToEther(balance)
-	fmt.Printf("%f\n", hBalance)
 
-	// STAKE
-	fmt.Printf("    stake balance: ")
-	balance, err = network.SmartContracts.StakingBridge.GetStakeBalance(node.VegaPubKey)
-	if err != nil {
-		return err
-	}
-	hBalance = ethutils.VegaTokenToFullTokens(balance)
-	fmt.Printf("%f", hBalance)
-	if hBalance.Cmp(minValidatorStake) < 0 {
-		diff := new(big.Float)
-		diff = diff.Sub(minValidatorStake, hBalance)
-		fmt.Printf(" [below required %f]", minValidatorStake)
-
-		if err := Stake(node.VegaPubKey, diff); err != nil {
+	resultsChannel := make(chan error, len(network.ValidatorsById))
+	var wg sync.WaitGroup
+	//for id, validator := range network.ValidatorsById {
+	for name, nodeSecrets := range network.NodeSecrets {
+		validator, isValidator := network.ValidatorsById[nodeSecrets.VegaId]
+		if !isValidator {
+			continue
+		}
+		stakedByOperator, ok := new(big.Int).SetString(validator.StakedByOperator, 0)
+		if !ok {
+			logger.Error("failed to parse StakedByOperator", zap.String("node", name),
+				zap.String("StakedByOperator", validator.StakedByOperator), zap.Error(err))
+		}
+		if minValidatorStake.Cmp(stakedByOperator) <= 0 {
+			logger.Info("node already self-delegated enough", zap.String("node", name),
+				zap.String("StakedByOperator", validator.StakedByOperator))
+			continue
+		}
+		// TODO: check if the stake for party is already visible
+		partyTotalStake, err := network.DataNodeClient.GetPartyTotalStake(nodeSecrets.VegaId)
+		if err != nil {
 			return err
 		}
-	} else {
-		fmt.Printf(" [ok]")
-	}
-	fmt.Printf("\n")
-
-	// SELF-DELEGATE
-	if isValidator {
-		fmt.Printf("    self-delegate balance: ")
-
-		selfDelegate := new(big.Int)
-		var ok bool
-		selfDelegate, ok = selfDelegate.SetString(nodeData.StakedByOperator, 0)
-		if !ok {
-			return fmt.Errorf("failed to convert Staked By Operator '%s' of %s node to big.Int", nodeData.StakedByOperator, name)
+		if partyTotalStake.Cmp(minValidatorStake) < 0 {
+			logger.Warn("party doesn't have visible stake yet - you might need to wait till ??", zap.String("node", name),
+				zap.String("partyTotalStake", partyTotalStake.String()))
+			continue
 		}
-		hSelfDelegate := ethutils.VegaTokenToFullTokens(selfDelegate)
-		fmt.Printf("%f", hSelfDelegate)
-		if isValidator {
-			if hSelfDelegate.Cmp(minValidatorStake) < 0 {
-				diff := new(big.Float)
-				diff = diff.Sub(minValidatorStake, hSelfDelegate)
-				fmt.Printf(" [below required %f]", minValidatorStake)
-				if err := DelegateToSelf(&node, diff); err != nil {
-					return err
-				}
-			} else {
-				fmt.Printf(" [ok]")
+
+		wg.Add(1)
+		go func(name string, validator *vega.Node, nodeSecrets secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string) {
+			defer wg.Done()
+			vegawallet, err := wallet.NewVegaWallet(validator.Id, &secrets.VegaWalletPrivate{
+				Id:             nodeSecrets.VegaId,
+				PublicKey:      nodeSecrets.VegaPubKey,
+				PrivateKey:     nodeSecrets.VegaPrivateKey,
+				RecoveryPhrase: nodeSecrets.VegaRecoveryPhrase,
+			})
+			if err != nil {
+				logger.Error("failed to create wallet", zap.String("node", name), zap.Error(err))
+				resultsChannel <- fmt.Errorf("failed to create wallet for %s node", name)
+				return
 			}
-		}
-		fmt.Printf("\n")
+			walletTxReq := walletpb.SubmitTransactionRequest{
+				PubKey: nodeSecrets.VegaPubKey,
+				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
+					DelegateSubmission: &v1.DelegateSubmission{
+						NodeId: nodeSecrets.VegaId,
+						Amount: minValidatorStake.String(),
+					},
+				},
+			}
+
+			signedTx, err := vegawallet.SignTx(&walletTxReq, lastBlockData.Height, chainID)
+			if err != nil {
+				logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
+				resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
+				return
+			}
+
+			tid := vgcrypto.RandomHash()
+			powNonce, _, err := vgcrypto.PoW(lastBlockData.Hash, tid, uint(lastBlockData.SpamPowDifficulty), vgcrypto.Sha3)
+			if err != nil {
+				logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
+				resultsChannel <- fmt.Errorf("failed to generate proof of work: %w", err)
+			}
+			signedTx.Pow = &commandspb.ProofOfWork{
+				Tid:   tid,
+				Nonce: powNonce,
+			}
+
+			submitReq := &vegaapipb.SubmitTransactionRequest{
+				Tx:   signedTx,
+				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+			}
+			submitResponse, err := network.DataNodeClient.SubmitTransaction(submitReq)
+			if err != nil {
+				logger.Error("failed to submit a trasnaction", zap.String("node", name), zap.Error(err))
+				resultsChannel <- fmt.Errorf("failed to submit a transaction for %s node", name)
+				return
+			}
+			if !submitResponse.Success {
+				logger.Error("transaction submission failure", zap.String("node", name), zap.Error(err))
+				resultsChannel <- fmt.Errorf("transaction submission failure for %s node", name)
+				return
+			}
+			logger.Info("successful delegation", zap.String("node", name), zap.Any("response", submitResponse))
+		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId)
 	}
+	wg.Wait()
+	close(resultsChannel)
 
-	return nil
-}
+	var failureCount int
 
-func Stake(vegaPubKey string, amount *big.Float) error {
-	fmt.Printf(" staking %f ...", amount)
-	// TODO: implement
-	fmt.Printf(" not implemented")
-	return nil
-}
+	for err := range resultsChannel {
+		if err != nil {
+			failureCount += 1
+		}
+	}
+	successCount := len(network.ValidatorsById) - failureCount
+	logger.Info("Delegate summary", zap.Int("successCount", successCount), zap.Int("failureCount", failureCount))
+	if failureCount > 0 {
+		return fmt.Errorf("failed to self-delegate to all of the parties")
+	}
+	fmt.Printf("DONE\n")
 
-func DelegateToSelf(node *secrets.VegaNodePrivate, amount *big.Float) error {
-	fmt.Printf(" delegating %f ...", amount)
-	// TODO: implement
-	fmt.Printf(" not implemented")
 	return nil
 }
