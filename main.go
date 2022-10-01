@@ -4,6 +4,7 @@ import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/live"
+	"github.com/vegaprotocol/devopstools/cmd/market"
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
 	"github.com/vegaprotocol/devopstools/cmd/party"
@@ -27,4 +28,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(erc20token.ERC20tokenCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
+	rootCmd.RootCmd.AddCommand(market.MarketCmd)
 }

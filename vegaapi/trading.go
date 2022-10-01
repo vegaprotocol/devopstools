@@ -1,5 +1,27 @@
 package vegaapi
 
+import (
+	"context"
+	"fmt"
+
+	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	"code.vegaprotocol.io/vega/protos/vega"
+	e "github.com/vegaprotocol/devopstools/errors"
+	"google.golang.org/grpc/connectivity"
+)
+
+func (n *DataNode) GetAllMarkets() ([]*vega.Market, error) {
+	res, err := n.ListMarkets(&dataapipb.ListMarketsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all markets, %w", err)
+	}
+	result := make([]*vega.Market, len(res.Markets.Edges))
+	for i, edge := range res.Markets.Edges {
+		result[i] = edge.Node
+	}
+	return result, nil
+}
+
 // === TradingDataService ===
 
 // // PartyAccounts returns accounts for the given party.
@@ -26,53 +48,53 @@ package vegaapi
 // 	return
 // }
 
-// // MarketDataByID returns market data for the specified market.
-// func (n *DataNode) MarketDataByID(req *dataapipb.MarketDataByIDRequest) (response *dataapipb.MarketDataByIDResponse, err error) {
-// 	msg := "gRPC call failed (data-node): MarketDataByID: %w"
-// 	if n == nil {
-// 		err = fmt.Errorf(msg, e.ErrNil)
-// 		return
-// 	}
+// // GetMarket returns market data for the specified market.
+func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapipb.GetMarketResponse, err error) {
+	msg := "gRPC call failed (data-node): GetMarket: %w"
+	if n == nil {
+		err = fmt.Errorf(msg, e.ErrNil)
+		return
+	}
 
-// 	if n.conn.GetState() != connectivity.Ready {
-// 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-// 		return
-// 	}
+	if n.conn.GetState() != connectivity.Ready {
+		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
+		return
+	}
 
-// 	c := dataapipb.NewTradingDataServiceClient(n.conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
-// 	defer cancel()
+	c := dataapipb.NewTradingDataServiceClient(n.conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	defer cancel()
 
-// 	response, err = c.MarketDataByID(ctx, req)
-// 	if err != nil {
-// 		err = fmt.Errorf(msg, e.ErrorDetail(err))
-// 	}
-// 	return
-// }
+	response, err = c.GetMarket(ctx, req)
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return
+}
 
-// // Markets returns all markets.
-// func (n *DataNode) Markets(req *dataapipb.MarketsRequest) (response *dataapipb.MarketsResponse, err error) {
-// 	msg := "gRPC call failed (data-node): Markets: %w"
-// 	if n == nil {
-// 		err = fmt.Errorf(msg, e.ErrNil)
-// 		return
-// 	}
+// ListMarkets returns all markets.
+func (n *DataNode) ListMarkets(req *dataapipb.ListMarketsRequest) (response *dataapipb.ListMarketsResponse, err error) {
+	msg := "gRPC call failed (data-node): ListMarkets: %w"
+	if n == nil {
+		err = fmt.Errorf(msg, e.ErrNil)
+		return
+	}
 
-// 	if n.conn.GetState() != connectivity.Ready {
-// 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-// 		return
-// 	}
+	if n.conn.GetState() != connectivity.Ready {
+		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
+		return
+	}
 
-// 	c := dataapipb.NewTradingDataServiceClient(n.conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
-// 	defer cancel()
+	c := dataapipb.NewTradingDataServiceClient(n.conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	defer cancel()
 
-// 	response, err = c.Markets(ctx, req)
-// 	if err != nil {
-// 		err = fmt.Errorf(msg, e.ErrorDetail(err))
-// 	}
-// 	return
-// }
+	response, err = c.ListMarkets(ctx, req)
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return
+}
 
 // // PositionsByParty returns positions for the given party.
 // func (n *DataNode) PositionsByParty(req *dataapipb.PositionsByPartyRequest) (response *dataapipb.PositionsByPartyResponse, err error) {

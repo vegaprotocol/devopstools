@@ -23,6 +23,10 @@ func NewWalletManager(
 	}
 }
 
+//
+// ETHEREUM
+//
+
 func (wm *WalletManager) GetNetworkMainEthWallet(
 	ethNetwork types.ETHNetwork,
 	vegaNetwork string,
@@ -77,4 +81,24 @@ func (wm *WalletManager) getEthereumWallet(
 		return nil, err
 	}
 	return ethWallet, nil
+}
+
+//
+// VEGAWALLET
+//
+
+func (wm *WalletManager) GetVegaTokenWhaleVegaWallet() (*VegaWallet, error) {
+	return wm.getVegaWallet("vegaTokenWhale")
+}
+
+func (wm *WalletManager) getVegaWallet(secretPath string) (*VegaWallet, error) {
+	walletPrivate, err := wm.walletSecretStore.GetVegaWallet(secretPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get VegaWallet %s, get secret failed, %w", secretPath, err)
+	}
+	vegawallet, err := NewVegaWallet(walletPrivate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get VegaWallet %s, setting up secret failed, %w", secretPath, err)
+	}
+	return vegawallet, nil
 }
