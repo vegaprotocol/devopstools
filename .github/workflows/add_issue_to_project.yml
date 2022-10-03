@@ -1,6 +1,6 @@
 ---
 
-name: Add Issues To Project Board
+name: "Add Issues To Project Board"
 
 "on":
   issues:
@@ -10,7 +10,8 @@ jobs:
   add_issue:
     runs-on: ubuntu-latest
     steps:
-      - name: Add issue project board
+      # yamllint disable rule:line-length
+      - name: "Add issue project board"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_NEW_CARD_TO_PROJECT }}
           PROJECT_ID: ${{ secrets.DEVOPS_PROJECT_ID }}
