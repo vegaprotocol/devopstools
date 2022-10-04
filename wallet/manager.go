@@ -36,7 +36,7 @@ func (wm *WalletManager) GetNetworkMainEthWallet(
 		errMsg     = "failed to get Main Ethereum Wallet for %s network, %w"
 	)
 	switch vegaNetwork {
-	case "fairground", "devnet", "stagnet3":
+	case "devnet", "stagnet3":
 		secretPath = "OldMain"
 	default:
 		secretPath = fmt.Sprintf("%s/main", vegaNetwork)

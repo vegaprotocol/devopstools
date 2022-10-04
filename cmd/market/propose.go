@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/vega/core/netparams"
+	vegatypes "code.vegaprotocol.io/vega/core/types"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
@@ -62,8 +64,6 @@ func init() {
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeAll, "all", false, "Propose all markets")
 
 	proposeCmd.PersistentFlags().StringVar(&proposeArgs.OraclePubKey, "oracle-pubkey", "", "Oracle PubKey. Optional, by default proposer")
-	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.FakeAsset, "fake-asset", false, "Use Fake Assets as Settlement Assets. By default use ERC20 tokens")
-	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ERC20Asset, "erc20-asset", false, "Use ERC20 Tokens as Settlement Assets.")
 }
 
 func RunPropose(args ProposeArgs) error {
@@ -99,10 +99,35 @@ func RunPropose(args ProposeArgs) error {
 	if err != nil {
 		return err
 	}
-	// Assets
-	assets, err := network.DataNodeClient.GetAssets()
-	if err != nil {
-		return err
+
+	var (
+		settlementAssetId = struct {
+			AAPL    string
+			AAVEDAI string
+			BTCUSD  string
+			ETHBTC  string
+			TSLA    string
+			UNIDAI  string
+		}{}
+	)
+
+	switch args.VegaNetworkName {
+	case "devnet1":
+		settlementAssetId.AAPL = "fUSDC"
+		settlementAssetId.AAVEDAI = "fDAI"
+		settlementAssetId.BTCUSD = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663" // "fDAI"
+		settlementAssetId.ETHBTC = "fBTC"
+		settlementAssetId.TSLA = "177e8f6c25a955bd18475084b99b2b1d37f28f3dec393fab7755a7e69c3d8c3b"   // "tEURO"
+		settlementAssetId.UNIDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663" // "fDAI"
+	case "fairground":
+		settlementAssetId.AAPL = "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d"    // "tUSDC"
+		settlementAssetId.AAVEDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663" // "tDAI"
+		settlementAssetId.BTCUSD = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
+		settlementAssetId.ETHBTC = "cee709223217281d7893b650850ae8ee8a18b7539b5658f9b4cc24de95dd18ad"  // "tBTC"
+		settlementAssetId.TSLA = "177e8f6c25a955bd18475084b99b2b1d37f28f3dec393fab7755a7e69c3d8c3b"    // "tEURO"
+		settlementAssetId.UNIDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
+	default:
+		return fmt.Errorf("cannot create markets for %s network: missing config", args.VegaNetworkName)
 	}
 
 	// Propose
@@ -113,216 +138,109 @@ func RunPropose(args ProposeArgs) error {
 	// AAPL
 	//
 	if args.ProposeAAPL || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_AAPL_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "AAPL"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fUSDC")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tUSDC")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose AAPL", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"AAPL", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewAAPLMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_AAPL_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewAAPLMarketProposal(
+				settlementAssetId.AAPL, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_AAPL_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"AAPL", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_AAPL_MARKER, sub, logger,
+			)
+		}()
 	}
-
 	//
 	// AAVEDAI
 	//
 	if args.ProposeAAVEDAI || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_AAVEDAI_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "AAVEDAI"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fDAI")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tDAI")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose AAVEDAI", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"AAVEDAI", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewAAVEDAIMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_AAVEDAI_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewAAVEDAIMarketProposal(
+				settlementAssetId.AAVEDAI, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_AAVEDAI_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"AAVEDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_AAVEDAI_MARKER, sub, logger,
+			)
+		}()
 	}
-
 	//
 	// BTCUSD
 	//
 	if args.ProposeBTCUSD || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_BTCUSD_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "BTCUSD"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fDAI")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tDAI")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose BTCUSD", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"BTCUSD", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewBTCUSDMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_BTCUSD_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewBTCUSDMarketProposal(
+				settlementAssetId.BTCUSD, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_BTCUSD_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"BTCUSD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_BTCUSD_MARKER, sub, logger,
+			)
+		}()
 	}
-
 	//
 	// ETHBTC
 	//
 	if args.ProposeETHBTC || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_ETHBTC_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "ETHBTC"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fBTC")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tBTC")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose ETHBTC", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"ETHBTC", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewETHBTCMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_ETHBTC_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewETHBTCMarketProposal(
+				settlementAssetId.ETHBTC, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_ETHBTC_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"ETHBTC", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_ETHBTC_MARKER, sub, logger,
+			)
+		}()
 	}
-
 	//
 	// TSLA
 	//
 	if args.ProposeTSLA || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_TSLA_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "TSLA"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fEURO")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tEURO")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose TSLA", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"TSLA", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewTSLAMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_TSLA_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewTSLAMarketProposal(
+				settlementAssetId.TSLA, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_TSLA_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"TSLA", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_TSLA_MARKER, sub, logger,
+			)
+		}()
 	}
-
 	//
 	// UNIDAI
 	//
 	if args.ProposeUNIDAI || args.ProposeAll {
-		market := getMarket(markets, proposerVegawallet.PublicKey, MARKET_UNIDAI_MARKER)
-		if market != nil {
-			logger.Info("market already exist", zap.String("market", "UNIDAI"))
-		} else {
-			var settlementVegaAssetId string
-			if args.FakeAsset {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "fEURO")
-			} else {
-				settlementVegaAssetId, err = getAssetIdForSymbol(assets, "tEURO")
-			}
-			if err != nil {
-				logger.Error("failed to get asset to propose UNIDAI", zap.Error(err))
-			} else {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					err := proposeMarket(
-						"UNIDAI", network.DataNodeClient, lastBlockData, proposerVegawallet, logger,
-						proposals.NewUNIDAIMarketProposal(
-							settlementVegaAssetId, 5, oraclePubKey,
-							closingTime, enactmentTime,
-							[]string{MARKET_UNIDAI_MARKER},
-						),
-					)
-					if err != nil {
-						resultsChannel <- err
-					}
-				}()
-			}
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewUNIDAIMarketProposal(
+				settlementAssetId.UNIDAI, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_UNIDAI_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"UNIDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_UNIDAI_MARKER, sub, logger,
+			)
+		}()
 	}
 
 	wg.Wait()
@@ -337,20 +255,11 @@ func RunPropose(args ProposeArgs) error {
 	return nil
 }
 
-func getAssetIdForSymbol(assets map[string]*vega.AssetDetails, symbol string) (string, error) {
-	for id, asset := range assets {
-		if asset.Symbol == symbol {
-			return id, nil
-		}
-	}
-	return "", fmt.Errorf("failed to find asset for symbol %s", symbol)
-}
-
-func getMarket(markets []*vega.Market, proposerPubKey string, metadataTag string) *vega.Market {
+func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) *vega.Market {
 	for _, market := range markets {
 		if slices.Contains(
 			market.TradableInstrument.Instrument.GetFuture().OracleSpecForTradingTermination.PubKeys,
-			proposerPubKey,
+			oraclePubKey,
 		) && slices.Contains(
 			market.TradableInstrument.Instrument.Metadata.Tags,
 			metadataTag,
@@ -362,14 +271,28 @@ func getMarket(markets []*vega.Market, proposerPubKey string, metadataTag string
 	return nil
 }
 
-func proposeMarket(
+func proposeVoteProvideLP(
 	name string,
 	dataNodeClient *vegaapi.DataNode,
 	lastBlockData *vegaapipb.LastBlockHeightResponse,
+	markets []*vega.Market,
 	proposerVegawallet *wallet.VegaWallet,
-	logger *zap.Logger,
+	oraclePubKey string,
+	closingTime time.Time,
+	enactmentTime time.Time,
+	marketMetadataMarker string,
 	proposal *commandspb.ProposalSubmission,
+	logger *zap.Logger,
 ) error {
+	market := getMarket(markets, oraclePubKey, marketMetadataMarker)
+	if market != nil {
+		logger.Info("market already exist", zap.String("market", market.Id))
+		return nil
+	}
+	reference := proposal.Reference
+	//
+	// PROPOSE
+	//
 	// Prepare vegawallet Transaction Request
 	walletTxReq := walletpb.SubmitTransactionRequest{
 		PubKey: proposerVegawallet.PublicKey,
@@ -377,10 +300,113 @@ func proposeMarket(
 			ProposalSubmission: proposal,
 		},
 	}
-	// Sign + Proof of Work vegawallet Transaction request
-	signedTx, err := proposerVegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
+	if err := submitTx("propose market", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+		return err
+	}
+
+	//
+	// Find Proposal
+	//
+	time.Sleep(time.Second * 5)
+	res, err := dataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
+		ProposalReference: &reference,
+	})
 	if err != nil {
-		logger.Error("Failed to sign a trasnaction", zap.String("market", name),
+		return err
+	}
+	var proposalId string
+	for _, edge := range res.Connection.Edges {
+		if edge.Node.Proposal.Reference == reference {
+			logger.Info("Found proposal", zap.String("market", name), zap.String("reference", reference),
+				zap.String("status", edge.Node.Proposal.State.String()),
+				zap.Any("proposal", edge.Node.Proposal))
+			proposalId = edge.Node.Proposal.Id
+		}
+	}
+	//
+	// VOTE
+	//
+	voteWalletTxReq := walletpb.SubmitTransactionRequest{
+		PubKey: proposerVegawallet.PublicKey,
+		Command: &walletpb.SubmitTransactionRequest_VoteSubmission{
+			VoteSubmission: &commandspb.VoteSubmission{
+				ProposalId: proposalId,
+				Value:      vega.Vote_VALUE_YES,
+			},
+		},
+	}
+	if err := submitTx("vote on market proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
+		return err
+	}
+
+	//
+	// Provide LP
+	//
+
+	markets, err = dataNodeClient.GetAllMarkets()
+	if err != nil {
+		return fmt.Errorf("failed to get markets")
+	}
+	market = getMarket(markets, oraclePubKey, marketMetadataMarker)
+
+	// Prepare vegawallet Transaction Request
+	provideLPWalletTxReq := walletpb.SubmitTransactionRequest{
+		PubKey: proposerVegawallet.PublicKey,
+		Command: &walletpb.SubmitTransactionRequest_LiquidityProvisionSubmission{
+			LiquidityProvisionSubmission: &commandspb.LiquidityProvisionSubmission{
+				Fee:              "0.01",
+				MarketId:         market.Id,
+				CommitmentAmount: "1",
+				Buys: []*vega.LiquidityOrder{
+					{
+						Reference:  vegatypes.PeggedReferenceBestBid,
+						Proportion: 10,
+						Offset:     "1000",
+					},
+					{
+						Reference:  vegatypes.PeggedReferenceBestBid,
+						Proportion: 10,
+						Offset:     "2000",
+					},
+				},
+				Sells: []*vega.LiquidityOrder{
+					{
+						Reference:  vegatypes.PeggedReferenceBestAsk,
+						Proportion: 10,
+						Offset:     "2000",
+					},
+					{
+						Reference:  vegatypes.PeggedReferenceBestAsk,
+						Proportion: 10,
+						Offset:     "1000",
+					},
+				},
+			},
+		},
+	}
+	if err := submitTx("Provide LP", dataNodeClient, proposerVegawallet, logger, &provideLPWalletTxReq); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func submitTx(
+	description string,
+	dataNodeClient *vegaapi.DataNode,
+	proposerVegawallet *wallet.VegaWallet,
+	logger *zap.Logger,
+	walletTxReq *walletpb.SubmitTransactionRequest,
+) error {
+	lastBlockData, err := dataNodeClient.LastBlockData()
+	if err != nil {
+		return fmt.Errorf("failed to submit tx, cos")
+	}
+
+	// Sign + Proof of Work vegawallet Transaction request
+	signedTx, err := proposerVegawallet.SignTxWithPoW(walletTxReq, lastBlockData)
+	if err != nil {
+		logger.Error("Failed to sign a trasnaction", zap.String("description", description),
 			zap.String("proposer", proposerVegawallet.PublicKey),
 			zap.Any("txReq", &walletTxReq), zap.Error(err))
 		return err
@@ -393,22 +419,24 @@ func proposeMarket(
 	}
 
 	// Submit Transaction
-	logger.Info("Submit transaction", zap.String("market", name),
+	logger.Info("Submit transaction", zap.String("description", description),
 		zap.String("proposer", proposerVegawallet.PublicKey))
 	submitResponse, err := dataNodeClient.SubmitTransaction(submitReq)
 	if err != nil {
-		logger.Error("Failed to submit a trasnaction", zap.String("market", name),
+		logger.Error("Failed to submit a trasnaction", zap.String("description", description),
 			zap.String("proposer", proposerVegawallet.PublicKey),
 			zap.Any("txReq", submitReq), zap.Error(err))
 		return err
 	}
 	if !submitResponse.Success {
-		logger.Error("Transaction submission response is not successful", zap.String("market", name),
-			zap.String("proposer", proposerVegawallet.PublicKey),
+		logger.Error("Transaction submission response is not successful",
+			zap.String("proposer", proposerVegawallet.PublicKey), zap.String("description", description),
 			zap.Any("txReq", submitReq), zap.Any("response", submitResponse))
 		return err
 	}
-	logger.Info("Successful Submision of Market Proposal", zap.String("market", name),
-		zap.String("proposer", proposerVegawallet.PublicKey), zap.String("txHash", submitResponse.TxHash))
+	logger.Info("Successful Submision of Market Proposal", zap.String("description", description),
+		zap.String("proposer", proposerVegawallet.PublicKey), zap.String("txHash", submitResponse.TxHash),
+		zap.Any("response", submitResponse))
+
 	return nil
 }

@@ -90,7 +90,7 @@ func RunTopUpLiqbot(args LiqbotArgs) error {
 		wg.Add(1)
 		go func(tokenHexAddress string, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, args.Logger)
+			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(10000), args.Logger)
 			if err != nil {
 				resultsChannel <- err
 			}
@@ -102,7 +102,7 @@ func RunTopUpLiqbot(args LiqbotArgs) error {
 		wg.Add(1)
 		go func(assetId string, asset *vega.AssetDetails, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositFakeAssetToParties(networktools, assetId, asset, vegaPubKeys, args.Logger)
+			err := depositFakeAssetToParties(networktools, assetId, asset, vegaPubKeys, big.NewFloat(10000), args.Logger)
 			resultsChannel <- err
 		}(assetId, asset, vegaPubKeys)
 	}

@@ -133,3 +133,26 @@ func (n *DataNode) ListAssets(req *dataapipb.ListAssetsRequest) (response *dataa
 	}
 	return
 }
+
+func (n *DataNode) ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error) {
+	msg := "gRPC call failed (data-node): ListGovernanceData: %w"
+	if n == nil {
+		err = fmt.Errorf(msg, e.ErrNil)
+		return
+	}
+
+	if n.conn.GetState() != connectivity.Ready {
+		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
+		return
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	defer cancel()
+
+	response, err = c.ListGovernanceData(ctx, req)
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return
+}
