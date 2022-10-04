@@ -24,7 +24,7 @@ func (network *NetworkTools) GetTraderbotBaseURL() (string, error) {
 	case "stagnet3":
 		return "https://traderbot-stagnet3-k8s.ops.vega.xyz", nil
 	case "fairground":
-		return "https://traderbot-testnet-k8s.ops.vega.xyz", nil
+		return "https://traderbot-tmp-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://traderbot-%s-k8s.ops.vega.xyz", network.Name), nil
 	}
@@ -106,7 +106,7 @@ func (network *NetworkTools) GetLiqbotBaseURL() (string, error) {
 	case "stagnet3":
 		return "https://liqbot-stagnet3-k8s.ops.vega.xyz", nil
 	case "fairground":
-		return "https://liqbot-testnet-k8s.ops.vega.xyz", nil
+		return "https://liqbot-tmp-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://liqbot-%s-k8s.ops.vega.xyz", network.Name), nil
 	}
