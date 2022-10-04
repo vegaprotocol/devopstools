@@ -1,0 +1,103 @@
+{
+    "proposalSubmission": {
+      "reference": "injected_at_runtime",
+      "rationale": {
+        "title": "New EURO market",
+        "description": "New EURO market"
+      },
+      "terms": {
+        "closingTimestamp": 0,
+        "enactmentTimestamp": 0,
+        "newMarket": {
+          "changes": {
+            "instrument": {
+              "name": "Tesla Quarterly (30 Jun 2022)",
+              "code": "TSLA.QM21",
+              "future": {
+                "settlementAsset": "8b52d4a3a4b0ffe733cddbc2b67be273816cfeb6ca4c8b339bac03ffba08e4e4",
+                "quoteName": "EURO",
+                "oracleSpecForSettlementPrice": {
+                  "pubKeys": [
+                    "9d666ddfd25278835b3ce1c63d5a9bb74ee4be7b60c229e7254a7f214ac91899"
+                  ],
+                  "filters": [
+                    {
+                      "key": {
+                        "name": "prices.TSLA.value",
+                        "type": "TYPE_INTEGER"
+                      },
+                      "conditions": [
+                        {
+                          "operator": "OPERATOR_EQUALS",
+                          "value": "1"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "oracleSpecForTradingTermination": {
+                  "pubKeys": [
+                    "9d666ddfd25278835b3ce1c63d5a9bb74ee4be7b60c229e7254a7f214ac91899"
+                  ],
+                  "filters": [
+                    {
+                      "key": {
+                        "name": "termination.TSLA.value",
+                        "type": "TYPE_BOOLEAN"
+                      },
+                      "conditions": [
+                        {
+                          "operator": "OPERATOR_EQUALS",
+                          "value": "1"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "oracleSpecBinding": {
+                  "settlementPriceProperty": "prices.TSLA.value",
+                  "tradingTerminationProperty": "termination.TSLA.value"
+                }
+              }
+            },
+            "decimalPlaces": 5,
+            "metadata": [
+              "formerly:5A86B190C384997F",
+              "quote:EURO",
+              "ticker:TSLA",
+              "class:equities/single-stock-futures",
+              "sector:tech",
+              "listing_venue:NASDAQ",
+              "country:US"
+            ],
+            "priceMonitoringParameters": {
+              "triggers": [
+                {
+                  "horizon": 43200,
+                  "probability": "0.9999999",
+                  "auctionExtension": 600
+                }
+              ]
+            },
+            "liquidityMonitoringParameters": {
+              "targetStakeParameters": {
+                "timeWindow": 3600,
+                "scalingFactor": 10
+              },
+              "triggeringRatio": 0.7,
+              "auctionExtension": 1
+            },
+            "logNormal": {
+              "riskAversionParameter": 0.01,
+              "tau": 0.0001140771161,
+              "params": {
+                "mu": 0,
+                "r": 0.016,
+                "sigma": 0.8
+              }
+            }
+          }
+        }
+      }
+    }
+  }

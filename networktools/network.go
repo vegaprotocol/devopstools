@@ -27,9 +27,10 @@ func NewNetworkTools(
 	switch name {
 	case "devnet":
 		network.DNSSuffix = "d.vega.xyz"
-	case "testnet",
-		"fairground":
+	case "testnet":
 		network.DNSSuffix = "testnet.vega.xyz"
+	case "fairground":
+		network.DNSSuffix = "tmp.vega.xyz"
 	case
 		"devnet1",
 		"devnet2",

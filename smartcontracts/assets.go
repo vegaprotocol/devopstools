@@ -41,6 +41,32 @@ var (
 		Version:    erc20token.ERC20TokenBase,
 	}
 
+	// New Fairground
+	TEURO_F VegaAsset = VegaAsset{
+		Name:       "tEURO TEST",
+		HexAddress: "0x0158031158Bb4dF2AD02eAA31e8963E84EA978a4",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+	TDAI_F VegaAsset = VegaAsset{
+		Name:       "tDAI TEST",
+		HexAddress: "0x26223f9C67871CFcEa329975f7BC0C9cB8FBDb9b",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+	TUSDC_F VegaAsset = VegaAsset{
+		Name:       "tUSDC TEST",
+		HexAddress: "0xdBa6373d0DAAAA44bfAd663Ff93B1bF34cE054E9",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+	TBTC_F VegaAsset = VegaAsset{
+		Name:       "tBTC TEST",
+		HexAddress: "0x1d525fB145Af5c51766a89706C09fE07E6058D1D",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
 	// OLD Deprecated to be removed
 	TEURORopsten VegaAsset = VegaAsset{
 		Name:       "tEURO",
@@ -68,7 +94,7 @@ var (
 	}
 )
 
-var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten}
+var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC, TEURO_F, TDAI_F, TUSDC_F, TBTC_F, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten}
 
 func (m *SmartContractsManager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
 	name = strings.ToLower(name)

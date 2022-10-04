@@ -15,42 +15,42 @@ import (
 	"go.uber.org/zap"
 )
 
-type TraderbotArgs struct {
+type LiqbotArgs struct {
 	*TopUpArgs
 	VegaNetworkName string
 }
 
-var traderbotArgs TraderbotArgs
+var liqbotArgs LiqbotArgs
 
-// traderbotCmd represents the traderbot command
-var topUpTraderbotCmd = &cobra.Command{
-	Use:   "traderbot",
-	Short: "TopUp traderbot for network",
-	Long:  `TopUp traderbot for network`,
+// liqbotCmd represents the liqbot command
+var topUpLiqbotCmd = &cobra.Command{
+	Use:   "liqbot",
+	Short: "TopUp liqbot for network",
+	Long:  `TopUp liqbot for network`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := RunTopUpTraderbot(traderbotArgs); err != nil {
-			traderbotArgs.Logger.Error("Error", zap.Error(err))
+		if err := RunTopUpLiqbot(liqbotArgs); err != nil {
+			liqbotArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
-	traderbotArgs.TopUpArgs = &topUpArgs
+	liqbotArgs.TopUpArgs = &topUpArgs
 
-	TopUpCmd.AddCommand(topUpTraderbotCmd)
-	topUpTraderbotCmd.PersistentFlags().StringVar(&traderbotArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := topUpTraderbotCmd.MarkPersistentFlagRequired("network"); err != nil {
+	TopUpCmd.AddCommand(topUpLiqbotCmd)
+	topUpLiqbotCmd.PersistentFlags().StringVar(&liqbotArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := topUpLiqbotCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }
 
-func RunTopUpTraderbot(args TraderbotArgs) error {
+func RunTopUpLiqbot(args LiqbotArgs) error {
 	networktools, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
 	if err != nil {
 		return err
 	}
-	traders, err := networktools.GetTraderbotTraders()
+	traders, err := networktools.GetLiqbotTraders()
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 		wg.Add(1)
 		go func(tokenHexAddress string, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(100000), args.Logger)
+			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(10000), args.Logger)
 			if err != nil {
 				resultsChannel <- err
 			}
@@ -102,7 +102,7 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 		wg.Add(1)
 		go func(assetId string, asset *vega.AssetDetails, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositFakeAssetToParties(networktools, assetId, asset, vegaPubKeys, big.NewFloat(100000), args.Logger)
+			err := depositFakeAssetToParties(networktools, assetId, asset, vegaPubKeys, big.NewFloat(10000), args.Logger)
 			resultsChannel <- err
 		}(assetId, asset, vegaPubKeys)
 	}

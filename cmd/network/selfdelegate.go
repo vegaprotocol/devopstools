@@ -11,7 +11,6 @@ import (
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	v1 "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -20,8 +19,6 @@ import (
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
-
-	vgcrypto "code.vegaprotocol.io/shared/libs/crypto"
 )
 
 type SelfDelegateArgs struct {
@@ -268,7 +265,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		wg.Add(1)
 		go func(name string, validator *vega.Node, nodeSecrets secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string) {
 			defer wg.Done()
-			vegawallet, err := wallet.NewVegaWallet(validator.Id, &secrets.VegaWalletPrivate{
+			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
 				Id:             nodeSecrets.VegaId,
 				PublicKey:      nodeSecrets.VegaPubKey,
 				PrivateKey:     nodeSecrets.VegaPrivateKey,
@@ -282,29 +279,18 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			walletTxReq := walletpb.SubmitTransactionRequest{
 				PubKey: nodeSecrets.VegaPubKey,
 				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
-					DelegateSubmission: &v1.DelegateSubmission{
+					DelegateSubmission: &commandspb.DelegateSubmission{
 						NodeId: nodeSecrets.VegaId,
 						Amount: minValidatorStake.String(),
 					},
 				},
 			}
 
-			signedTx, err := vegawallet.SignTx(&walletTxReq, lastBlockData.Height, chainID)
+			signedTx, err := vegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
 			if err != nil {
 				logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
 				resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
 				return
-			}
-
-			tid := vgcrypto.RandomHash()
-			powNonce, _, err := vgcrypto.PoW(lastBlockData.Hash, tid, uint(lastBlockData.SpamPowDifficulty), vgcrypto.Sha3)
-			if err != nil {
-				logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
-				resultsChannel <- fmt.Errorf("failed to generate proof of work: %w", err)
-			}
-			signedTx.Pow = &commandspb.ProofOfWork{
-				Tid:   tid,
-				Nonce: powNonce,
 			}
 
 			submitReq := &vegaapipb.SubmitTransactionRequest{

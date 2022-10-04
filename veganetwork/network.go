@@ -25,7 +25,7 @@ type VegaNetwork struct {
 	AssetMainWallet   *wallet.EthWallet
 
 	MarketsCreator *secrets.VegaWalletPrivate
-	VegaTokenWhale *secrets.VegaWalletPrivate
+	VegaTokenWhale *wallet.VegaWallet
 
 	// network params/config
 	NetworkParams  *NetworkParams
@@ -111,6 +111,10 @@ func NewVegaNetwork(
 		return nil, fmt.Errorf(errMsg, err)
 	}
 	n.NetworkMainWallet, err = n.WalletManager.GetNetworkMainEthWallet(n.EthNetwork, n.Network)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+	n.VegaTokenWhale, err = n.WalletManager.GetVegaTokenWhaleVegaWallet()
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

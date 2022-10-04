@@ -3,7 +3,9 @@ package wallet
 import (
 	"fmt"
 
+	vgcrypto "code.vegaprotocol.io/shared/libs/crypto"
 	"code.vegaprotocol.io/vega/commands"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	wcommands "code.vegaprotocol.io/vega/wallet/commands"
@@ -19,10 +21,9 @@ type VegaWallet struct {
 }
 
 func NewVegaWallet(
-	name string,
 	private *secrets.VegaWalletPrivate,
 ) (*VegaWallet, error) {
-	hdWallet, err := wallet.ImportHDWallet(name, private.RecoveryPhrase, wallet.LatestVersion)
+	hdWallet, err := wallet.ImportHDWallet(private.Id, private.RecoveryPhrase, wallet.LatestVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new VegaWallet, %w", err)
 	}
@@ -55,4 +56,24 @@ func (vw *VegaWallet) SignTx(req *walletpb.SubmitTransactionRequest, height uint
 		Version: signature.Version,
 	}
 	return commands.NewTransaction(pubKey, marshaledInputData, protoSignature), nil
+}
+
+func (vw *VegaWallet) SignTxWithPoW(req *walletpb.SubmitTransactionRequest, lastBlockData *vegaapipb.LastBlockHeightResponse) (*commandspb.Transaction, error) {
+	errMsg := fmt.Sprintf("failed to sing transaction %s", req)
+	signedTx, err := vw.SignTx(req, lastBlockData.Height, lastBlockData.ChainId)
+	if err != nil {
+		return nil, fmt.Errorf("%s, %w", errMsg, err)
+	}
+
+	tid := vgcrypto.RandomHash()
+	powNonce, _, err := vgcrypto.PoW(lastBlockData.Hash, tid, uint(lastBlockData.SpamPowDifficulty), vgcrypto.Sha3)
+	if err != nil {
+		return nil, fmt.Errorf("%s, %w", errMsg, err)
+	}
+	signedTx.Pow = &commandspb.ProofOfWork{
+		Tid:   tid,
+		Nonce: powNonce,
+	}
+
+	return signedTx, nil
 }

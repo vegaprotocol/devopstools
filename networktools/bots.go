@@ -1,9 +1,11 @@
 package networktools
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Traders struct {
@@ -22,7 +24,7 @@ func (network *NetworkTools) GetTraderbotBaseURL() (string, error) {
 	case "stagnet3":
 		return "https://traderbot-stagnet3-k8s.ops.vega.xyz", nil
 	case "fairground":
-		return "https://traderbot-testnet-k8s.ops.vega.xyz", nil
+		return "https://traderbot-tmp-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://traderbot-%s-k8s.ops.vega.xyz", network.Name), nil
 	}
@@ -48,7 +50,14 @@ func (network *NetworkTools) GetTraderbotTraders() (*Traders, error) {
 	}
 	url := fmt.Sprintf("%s/traders", baseURL)
 
-	res, err := http.Get(url)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: time.Second * 5,
+	}
+
+	res, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}
@@ -97,7 +106,7 @@ func (network *NetworkTools) GetLiqbotBaseURL() (string, error) {
 	case "stagnet3":
 		return "https://liqbot-stagnet3-k8s.ops.vega.xyz", nil
 	case "fairground":
-		return "https://liqbot-testnet-k8s.ops.vega.xyz", nil
+		return "https://liqbot-tmp-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://liqbot-%s-k8s.ops.vega.xyz", network.Name), nil
 	}
@@ -118,7 +127,13 @@ func (network *NetworkTools) GetLiqbotTraders() (*Traders, error) {
 	}
 	url := fmt.Sprintf("%s/traders-settlement", baseURL)
 
-	res, err := http.Get(url)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: time.Second * 5,
+	}
+	res, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}
