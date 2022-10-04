@@ -18,7 +18,7 @@ func (network *NetworkTools) GetFaucetBaseURL() (string, error) {
 	case "stagnet3":
 		return "https://faucet.stagnet3.vega.xyz", nil
 	case "fairground":
-		return "https://faucet.tmp.vega.xyz", nil
+		return "https://faucet.testnet.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://faucet.%s.vega.xyz", network.Name), nil
 	}
