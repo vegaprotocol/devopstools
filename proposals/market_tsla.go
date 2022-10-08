@@ -44,7 +44,7 @@ func NewTSLAMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "EURO",
-									OracleSpecForSettlementPrice: &oraclespb.OracleSpecConfiguration{
+									OracleSpecForSettlementData: &oraclespb.OracleSpecConfiguration{
 										PubKeys: []string{oraclePubKey},
 										Filters: []*oraclespb.Filter{
 											{
@@ -79,7 +79,7 @@ func NewTSLAMarketProposal(
 										},
 									},
 									OracleSpecBinding: &vega.OracleSpecToFutureBinding{
-										SettlementPriceProperty:    "prices.TSLA.value",
+										SettlementDataProperty:     "prices.TSLA.value",
 										TradingTerminationProperty: "termination.TSLA.value",
 									},
 								},
