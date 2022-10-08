@@ -44,7 +44,7 @@ func NewBTCUSDMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "USD",
-									OracleSpecForSettlementPrice: &oraclespb.OracleSpecConfiguration{
+									OracleSpecForSettlementData: &oraclespb.OracleSpecConfiguration{
 										PubKeys: []string{oraclePubKey},
 										Filters: []*oraclespb.Filter{
 											{
@@ -79,7 +79,7 @@ func NewBTCUSDMarketProposal(
 										},
 									},
 									OracleSpecBinding: &vega.OracleSpecToFutureBinding{
-										SettlementPriceProperty:    "prices.BTC.value",
+										SettlementDataProperty:     "prices.BTC.value",
 										TradingTerminationProperty: "termination.BTC.value",
 									},
 								},

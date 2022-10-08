@@ -44,7 +44,7 @@ func NewAAPLMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "USD",
-									OracleSpecForSettlementPrice: &oraclespb.OracleSpecConfiguration{
+									OracleSpecForSettlementData: &oraclespb.OracleSpecConfiguration{
 										PubKeys: []string{oraclePubKey},
 										Filters: []*oraclespb.Filter{
 											{
@@ -79,7 +79,7 @@ func NewAAPLMarketProposal(
 										},
 									},
 									OracleSpecBinding: &vega.OracleSpecToFutureBinding{
-										SettlementPriceProperty:    "prices.AAPL.value",
+										SettlementDataProperty:     "prices.AAPL.value",
 										TradingTerminationProperty: "termination.AAPL.value",
 									},
 								},

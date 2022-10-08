@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20220816105810-a519d6b44f35
-	code.vegaprotocol.io/vega v0.55.1-0.20220923161021-510bef4dfb6b
+	code.vegaprotocol.io/vega v0.57.1-0.20221008180005-bac85b570380
 	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.23.0
@@ -13,7 +13,7 @@ require (
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b
 	google.golang.org/grpc v1.48.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 )
 
 require (
@@ -65,6 +65,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.6.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
+	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
@@ -123,7 +124,7 @@ require (
 )
 
 replace (
-	github.com/fergusstrange/embedded-postgres => github.com/vegaprotocol/embedded-postgres v1.13.1-0.20220607151211-5f2f488de508
+	github.com/fergusstrange/embedded-postgres => github.com/vegaprotocol/embedded-postgres v1.13.1-0.20220920142401-92fd684a486d
 	github.com/jackc/pgx/v4 v4.14.1 => github.com/pscott31/pgx/v4 v4.16.2-0.20220531164027-bd666b84b61f
 	github.com/shopspring/decimal => github.com/vegaprotocol/decimal v1.3.1-uint256
 )

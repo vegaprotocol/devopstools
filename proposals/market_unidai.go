@@ -44,7 +44,7 @@ func NewUNIDAIMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "DAI",
-									OracleSpecForSettlementPrice: &oraclespb.OracleSpecConfiguration{
+									OracleSpecForSettlementData: &oraclespb.OracleSpecConfiguration{
 										PubKeys: []string{oraclePubKey},
 										Filters: []*oraclespb.Filter{
 											{
@@ -79,7 +79,7 @@ func NewUNIDAIMarketProposal(
 										},
 									},
 									OracleSpecBinding: &vega.OracleSpecToFutureBinding{
-										SettlementPriceProperty:    "prices.UNI.value",
+										SettlementDataProperty:     "prices.UNI.value",
 										TradingTerminationProperty: "termination.UNI.value",
 									},
 								},
