@@ -109,7 +109,7 @@ func depositERC20TokenToParties(
 		return fmt.Errorf("failed to get allowance, %s: %w", errMsg, err)
 	}
 	if allowance.Cmp(totalDepositAmount) < 0 {
-		diff := new(big.Int).Sub(totalDepositAmount, balance)
+		diff := new(big.Int).Sub(totalDepositAmount, allowance)
 		opts := minterWallet.GetTransactOpts()
 		logger.Info("increasing allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
 			zap.String("minter", minterWallet.Address.Hex()),
@@ -160,6 +160,7 @@ func depositERC20TokenToParties(
 		logger.Debug("depositing", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
 			zap.String("vegaPubKey", pubKey), zap.String("amount", depositAmount.String()))
 		depositTxs[i], err = erc20bridge.DepositAsset(opts, token.Address, depositAmount, byte32PubKey)
+
 		if err != nil {
 			failure += 1
 			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
