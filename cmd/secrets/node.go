@@ -21,8 +21,8 @@ var nodeArgs NodeArgs
 // nodeCmd represents the node command
 var nodeCmd = &cobra.Command{
 	Use:   "node",
-	Short: "Get Vega Network /statistics",
-	Long:  `Get Vega Network /statistics`,
+	Short: "Get Vega Network Node secrets",
+	Long:  `Get Vega Network Node secrets`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := RunNode(nodeArgs); err != nil {
 			nodeArgs.Logger.Error("Error", zap.Error(err))
