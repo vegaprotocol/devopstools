@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/networktools"
@@ -65,7 +66,13 @@ func RunPSSH(args PsshArgs) error {
 		args.SSHUsername, args.SSHPrivateKeyfile, args.Command,
 	)
 
-	for host, result := range sshResults {
+	hostNames := make([]string, 0)
+	for host, _ := range sshResults {
+		hostNames = append(hostNames, host)
+	}
+	sort.Strings(hostNames)
+	for _, host := range hostNames {
+		result := sshResults[host]
 		if result.Err != nil {
 			fmt.Printf("#-ERROR-# %s #-ERROR-#\n%s\n%v\n\n", result.Host, result.Output, result.Err)
 		} else {
