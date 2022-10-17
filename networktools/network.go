@@ -25,22 +25,12 @@ func NewNetworkTools(
 	}
 
 	switch name {
-	case "devnet":
-		network.DNSSuffix = "d.vega.xyz"
 	case "fairground":
 		network.DNSSuffix = "testnet.vega.xyz"
-	case
-		"devnet1",
-		"devnet2",
-		"devnet3",
-		"stagnet1",
-		"stagnet2",
-		"stagnet3":
-		network.DNSSuffix = fmt.Sprintf("%s.vega.xyz", name)
 	case "mainnet":
 		network.DNSSuffix = ""
 	default:
-		return nil, fmt.Errorf("Unknown network %s", name)
+		network.DNSSuffix = fmt.Sprintf("%s.vega.xyz", name)
 	}
 	return &network, nil
 }
