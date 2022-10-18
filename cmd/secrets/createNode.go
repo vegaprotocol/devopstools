@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +17,7 @@ type CreateNodeArgs struct {
 	VegaNetworkName string
 	NodeId          string
 	Force           bool
+	Stake           bool
 }
 
 var createNodeArgs CreateNodeArgs
@@ -46,6 +48,7 @@ func init() {
 		log.Fatalf("%v\n", err)
 	}
 	createNodeCmd.PersistentFlags().BoolVar(&createNodeArgs.Force, "force", false, "Force to push new secrets, even if the secrets already exist")
+	createNodeCmd.PersistentFlags().BoolVar(&createNodeArgs.Stake, "stake", false, "Stake Vega token to newly created VegaPub key. If replacing keys, then unstake will be called first.")
 }
 
 func RunCreateNode(args CreateNodeArgs) error {
@@ -53,8 +56,8 @@ func RunCreateNode(args CreateNodeArgs) error {
 	if err != nil {
 		return err
 	}
-	nodeData, err := secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
-	if err == nil && nodeData != nil && !args.Force {
+	oldNodeData, err := secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
+	if err == nil && oldNodeData != nil && !args.Force {
 		return fmt.Errorf("secrets for node %s already exists, use --force to override and put new secrets for it", args.NodeId)
 	}
 
@@ -70,6 +73,60 @@ func RunCreateNode(args CreateNodeArgs) error {
 
 	if err = secretStore.StoreVegaNode(args.VegaNetworkName, args.NodeId, newSecrets); err != nil {
 		return err
+	}
+
+	if args.Stake {
+		//
+		// Get Smart Contracts for Network
+		//
+		network, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
+		if err != nil {
+			return err
+		}
+		ethClientManager, err := args.GetEthereumClientManager()
+		if err != nil {
+			return err
+		}
+		smartContracts, err := network.GetSmartContracts(ethClientManager)
+		if err != nil {
+			return err
+		}
+		//
+		// Get Minimum Validator Stake
+		//
+		networkParams, err := network.GetNetworkParams()
+		if err != nil {
+			return err
+		}
+		minStake, err := networkParams.GetMinimumValidatorStake()
+		if err != nil {
+			return err
+		}
+		//
+		// Get Ethereum Wallet
+		//
+		walletManager, err := args.GetWalletManager()
+		if err != nil {
+			return err
+		}
+		ethNetwork, err := network.GetEthNetwork()
+		if err != nil {
+			return err
+		}
+		mainWallet, err := walletManager.GetNetworkMainEthWallet(ethNetwork, args.VegaNetworkName)
+		if err != nil {
+			return err
+		}
+
+		//
+		// Remove stake if needed, then top up the new vega pub key
+		//
+		if oldNodeData != nil {
+			_ = smartContracts.RemoveStake(mainWallet, oldNodeData.VegaPubKey)
+		}
+		if err := smartContracts.TopUpStakeForONe(mainWallet, newSecrets.VegaPubKey, minStake); err != nil {
+			return err
+		}
 	}
 	return nil
 }

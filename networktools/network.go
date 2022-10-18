@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/types"
 	"go.uber.org/zap"
 )
 
 type NetworkTools struct {
-	Name        string
-	DNSSuffix   string
-	logger      *zap.Logger
-	restTimeout time.Duration
+	Name          string
+	DNSSuffix     string
+	logger        *zap.Logger
+	restTimeout   time.Duration
+	networkParams *types.NetworkParams
 }
 
 func NewNetworkTools(

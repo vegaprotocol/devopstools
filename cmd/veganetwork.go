@@ -18,6 +18,10 @@ func (ra *RootArgs) ConnectToVegaNetwork(network string) (*veganetwork.VegaNetwo
 	if err != nil {
 		return nil, err
 	}
+	ethClientManager, err := ra.GetEthereumClientManager()
+	if err != nil {
+		return nil, err
+	}
 	smartContractsManager, err := ra.GetSmartContractsManager()
 	if err != nil {
 		return nil, err
@@ -30,6 +34,7 @@ func (ra *RootArgs) ConnectToVegaNetwork(network string) (*veganetwork.VegaNetwo
 		network,
 		dataNodeClient,
 		nodeSecretStore,
+		ethClientManager,
 		smartContractsManager,
 		walletManager,
 		ra.Logger,

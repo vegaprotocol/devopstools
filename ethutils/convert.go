@@ -1,6 +1,7 @@
 package ethutils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -64,4 +65,14 @@ func TokenFromFullTokens(amount *big.Float, decimals uint8) *big.Int {
 
 func TimestampNonce() uint64 {
 	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
+}
+
+func VegaPubKeyToByte32(pubKey string) (byte32PubKey [32]byte, err error) {
+	var bytePubKey []byte
+	bytePubKey, err = hex.DecodeString(pubKey)
+	if err != nil {
+		return
+	}
+	copy(byte32PubKey[:], bytePubKey)
+	return
 }

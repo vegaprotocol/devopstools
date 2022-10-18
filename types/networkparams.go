@@ -1,4 +1,4 @@
-package veganetwork
+package types
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	"code.vegaprotocol.io/vega/protos/vega"
-	"github.com/vegaprotocol/devopstools/ethutils"
 )
 
 type NetworkParams struct {
@@ -20,7 +19,7 @@ func NewNetworkParams(params map[string]string) *NetworkParams {
 	}
 }
 
-func (p *NetworkParams) GetMinimumValidatorStake() (*big.Float, error) {
+func (p *NetworkParams) GetMinimumValidatorStake() (*big.Int, error) {
 	param := netparams.StakingAndDelegationRewardMinimumValidatorStake
 	val, ok := p.Params[param]
 	if !ok {
@@ -32,8 +31,7 @@ func (p *NetworkParams) GetMinimumValidatorStake() (*big.Float, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to get MinimumValidatorStake, failed to conver '%s'='%s' to big.Int", param, val)
 	}
-	humanMinimumValidatorStake := ethutils.VegaTokenToFullTokens(minimumValidatorStake)
-	return humanMinimumValidatorStake, nil
+	return minimumValidatorStake, nil
 }
 
 func (p *NetworkParams) GetEthereumConfig() (*vega.EthereumConfig, error) {

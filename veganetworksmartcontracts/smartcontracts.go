@@ -1,4 +1,4 @@
-package smartcontracts
+package veganetworksmartcontracts
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
 	"github.com/vegaprotocol/devopstools/smartcontracts/multisigcontrol"
 	"github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge"
-	"github.com/vegaprotocol/devopstools/types"
+	"go.uber.org/zap"
 )
 
 type VegaNetworkSmartContracts struct {
@@ -21,25 +21,26 @@ type VegaNetworkSmartContracts struct {
 	StakingBridge   *stakingbridge.StakingBridge
 
 	EthClient *ethclient.Client
+	logger    *zap.Logger
 }
 
-func (m *SmartContractsManager) Connect(
-	ethNetwork types.ETHNetwork,
+func NewVegaNetworkSmartContracts(
+	ethClient *ethclient.Client,
 	vegaTokenHexAddress string,
 	assetPoolHexAddress string,
 	erc20BridgeHexAddress string,
 	multisigControlHexAddress string,
 	stakingBridgeHexAddress string,
+	logger *zap.Logger,
 ) (*VegaNetworkSmartContracts, error) {
 	var (
-		result = &VegaNetworkSmartContracts{}
+		result = &VegaNetworkSmartContracts{
+			EthClient: ethClient,
+			logger:    logger,
+		}
 		errMsg = "failed to create new VegaNetwork SmartContracts, %w"
 		err    error
 	)
-	result.EthClient, err = m.ethClientManager.GetEthClient(ethNetwork)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
 
 	// ERC20 Bridge
 	if len(erc20BridgeHexAddress) == 0 {
