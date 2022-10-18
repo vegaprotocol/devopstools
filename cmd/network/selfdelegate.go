@@ -1,7 +1,6 @@
 package network
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -68,10 +67,11 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 
 		stakeSuccessCount, stakeFailureCount, stakeOKCount int
 	)
-	humanMinValidatorStake, err := network.NetworkParams.GetMinimumValidatorStake()
+	minValidatorStake, err := network.NetworkParams.GetMinimumValidatorStake()
 	if err != nil {
 		return err
 	}
+	humanMinValidatorStake := ethutils.VegaTokenToFullTokens(minValidatorStake)
 	vegaTokenInfo, err := vegaToken.GetInfo()
 	if err != nil {
 		return fmt.Errorf("failed to get vega token info %s: %w", vegaToken.Address, err)
@@ -184,15 +184,9 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			stakeAmount = ethutils.VegaTokenFromFullTokens(humanStakeAmount)
 			opts        = minterWallet.GetTransactOpts()
 		)
-		bytePubKey, err := hex.DecodeString(node.VegaPubKey)
-		if err != nil {
-			return err
-		}
-		var byte32PubKey [32]byte
-		copy(byte32PubKey[:], bytePubKey)
 		logger.Info("staking to node", zap.String("node", name), zap.String("vegaPubKey", node.VegaPubKey),
 			zap.String("amount", humanStakeAmount.String()), zap.String("stakingBridgeAddress", stakingBridge.Address.Hex()))
-		tx, err := stakingBridge.Stake(opts, stakeAmount, byte32PubKey)
+		tx, err := stakingBridge.Stake(opts, stakeAmount, node.VegaPubKey)
 		if err != nil {
 			stakeFailureCount += 1
 			logger.Error("failed to stake", zap.String("node", name), zap.Error(err))
@@ -221,9 +215,6 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	//
 	// Delegate
 	//
-	var (
-		minValidatorStake = ethutils.VegaTokenFromFullTokens(humanMinValidatorStake)
-	)
 	lastBlockData, err := network.DataNodeClient.LastBlockData()
 	if err != nil {
 		return err

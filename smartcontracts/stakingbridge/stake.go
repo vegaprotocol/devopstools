@@ -2,11 +2,13 @@ package stakingbridge
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/vegaprotocol/devopstools/ethutils"
 	StakingBridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge/v1"
 )
 
@@ -14,16 +16,14 @@ func (sb *StakingBridge) GetStakeBalance(
 	vegaPubKey string,
 ) (balance *big.Int, err error) {
 	var (
-		byte32VegaPubKey  [32]byte
 		latestBlockNumber uint64
 		depositedIterator *StakingBridge_V1.StakingBridgeStakeDepositedIterator
 		removedIterator   *StakingBridge_V1.StakingBridgeStakeRemovedIterator
 	)
-	byteVegaPubKey, err := hex.DecodeString(vegaPubKey)
+	byte32VegaPubKey, err := ethutils.VegaPubKeyToByte32(vegaPubKey)
 	if err != nil {
 		return nil, err
 	}
-	copy(byte32VegaPubKey[:], byteVegaPubKey)
 	// get last block
 	latestBlockNumber, err = sb.client.BlockNumber(context.Background())
 	if err != nil {
@@ -62,4 +62,28 @@ func (sb *StakingBridge) GetStakeBalance(
 	// Ignore Stake Transfer events - transfer does not change Stake Balance of vegawallet
 
 	return
+}
+
+func (sb *StakingBridge) StakeBalance(opts *bind.CallOpts, target common.Address, vegaPubKey string) (*big.Int, error) {
+	byte32VegaPubKey, err := ethutils.VegaPubKeyToByte32(vegaPubKey)
+	if err != nil {
+		return nil, err
+	}
+	return sb.StakingBridgeCommon.StakeBalance(opts, target, byte32VegaPubKey)
+}
+
+func (sb *StakingBridge) Stake(opts *bind.TransactOpts, amount *big.Int, vegaPubKey string) (*types.Transaction, error) {
+	byte32VegaPubKey, err := ethutils.VegaPubKeyToByte32(vegaPubKey)
+	if err != nil {
+		return nil, err
+	}
+	return sb.StakingBridgeCommon.Stake(opts, amount, byte32VegaPubKey)
+}
+
+func (sb *StakingBridge) RemoveStake(opts *bind.TransactOpts, amount *big.Int, vegaPubKey string) (*types.Transaction, error) {
+	byte32VegaPubKey, err := ethutils.VegaPubKeyToByte32(vegaPubKey)
+	if err != nil {
+		return nil, err
+	}
+	return sb.StakingBridgeCommon.RemoveStake(opts, amount, byte32VegaPubKey)
 }

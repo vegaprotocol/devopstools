@@ -5,17 +5,19 @@ import (
 
 	"code.vegaprotocol.io/vega/protos/vega"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/veganetworksmartcontracts"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
 type VegaNetwork struct {
 	Network        string
-	SmartContracts *smartcontracts.VegaNetworkSmartContracts
+	SmartContracts *veganetworksmartcontracts.VegaNetworkSmartContracts
 
 	ValidatorsById map[string]*vega.Node
 
@@ -28,12 +30,13 @@ type VegaNetwork struct {
 	VegaTokenWhale *wallet.VegaWallet
 
 	// network params/config
-	NetworkParams  *NetworkParams
+	NetworkParams  *types.NetworkParams
 	EthereumConfig *vega.EthereumConfig
 	EthNetwork     types.ETHNetwork
 
 	// clients
 	DataNodeClient        *vegaapi.DataNode
+	EthClientManager      *ethutils.EthereumClientManager
 	SmartContractsManager *smartcontracts.SmartContractsManager
 	WalletManager         *wallet.WalletManager
 	EthClient             *ethclient.Client
@@ -44,6 +47,7 @@ func NewVegaNetwork(
 	network string,
 	dataNodeClient *vegaapi.DataNode,
 	nodeSecretStore secrets.NodeSecretStore,
+	ethClientManager *ethutils.EthereumClientManager,
 	smartContractsManager *smartcontracts.SmartContractsManager,
 	walletManager *wallet.WalletManager,
 	logger *zap.Logger,
@@ -52,6 +56,7 @@ func NewVegaNetwork(
 		n = &VegaNetwork{
 			Network:               network,
 			DataNodeClient:        dataNodeClient,
+			EthClientManager:      ethClientManager,
 			SmartContractsManager: smartContractsManager,
 			WalletManager:         walletManager,
 			NodeSecretStore:       nodeSecretStore,
@@ -65,7 +70,7 @@ func NewVegaNetwork(
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
-	n.NetworkParams = NewNetworkParams(networkParams)
+	n.NetworkParams = types.NewNetworkParams(networkParams)
 	n.EthereumConfig, err = n.NetworkParams.GetEthereumConfig()
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
@@ -75,19 +80,24 @@ func NewVegaNetwork(
 		return nil, fmt.Errorf(errMsg, err)
 	}
 
+	n.EthClient, err = n.EthClientManager.GetEthClient(n.EthNetwork)
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+
 	// Setup Smart Contracts
-	n.SmartContracts, err = n.SmartContractsManager.Connect(
-		n.EthNetwork,
+	n.SmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
+		n.EthClient,
 		"", // will be taken from Staking Bridge
 		"", // will be taken from ERC20 Bridge
 		n.EthereumConfig.CollateralBridgeContract.Address,
 		n.EthereumConfig.MultisigControlContract.Address,
 		n.EthereumConfig.StakingBridgeContract.Address,
+		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
-	n.EthClient = n.SmartContracts.EthClient
 
 	// Node Secrets
 	n.NodeSecrets, err = n.NodeSecretStore.GetAllVegaNode(n.Network)

@@ -90,7 +90,7 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 		wg.Add(1)
 		go func(tokenHexAddress string, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(1000000), args.Logger)
+			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(1000000000), args.Logger)
 			if err != nil {
 				resultsChannel <- err
 			}

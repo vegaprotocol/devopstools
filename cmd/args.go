@@ -65,7 +65,7 @@ func (ra *RootArgs) GetSmartContractsManager() (*smartcontracts.SmartContractsMa
 	if err != nil {
 		return nil, fmt.Errorf("failed to get SmartContractsManager, %w", err)
 	}
-	return smartcontracts.NewSmartContractsManager(ethClientManager), nil
+	return smartcontracts.NewSmartContractsManager(ethClientManager, ra.Logger), nil
 }
 
 func (ra *RootArgs) GetWalletManager() (*wallet.WalletManager, error) {
