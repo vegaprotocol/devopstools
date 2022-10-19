@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (m *VegaNetworkSmartContracts) TopUpStakeForONe(minterWallet *wallet.EthWallet, partyPubKey string, amount *big.Int) error {
+func (m *VegaNetworkSmartContracts) TopUpStakeForOne(minterWallet *wallet.EthWallet, partyPubKey string, amount *big.Int) error {
 	return m.TopUpStake(minterWallet, map[string]*big.Int{partyPubKey: amount})
 }
 

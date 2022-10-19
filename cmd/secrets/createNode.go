@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +47,6 @@ func init() {
 		log.Fatalf("%v\n", err)
 	}
 	createNodeCmd.PersistentFlags().BoolVar(&createNodeArgs.Force, "force", false, "Force to push new secrets, even if the secrets already exist")
-	createNodeCmd.PersistentFlags().BoolVar(&createNodeArgs.Stake, "stake", false, "Stake Vega token to newly created VegaPub key. If replacing keys, then unstake will be called first.")
 }
 
 func RunCreateNode(args CreateNodeArgs) error {
@@ -75,58 +73,15 @@ func RunCreateNode(args CreateNodeArgs) error {
 		return err
 	}
 
-	if args.Stake {
-		//
-		// Get Smart Contracts for Network
-		//
-		network, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
-		if err != nil {
-			return err
-		}
-		ethClientManager, err := args.GetEthereumClientManager()
-		if err != nil {
-			return err
-		}
-		smartContracts, err := network.GetSmartContracts(ethClientManager)
-		if err != nil {
-			return err
-		}
-		//
-		// Get Minimum Validator Stake
-		//
-		networkParams, err := network.GetNetworkParams()
-		if err != nil {
-			return err
-		}
-		minStake, err := networkParams.GetMinimumValidatorStake()
-		if err != nil {
-			return err
-		}
-		//
-		// Get Ethereum Wallet
-		//
-		walletManager, err := args.GetWalletManager()
-		if err != nil {
-			return err
-		}
-		ethNetwork, err := network.GetEthNetwork()
-		if err != nil {
-			return err
-		}
-		mainWallet, err := walletManager.GetNetworkMainEthWallet(ethNetwork, args.VegaNetworkName)
-		if err != nil {
-			return err
-		}
+	args.Logger.Info("Generated new secrets for node", zap.String("network", args.VegaNetworkName), zap.String("nodeId", args.NodeId),
+		zap.String("VegaPubKey", newSecrets.VegaPubKey),
+		zap.String("VegaId", newSecrets.VegaId),
+		zap.String("EthereumAddress", newSecrets.EthereumAddress),
+		zap.String("TendermintNodeId", newSecrets.TendermintNodeId),
+		zap.String("TendermintNodePubKey", newSecrets.TendermintNodePubKey),
+		zap.String("TendermintValidatorAddress", newSecrets.TendermintValidatorAddress),
+		zap.String("TendermintValidatorPubKey", newSecrets.TendermintValidatorPubKey),
+	)
 
-		//
-		// Remove stake if needed, then top up the new vega pub key
-		//
-		if oldNodeData != nil {
-			_ = smartContracts.RemoveStake(mainWallet, oldNodeData.VegaPubKey)
-		}
-		if err := smartContracts.TopUpStakeForONe(mainWallet, newSecrets.VegaPubKey, minStake); err != nil {
-			return err
-		}
-	}
 	return nil
 }

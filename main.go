@@ -12,6 +12,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
+	"github.com/vegaprotocol/devopstools/cmd/validator"
 )
 
 func main() {
@@ -29,4 +30,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)
+	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
 }
