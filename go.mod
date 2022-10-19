@@ -3,11 +3,14 @@ module github.com/vegaprotocol/devopstools
 go 1.19
 
 require (
-	code.vegaprotocol.io/shared v0.0.0-20220816105810-a519d6b44f35
-	code.vegaprotocol.io/vega v0.57.1-0.20221008180005-bac85b570380
+	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
+	code.vegaprotocol.io/vega v0.58.1-0.20221019163417-0546352ee810
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
+	github.com/ethereum/go-ethereum v1.10.25
+	github.com/hashicorp/vault/api v1.8.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/spf13/cobra v1.5.0
+	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tendermint/tendermint v0.34.21
 	go.uber.org/zap v1.23.0
@@ -79,6 +82,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.6.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
@@ -91,12 +95,11 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.0 // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220317090546-adb2f9614b17 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -114,7 +117,8 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/subosito/gotenv v1.4.1 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
@@ -122,29 +126,19 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/vegaprotocol/go-slip10 v0.1.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/net v0.0.0-20220726230323-06994584191e // indirect
+	golang.org/x/sys v0.0.0-20220727055044-e65921a090b8 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-require (
-	github.com/ethereum/go-ethereum v1.10.25
-	github.com/hashicorp/vault/api v1.8.0
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.13.0
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/sys v0.0.0-20220727055044-e65921a090b8 // indirect
-)
-
 replace (
 	github.com/fergusstrange/embedded-postgres => github.com/vegaprotocol/embedded-postgres v1.13.1-0.20220920142401-92fd684a486d
-	github.com/jackc/pgx/v4 v4.14.1 => github.com/pscott31/pgx/v4 v4.16.2-0.20220531164027-bd666b84b61f
 	github.com/shopspring/decimal => github.com/vegaprotocol/decimal v1.3.1-uint256
 )
