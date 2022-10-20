@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -63,19 +62,19 @@ func RunCreateNode(args CreateNodeArgs) error {
 	if err != nil {
 		return err
 	}
-	byteResult, err := json.MarshalIndent(newSecrets, "", "\t")
-	if err != nil {
-		return fmt.Errorf("failed to parse createNode '%s' secret data for network '%s', %w", args.NodeId, args.VegaNetworkName, err)
-	}
-	fmt.Println(string(byteResult))
 
 	if err = secretStore.StoreVegaNode(args.VegaNetworkName, args.NodeId, newSecrets); err != nil {
 		return err
 	}
 
 	args.Logger.Info("Generated new secrets for node", zap.String("network", args.VegaNetworkName), zap.String("nodeId", args.NodeId),
+		zap.String("Name", newSecrets.Name),
+		zap.String("Country", newSecrets.Country),
+		zap.String("InfoURL", newSecrets.InfoURL),
+		zap.String("AvatarURL", newSecrets.AvatarURL),
 		zap.String("VegaPubKey", newSecrets.VegaPubKey),
 		zap.String("VegaId", newSecrets.VegaId),
+		zap.Uint64("VegaPubKeyIndex", *newSecrets.VegaPubKeyIndex),
 		zap.String("EthereumAddress", newSecrets.EthereumAddress),
 		zap.String("TendermintNodeId", newSecrets.TendermintNodeId),
 		zap.String("TendermintNodePubKey", newSecrets.TendermintNodePubKey),
