@@ -124,6 +124,7 @@ func GenerateRandomWikiURL() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s, %w", errMsg, err)
 	}
+	defer response.Body.Close()
 	if response.StatusCode == http.StatusFound { //status code 302
 		url, err := response.Location()
 		if err != nil {
