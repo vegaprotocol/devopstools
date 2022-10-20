@@ -3,6 +3,12 @@ Scripts used by DevOps team at Vega
 
 This repository contains shared packages imported and used by scripts in other repositories.
 
+## Setup
+
+Create `secret.txt` in root directory of this repo, and put your GitHub token inside. (the scope of the token does not matter).
+
+Reason: some of the commands require secrets (vega or eth wallets, or node secrets). Those are read automatically from HashiCorp Vault. We use GitHub authentication for HashiCorp Vault.
+
 ## DevOps goals
 
 We want to minimise usage of `bash` and replace it with `Golang`.
