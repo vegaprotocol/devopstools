@@ -6,25 +6,31 @@ package secrets
 
 // Private part stored in HashiCorp Vault
 type VegaNodePrivate struct {
+	// Metadata
+	Name      string `json:"name"`
+	Country   string `json:"country"`
+	InfoURL   string `json:"info_url"`
+	AvatarURL string `json:"avatar_url"`
 	// Ethereum
 	EthereumAddress    string `json:"ethereum_address"`
 	EthereumPrivateKey string `json:"ethereum_private_key"`
 	EthereumMnemonic   string `json:"ethereum_mnemonic"`
 	// Vega
-	VegaId             string `json:"vega_id"`
-	VegaPubKey         string `json:"vega_public_key"`
-	VegaPrivateKey     string `json:"vega_private_key"`
-	VegaRecoveryPhrase string `json:"vega_recovery_phrase"`
+	VegaId             string  `json:"vega_id"`
+	VegaPubKey         string  `json:"vega_public_key"`
+	VegaPrivateKey     string  `json:"vega_private_key"`
+	VegaRecoveryPhrase string  `json:"vega_recovery_phrase"`
+	VegaPubKeyIndex    *uint64 `json:"vega_public_key_index"`
 	// Tendermint
-	TendermintNodeId              string `json:"tendermint_node_id,omitempty"`
-	TendermintNodePubKey          string `json:"tendermint_node_public_key,omitempty"`
-	TendermintNodePrivateKey      string `json:"tendermint_node_private_key,omitempty"`
-	TendermintValidatorAddress    string `json:"tendermint_validator_address,omitempty"`
-	TendermintValidatorPubKey     string `json:"tendermint_validator_public_key,omitempty"`
-	TendermintValidatorPrivateKey string `json:"tendermint_validator_private_key,omitempty"`
+	TendermintNodeId              string `json:"tendermint_node_id"`
+	TendermintNodePubKey          string `json:"tendermint_node_public_key"`
+	TendermintNodePrivateKey      string `json:"tendermint_node_private_key"`
+	TendermintValidatorAddress    string `json:"tendermint_validator_address"`
+	TendermintValidatorPubKey     string `json:"tendermint_validator_public_key"`
+	TendermintValidatorPrivateKey string `json:"tendermint_validator_private_key"`
 	// Binary wallet file passphrase
-	WalletBinaryPassphrase string         `json:"wallet_binary_passphrase,omitempty"`
-	BinaryWallets          *BinaryWallets `json:"binary_wallets,omitempty"`
+	WalletBinaryPassphrase string         `json:"wallet_binary_passphrase"`
+	BinaryWallets          *BinaryWallets `json:"binary_wallets"`
 }
 
 type BinaryWallets struct {
