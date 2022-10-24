@@ -1,4 +1,4 @@
-package vegaapi
+package datanode
 
 import (
 	"context"

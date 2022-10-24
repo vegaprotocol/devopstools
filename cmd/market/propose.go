@@ -280,7 +280,7 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 
 func proposeVoteProvideLP(
 	name string,
-	dataNodeClient *vegaapi.DataNode,
+	dataNodeClient vegaapi.DataNodeClient,
 	lastBlockData *vegaapipb.LastBlockHeightResponse,
 	markets []*vega.Market,
 	proposerVegawallet *wallet.VegaWallet,
@@ -400,7 +400,7 @@ func proposeVoteProvideLP(
 
 func submitTx(
 	description string,
-	dataNodeClient *vegaapi.DataNode,
+	dataNodeClient vegaapi.DataNodeClient,
 	proposerVegawallet *wallet.VegaWallet,
 	logger *zap.Logger,
 	walletTxReq *walletpb.SubmitTransactionRequest,

@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 	"go.uber.org/zap"
 )
 
-func (network *NetworkTools) GetDataNodeClient() (*vegaapi.DataNode, error) {
+func (network *NetworkTools) GetDataNodeClient() (vegaapi.DataNodeClient, error) {
 	addresses := network.GetNetworkGRPCDataNodes()
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy GRPC endpoint for '%s'", network.Name)
 	}
-	node := vegaapi.NewDataNode(addresses, time.Second, network.logger)
+	node := datanode.NewDataNode(addresses, time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)

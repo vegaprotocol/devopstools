@@ -93,7 +93,7 @@ func RunProvideLP(args ProvideLPArgs) error {
 
 func provideLiquidity(
 	name string,
-	dataNodeClient *vegaapi.DataNode,
+	dataNodeClient vegaapi.DataNodeClient,
 	proposerVegawallet *wallet.VegaWallet,
 	logger *zap.Logger,
 	marketId string,

@@ -276,6 +276,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					},
 				},
 			}
+			logger.Info("tx", zap.Any("walletTxReq", walletTxReq))
 
 			signedTx, err := vegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
 			if err != nil {
@@ -283,6 +284,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 				resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
 				return
 			}
+			logger.Info("tx", zap.Any("signedTx", signedTx))
 
 			submitReq := &vegaapipb.SubmitTransactionRequest{
 				Tx:   signedTx,
@@ -294,6 +296,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 				resultsChannel <- fmt.Errorf("failed to submit a transaction for %s node", name)
 				return
 			}
+			logger.Info("tx", zap.Any("submitResponse", submitResponse))
 			if !submitResponse.Success {
 				logger.Error("transaction submission failure", zap.String("node", name), zap.Error(err))
 				resultsChannel <- fmt.Errorf("transaction submission failure for %s node", name)

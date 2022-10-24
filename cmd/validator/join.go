@@ -6,11 +6,16 @@ import (
 	"math/big"
 	"os"
 
+	"code.vegaprotocol.io/vega/protos/vega"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
@@ -165,6 +170,106 @@ func RunJoin(args JoinArgs) error {
 		}
 		args.Logger.Info("Staked to new vega pub key", zap.String("vegaPubKey", currentNodeSecrets.VegaPubKey),
 			zap.String("amount", minValidatorStake.String()))
+	}
+
+	if args.SelfDelegate {
+		var (
+			epochValidator   *vega.Node
+			stakedByOperator = big.NewInt(0)
+			pendingStake     = big.NewInt(0)
+			ok               bool
+		)
+		dataNodeClient, err := network.GetDataNodeClient()
+		if err != nil {
+			return fmt.Errorf("failed to self-delegate, %w", err)
+		}
+		//
+		// Get current delegation
+		//
+		epoch, err := dataNodeClient.GetCurrentEpoch()
+		if err != nil {
+			return fmt.Errorf("failed to self-delegate, %w", err)
+		}
+		for _, v := range epoch.Validators {
+			if v.Id == currentNodeSecrets.VegaId {
+				epochValidator = v
+				break
+			}
+		}
+		if epochValidator != nil {
+			stakedByOperator, ok = stakedByOperator.SetString(epochValidator.StakedByOperator, 0)
+			if !ok {
+				args.Logger.Error("failed to parse StakedByOperator", zap.String("node", currentNodeSecrets.Name),
+					zap.String("StakedByOperator", epochValidator.StakedByOperator), zap.Error(err))
+			}
+			pendingStake, ok = pendingStake.SetString(epochValidator.PendingStake, 0)
+			if !ok {
+				args.Logger.Error("failed to parse PendingStake", zap.String("node", currentNodeSecrets.Name),
+					zap.String("PendingStake", epochValidator.PendingStake), zap.Error(err))
+			}
+			args.Logger.Info("found validator", zap.String("vega Id", currentNodeSecrets.VegaId),
+				zap.String("vega pub key", currentNodeSecrets.VegaPubKey), zap.String("stakedByOperator", stakedByOperator.String()),
+				zap.String("pendingStake", pendingStake.String()), zap.String("minValidatorStake", minValidatorStake.String()))
+			stakedByOperator = stakedByOperator.Add(stakedByOperator, pendingStake)
+		}
+		if stakedByOperator.Cmp(minValidatorStake) >= 0 {
+			args.Logger.Info("no need to stake", zap.String("validator", currentNodeSecrets.Name))
+		} else {
+			//
+			// Get Current Total Stake
+			//
+			partyTotalStake, err := dataNodeClient.GetPartyTotalStake(currentNodeSecrets.VegaPubKey)
+			if err != nil {
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+			if partyTotalStake.Cmp(minValidatorStake) < 0 {
+				return fmt.Errorf("failed to self-delegate, party %s has %s stake which is less than required min %s",
+					currentNodeSecrets.VegaPubKey, partyTotalStake.String(), minValidatorStake.String())
+			}
+			//
+			// Submit Delegate Transaction
+			//
+			args.Logger.Info("data", zap.String("VegaId", currentNodeSecrets.VegaId), zap.String("VegaPubKey", currentNodeSecrets.VegaPubKey))
+			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
+				Id:             currentNodeSecrets.VegaId,
+				PublicKey:      currentNodeSecrets.VegaPubKey,
+				PrivateKey:     currentNodeSecrets.VegaPrivateKey,
+				RecoveryPhrase: currentNodeSecrets.VegaRecoveryPhrase,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+			lastBlockData, err := dataNodeClient.LastBlockData()
+			if err != nil {
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+			signedTx, err := vegawallet.SignTxWithPoW(&walletpb.SubmitTransactionRequest{
+				PubKey: currentNodeSecrets.VegaPubKey,
+				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
+					DelegateSubmission: &commandspb.DelegateSubmission{
+						NodeId: currentNodeSecrets.VegaId,
+						Amount: minValidatorStake.String(),
+					},
+				},
+			}, lastBlockData)
+			if err != nil {
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+
+			submitResponse, err := dataNodeClient.SubmitTransaction(&vegaapipb.SubmitTransactionRequest{
+				Tx:   signedTx,
+				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+			})
+			if err != nil {
+				args.Logger.Error("failed to submit a trasnaction", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+			args.Logger.Info("tx", zap.Any("submitResponse", submitResponse))
+			if !submitResponse.Success {
+				args.Logger.Error("transaction submission failure", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+		}
 	}
 
 	return nil

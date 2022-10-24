@@ -35,7 +35,7 @@ type VegaNetwork struct {
 	EthNetwork     types.ETHNetwork
 
 	// clients
-	DataNodeClient        *vegaapi.DataNode
+	DataNodeClient        vegaapi.DataNodeClient
 	EthClientManager      *ethutils.EthereumClientManager
 	SmartContractsManager *smartcontracts.SmartContractsManager
 	WalletManager         *wallet.WalletManager
@@ -45,7 +45,7 @@ type VegaNetwork struct {
 
 func NewVegaNetwork(
 	network string,
-	dataNodeClient *vegaapi.DataNode,
+	dataNodeClient vegaapi.DataNodeClient,
 	nodeSecretStore secrets.NodeSecretStore,
 	ethClientManager *ethutils.EthereumClientManager,
 	smartContractsManager *smartcontracts.SmartContractsManager,
