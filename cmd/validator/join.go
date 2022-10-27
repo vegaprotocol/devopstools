@@ -21,12 +21,13 @@ import (
 
 type JoinArgs struct {
 	*ValidatorArgs
-	VegaNetworkName string
-	NodeId          string
-	GenerateSecrets bool
-	UnstakeFromOld  bool
-	Stake           bool
-	SelfDelegate    bool
+	VegaNetworkName             string
+	NodeId                      string
+	GenerateSecrets             bool
+	UnstakeFromOld              bool
+	Stake                       bool
+	SelfDelegate                bool
+	GetEthAddressToSubmitBundle bool
 }
 
 var joinArgs JoinArgs
@@ -60,6 +61,7 @@ func init() {
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.UnstakeFromOld, "unstake-from-old-secrets", false, "Unstake from old vegaPubKey. Used together with --generate-new-secrets")
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.Stake, "stake", false, "Stake Vega token to validator's VegaPub key. Skip if there is enough stake already.")
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.SelfDelegate, "self-delegate", false, "Delegate from node's vegaPubKey to node's id. You need to stake to node's vegaPubKey first.")
+	joinCmd.PersistentFlags().BoolVar(&joinArgs.GetEthAddressToSubmitBundle, "get-eth-to-submit-bundle", false, "Prints ethereum address of a wallet that will be used to submit Multisig Control bundle.")
 }
 
 func RunJoin(args JoinArgs) error {
@@ -73,6 +75,10 @@ func RunJoin(args JoinArgs) error {
 		secretStore   secrets.NodeSecretStore
 		err           error
 	)
+
+	if args.GetEthAddressToSubmitBundle {
+		return printEthAddressToSubmitBundle(args)
+	}
 
 	args.Logger.Info("executing Join",
 		zap.String("network", args.VegaNetworkName), zap.String("node", args.NodeId), zap.Bool("generate secrets", args.GenerateSecrets),
@@ -272,5 +278,26 @@ func RunJoin(args JoinArgs) error {
 		}
 	}
 
+	return nil
+}
+
+func printEthAddressToSubmitBundle(args JoinArgs) error {
+	network, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
+	if err != nil {
+		return err
+	}
+	ethNetwork, err := network.GetEthNetwork()
+	if err != nil {
+		return err
+	}
+	walletManager, err := args.GetWalletManager()
+	if err != nil {
+		return err
+	}
+	wallet, err := walletManager.GetNetworkMainEthWallet(ethNetwork, args.VegaNetworkName)
+	if err != nil {
+		return err
+	}
+	fmt.Println(wallet.Address)
 	return nil
 }
