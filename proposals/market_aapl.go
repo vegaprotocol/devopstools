@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"code.vegaprotocol.io/vega/core/types"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	oraclespb "code.vegaprotocol.io/vega/protos/vega/oracles/v1"
+	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
@@ -21,6 +22,7 @@ func NewAAPLMarketProposal(
 	var (
 		reference = tools.RandAlpaNumericString(40)
 		Name      = fmt.Sprintf("Apple Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 months
+		pubKey    = types.CreateSignerFromString(oraclePubKey, types.DataSignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
@@ -44,41 +46,41 @@ func NewAAPLMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "USD",
-									OracleSpecForSettlementData: &oraclespb.OracleSpecConfiguration{
-										PubKeys: []string{oraclePubKey},
-										Filters: []*oraclespb.Filter{
+									DataSourceSpecForSettlementData: &datav1.DataSourceSpecConfiguration{
+										Signers: []*datav1.Signer{pubKey.IntoProto()},
+										Filters: []*datav1.Filter{
 											{
-												Key: &oraclespb.PropertyKey{
+												Key: &datav1.PropertyKey{
 													Name: "prices.AAPL.value",
-													Type: oraclespb.PropertyKey_TYPE_INTEGER,
+													Type: datav1.PropertyKey_TYPE_INTEGER,
 												},
-												Conditions: []*oraclespb.Condition{
+												Conditions: []*datav1.Condition{
 													{
-														Operator: oraclespb.Condition_OPERATOR_EQUALS,
+														Operator: datav1.Condition_OPERATOR_EQUALS,
 														Value:    "1",
 													},
 												},
 											},
 										},
 									},
-									OracleSpecForTradingTermination: &oraclespb.OracleSpecConfiguration{
-										PubKeys: []string{oraclePubKey},
-										Filters: []*oraclespb.Filter{
+									DataSourceSpecForTradingTermination: &datav1.DataSourceSpecConfiguration{
+										Signers: []*datav1.Signer{pubKey.IntoProto()},
+										Filters: []*datav1.Filter{
 											{
-												Key: &oraclespb.PropertyKey{
+												Key: &datav1.PropertyKey{
 													Name: "termination.AAPL.value",
-													Type: oraclespb.PropertyKey_TYPE_BOOLEAN,
+													Type: datav1.PropertyKey_TYPE_BOOLEAN,
 												},
-												Conditions: []*oraclespb.Condition{
+												Conditions: []*datav1.Condition{
 													{
-														Operator: oraclespb.Condition_OPERATOR_EQUALS,
+														Operator: datav1.Condition_OPERATOR_EQUALS,
 														Value:    "1",
 													},
 												},
 											},
 										},
 									},
-									OracleSpecBinding: &vega.OracleSpecToFutureBinding{
+									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
 										SettlementDataProperty:     "prices.AAPL.value",
 										TradingTerminationProperty: "termination.AAPL.value",
 									},

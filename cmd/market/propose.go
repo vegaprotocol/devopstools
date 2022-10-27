@@ -263,9 +263,27 @@ func RunPropose(args ProposeArgs) error {
 }
 
 func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) *vega.Market {
+
 	for _, market := range markets {
+		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil ||
+			market.TradableInstrument.Instrument.GetFuture() == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.Config == nil {
+			continue
+		}
+
+		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.Config.Signers
+		stringSigners := []string{}
+		for _, signer := range signers {
+			if signer.GetPubKey() == nil {
+				continue
+			}
+
+			stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+		}
+
 		if slices.Contains(
-			market.TradableInstrument.Instrument.GetFuture().OracleSpecForTradingTermination.PubKeys,
+			stringSigners,
 			oraclePubKey,
 		) && slices.Contains(
 			market.TradableInstrument.Instrument.Metadata.Tags,
@@ -355,6 +373,9 @@ func proposeVoteProvideLP(
 		return fmt.Errorf("failed to get markets")
 	}
 	market = getMarket(markets, oraclePubKey, marketMetadataMarker)
+	if market == nil {
+		return fmt.Errorf("failed to find particular market for %s oracle public key", oraclePubKey)
+	}
 
 	// Prepare vegawallet Transaction Request
 	provideLPWalletTxReq := walletpb.SubmitTransactionRequest{
