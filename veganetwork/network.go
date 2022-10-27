@@ -22,7 +22,7 @@ type VegaNetwork struct {
 	ValidatorsById map[string]*vega.Node
 
 	// wallets
-	NodeSecrets       map[string]secrets.VegaNodePrivate
+	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *wallet.EthWallet
 	AssetMainWallet   *wallet.EthWallet
 

@@ -254,7 +254,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		}
 
 		wg.Add(1)
-		go func(name string, validator *vega.Node, nodeSecrets secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string) {
+		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string) {
 			defer wg.Done()
 			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
 				Id:             nodeSecrets.VegaId,

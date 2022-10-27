@@ -47,12 +47,7 @@ func (c *HCVaultSecretStore) GetVegaNodeList(network string) ([]string, error) {
 	return secretList, nil
 }
 
-func (c *HCVaultSecretStore) GetAllVegaNode(network string) (map[string]secrets.VegaNodePrivate, error) {
-
-	// TODO: remove once not needed
-	if network == "devnet" {
-		network = "devnet1"
-	}
+func (c *HCVaultSecretStore) GetAllVegaNode(network string) (map[string]*secrets.VegaNodePrivate, error) {
 
 	nodeList, err := c.GetVegaNodeList(network)
 	if err != nil {
@@ -79,12 +74,12 @@ func (c *HCVaultSecretStore) GetAllVegaNode(network string) (map[string]secrets.
 	wg.Wait()
 	close(resultsChannel)
 
-	result := map[string]secrets.VegaNodePrivate{}
+	result := map[string]*secrets.VegaNodePrivate{}
 	for nodeResult := range resultsChannel {
 		if nodeResult.Err != nil {
 			return nil, fmt.Errorf("failed to get secret for one node for network %s, %w", network, nodeResult.Err)
 		}
-		result[nodeResult.NodeId] = *nodeResult.SecretData
+		result[nodeResult.NodeId] = nodeResult.SecretData
 	}
 	return result, nil
 }
