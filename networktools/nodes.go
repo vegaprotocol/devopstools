@@ -79,3 +79,7 @@ func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
 	}
 	return addresses
 }
+
+func (network *NetworkTools) GetNodeURL(nodeId string) string {
+	return fmt.Sprintf("%s.%s", nodeId, network.DNSSuffix)
+}
