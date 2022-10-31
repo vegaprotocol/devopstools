@@ -29,6 +29,7 @@ type ProposeArgs struct {
 	ProposeETHBTC  bool
 	ProposeTSLA    bool
 	ProposeUNIDAI  bool
+	ProposeETHDAI  bool
 	ProposeAll     bool
 	OraclePubKey   string
 	FakeAsset      bool
@@ -61,6 +62,7 @@ func init() {
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeETHBTC, "ethbtc", false, "Propose ETHBTC market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeTSLA, "tsla", false, "Propose TSLA market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeUNIDAI, "unidai", false, "Propose UNIDAI market")
+	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeETHDAI, "ethdai", false, "Propose ETHDI market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeAll, "all", false, "Propose all markets")
 
 	proposeCmd.PersistentFlags().StringVar(&proposeArgs.OraclePubKey, "oracle-pubkey", "", "Oracle PubKey. Optional, by default proposer")
@@ -100,41 +102,9 @@ func RunPropose(args ProposeArgs) error {
 		return err
 	}
 
-	var (
-		settlementAssetId = struct {
-			AAPL    string
-			AAVEDAI string
-			BTCUSD  string
-			ETHBTC  string
-			TSLA    string
-			UNIDAI  string
-		}{}
-	)
-
-	switch args.VegaNetworkName {
-	case "devnet1":
-		settlementAssetId.AAPL = "fUSDC"
-		settlementAssetId.AAVEDAI = "fDAI"
-		settlementAssetId.BTCUSD = "fDAI"
-		settlementAssetId.ETHBTC = "fBTC"
-		settlementAssetId.TSLA = "fEURO"
-		settlementAssetId.UNIDAI = "fDAI"
-	case "stagnet1":
-		settlementAssetId.AAPL = "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d"    // "tUSDC"
-		settlementAssetId.AAVEDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663" // "tDAI"
-		settlementAssetId.BTCUSD = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
-		settlementAssetId.ETHBTC = "cee709223217281d7893b650850ae8ee8a18b7539b5658f9b4cc24de95dd18ad"  // "tBTC"
-		settlementAssetId.TSLA = "177e8f6c25a955bd18475084b99b2b1d37f28f3dec393fab7755a7e69c3d8c3b"    // "tEURO"
-		settlementAssetId.UNIDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
-	case "fairground":
-		settlementAssetId.AAPL = "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d"    // "tUSDC"
-		settlementAssetId.AAVEDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663" // "tDAI"
-		settlementAssetId.BTCUSD = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
-		settlementAssetId.ETHBTC = "cee709223217281d7893b650850ae8ee8a18b7539b5658f9b4cc24de95dd18ad"  // "tBTC"
-		settlementAssetId.TSLA = "177e8f6c25a955bd18475084b99b2b1d37f28f3dec393fab7755a7e69c3d8c3b"    // "tEURO"
-		settlementAssetId.UNIDAI = "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663"  // "tDAI"
-	default:
-		return fmt.Errorf("cannot create markets for %s network: missing config", args.VegaNetworkName)
+	settlementAssetId, foundSettlementAssetId := settlementAssetIDs[args.VegaNetworkName]
+	if !foundSettlementAssetId {
+		return fmt.Errorf("failed to get assets id's for network %s", err)
 	}
 
 	// Propose
@@ -195,6 +165,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 		}()
 	}
+
 	//
 	// ETHBTC
 	//
@@ -250,12 +221,31 @@ func RunPropose(args ProposeArgs) error {
 		}()
 	}
 
+	//
+	// ETHDAI
+	//
+	if args.ProposeETHDAI || args.ProposeAll {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewETHDAIMarketProposal(
+				settlementAssetId.ETHDAI, 5, oraclePubKey,
+				closingTime, enactmentTime,
+				[]string{MARKET_ETHDAI_MARKER},
+			)
+			resultsChannel <- proposeVoteProvideLP(
+				"ETHDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				oraclePubKey, closingTime, enactmentTime, MARKET_ETHDAI_MARKER, sub, logger,
+			)
+		}()
+	}
+
 	wg.Wait()
 	close(resultsChannel)
 
 	for err := range resultsChannel {
 		if err != nil {
-			return fmt.Errorf("at least one proposal failed")
+			return fmt.Errorf("at least one proposal failed: %w", err)
 		}
 	}
 
@@ -263,7 +253,6 @@ func RunPropose(args ProposeArgs) error {
 }
 
 func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) *vega.Market {
-
 	for _, market := range markets {
 		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil ||
 			market.TradableInstrument.Instrument.GetFuture() == nil ||

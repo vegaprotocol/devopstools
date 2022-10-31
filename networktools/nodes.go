@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/types"
 )
 
 //
@@ -12,7 +13,7 @@ import (
 
 func (network *NetworkTools) GetNetworkNodes() []string {
 	switch network.Name {
-	case "mainnet":
+	case types.NetworkMainnet:
 		return []string{"mainnet-observer.ops.vega.xyz"}
 	}
 	hosts := []string{}
@@ -47,7 +48,7 @@ func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 
 func (network *NetworkTools) GetNetworkDataNodes() []string {
 	switch network.Name {
-	case "mainnet":
+	case types.NetworkMainnet:
 		return []string{"api.vega.xyz"}
 	}
 	hosts := []string{}
