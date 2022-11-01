@@ -9,15 +9,17 @@ import (
 	"math/big"
 	"net/http"
 	"time"
+
+	"github.com/vegaprotocol/devopstools/types"
 )
 
 func (network *NetworkTools) GetFaucetBaseURL() (string, error) {
 	switch network.Name {
 	case "devnet":
 		return "https://faucet.d.vega.xyz", nil
-	case "stagnet3":
+	case types.NetworkStagnet3:
 		return "https://faucet.stagnet3.vega.xyz", nil
-	case "fairground":
+	case types.NetworkFairground:
 		return "https://faucet.testnet.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://faucet.%s.vega.xyz", network.Name), nil

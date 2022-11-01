@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/vegaprotocol/devopstools/types"
 )
 
 type Traders struct {
@@ -21,9 +23,9 @@ func (network *NetworkTools) GetTraderbotBaseURL() (string, error) {
 	switch network.Name {
 	case "devnet":
 		return "https://traderbot-devnet-k8s.ops.vega.xyz", nil
-	case "stagnet3":
+	case types.NetworkStagnet3:
 		return "https://traderbot-stagnet3-k8s.ops.vega.xyz", nil
-	case "fairground":
+	case types.NetworkFairground:
 		return "https://traderbot-testnet-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://traderbot-%s-k8s.ops.vega.xyz", network.Name), nil
@@ -103,9 +105,9 @@ func (network *NetworkTools) GetLiqbotBaseURL() (string, error) {
 	switch network.Name {
 	case "devnet":
 		return "https://liqbot-devnet-k8s.ops.vega.xyz", nil
-	case "stagnet3":
+	case types.NetworkStagnet3:
 		return "https://liqbot-stagnet3-k8s.ops.vega.xyz", nil
-	case "fairground":
+	case types.NetworkFairground:
 		return "https://liqbot-testnet-k8s.ops.vega.xyz", nil
 	default:
 		return fmt.Sprintf("https://liqbot-%s-k8s.ops.vega.xyz", network.Name), nil

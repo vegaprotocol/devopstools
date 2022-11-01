@@ -27,9 +27,9 @@ func NewNetworkTools(
 	}
 
 	switch name {
-	case "fairground":
+	case types.NetworkFairground:
 		network.DNSSuffix = "testnet.vega.xyz"
-	case "mainnet":
+	case types.NetworkMainnet:
 		network.DNSSuffix = ""
 	default:
 		network.DNSSuffix = fmt.Sprintf("%s.vega.xyz", name)
