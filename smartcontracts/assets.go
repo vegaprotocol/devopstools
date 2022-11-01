@@ -67,6 +67,76 @@ var (
 		Version:    erc20token.ERC20TokenBase,
 	}
 
+	// New Stagnet3
+	WOZ_S3 VegaAsset = VegaAsset{
+		Name:       "Woz Token (Vega)",
+		HexAddress: "0x559cc3042F28dbaBE30A6b2343c102faeA08D399",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TIM_S3 VegaAsset = VegaAsset{
+		Name:       "Tim Token (Vega)",
+		HexAddress: "0x1e071110c83876dc71fBB9B85f273e1DDC805F12",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	MAK_S3 VegaAsset = VegaAsset{
+		Name:       "Maker Reward Token (Vega)",
+		HexAddress: "0x4B8cC8de9Dae629dDB3e64A6b4669077AD9aA0C4",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TEURO_S3 VegaAsset = VegaAsset{
+		Name:       "tEURO TEST",
+		HexAddress: "0xF47c3A0f61ED18386db1FD87Aad3C4523Ec326E8",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TAK_S3 VegaAsset = VegaAsset{
+		Name:       "Taker Reward Token (Vega)",
+		HexAddress: "0x7698D6c27326eB53a09eF50A6d851e7692cC82da",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TBTC_S3 VegaAsset = VegaAsset{
+		Name:       "tBTC TEST",
+		HexAddress: "0x333a2B77fd3c261DfAbB8E161d9063F6c15A3816",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TUSDC_S3 VegaAsset = VegaAsset{
+		Name:       "tUSDC TEST",
+		HexAddress: "0x6b3D260116d9a87458E44718b3DE7fABa8ac745C",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	TDAI_S3 VegaAsset = VegaAsset{
+		Name:       "tDAI TEST",
+		HexAddress: "0x355C3914Ea8F25559D5b8c3E1134c57fB3739B7A",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
+	LIQ_S3 VegaAsset = VegaAsset{
+		Name:       "Liquidity Reward Token (Vega)",
+		HexAddress: "0x3303C7BcF0aa1858D4c3cE7E372dd10809aF7f86",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+	VEGA_S3 VegaAsset = VegaAsset{
+		Name:       "Vega (stagnet3)",
+		HexAddress: "0xF136d9Ca8f9C2F6501487994e498fCDC48813Ae6",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
 	// OLD Deprecated to be removed
 	TEURORopsten VegaAsset = VegaAsset{
 		Name:       "tEURO",
@@ -94,7 +164,9 @@ var (
 	}
 )
 
-var allAssets = []VegaAsset{TEURO, TDAI, TUSDC, TBTC, TEURO_F, TDAI_F, TUSDC_F, TBTC_F, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten}
+var allAssets = []VegaAsset{
+	TEURO, TDAI, TUSDC, TBTC, TEURO_F, TDAI_F, TUSDC_F, TBTC_F, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten,
+	VEGA_S3, LIQ_S3, TDAI_S3, TBTC_S3, TUSDC_S3, TAK_S3, TEURO_S3, MAK_S3, TIM_S3, WOZ_S3}
 
 func (m *SmartContractsManager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
 	name = strings.ToLower(name)

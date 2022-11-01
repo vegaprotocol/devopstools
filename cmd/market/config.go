@@ -44,12 +44,13 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		ETHDAI:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 	},
 	types.NetworkStagnet3: {
-		AAPL:    "tbd", // "tUSDC"
-		AAVEDAI: "tbd", // "tDAI"
-		BTCUSD:  "tbd", // "tDAI"
-		ETHBTC:  "tbd", // "tBTC"
-		TSLA:    "tbd", // "tEURO"
-		UNIDAI:  "tbd", // "tDAI"
+		AAPL:    "758cd6c8be67b2fb360a97e94200398b417633aeb534fadcfde7e2e42b491750", // "tUSDC"
+		AAVEDAI: "74eeaeb035d444a77599dc7e2829ea7fcdc685fd47173a2a2e5fae0994a9d494", // "tDAI"
+		BTCUSD:  "74eeaeb035d444a77599dc7e2829ea7fcdc685fd47173a2a2e5fae0994a9d494", // "tDAI"
+		ETHBTC:  "5250f006831ceb27b83ac7068a049d6b4f60cf0f1254ccc3c4c11d8952e8cc1e", // "tBTC"
+		TSLA:    "37b6a93ad671e25a47682d8562c3c6f4283d051f229b81eba182bd5ae4afa17c", // "tEURO"
+		UNIDAI:  "74eeaeb035d444a77599dc7e2829ea7fcdc685fd47173a2a2e5fae0994a9d494", // "tDAI"
+		ETHDAI:  "74eeaeb035d444a77599dc7e2829ea7fcdc685fd47173a2a2e5fae0994a9d494", // "tDAI"
 	},
 	types.NetworkFairground: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"

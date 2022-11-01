@@ -15,7 +15,7 @@ func (network *NetworkTools) GetDataNodeClient() (vegaapi.DataNodeClient, error)
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy GRPC endpoint for '%s'", network.Name)
 	}
-	node := datanode.NewDataNode(addresses, time.Second, network.logger)
+	node := datanode.NewDataNode(addresses, 3*time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)

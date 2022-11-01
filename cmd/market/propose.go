@@ -321,7 +321,7 @@ func proposeVoteProvideLP(
 	//
 	// Find Proposal
 	//
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 10)
 	res, err := dataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
 		ProposalReference: &reference,
 	})
@@ -337,6 +337,11 @@ func proposeVoteProvideLP(
 			proposalId = edge.Node.Proposal.Id
 		}
 	}
+
+	if len(proposalId) < 1 {
+		return fmt.Errorf("got empty proposal id for the %s reference", reference)
+	}
+
 	//
 	// VOTE
 	//
@@ -359,7 +364,7 @@ func proposeVoteProvideLP(
 
 	markets, err = dataNodeClient.GetAllMarkets()
 	if err != nil {
-		return fmt.Errorf("failed to get markets")
+		return fmt.Errorf("failed to get markets: %w", err)
 	}
 	market = getMarket(markets, oraclePubKey, marketMetadataMarker)
 	if market == nil {
@@ -417,7 +422,7 @@ func submitTx(
 ) error {
 	lastBlockData, err := dataNodeClient.LastBlockData()
 	if err != nil {
-		return fmt.Errorf("failed to submit tx, cos")
+		return fmt.Errorf("failed to submit tx: %w", err)
 	}
 
 	// Sign + Proof of Work vegawallet Transaction request
@@ -448,7 +453,7 @@ func submitTx(
 	if !submitResponse.Success {
 		logger.Error("Transaction submission response is not successful",
 			zap.String("proposer", proposerVegawallet.PublicKey), zap.String("description", description),
-			zap.Any("txReq", submitReq), zap.Any("response", submitResponse))
+			zap.Any("txReq", submitReq.String()), zap.Any("response", submitResponse))
 		return err
 	}
 	logger.Info("Successful Submision of Market Proposal", zap.String("description", description),

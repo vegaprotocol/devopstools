@@ -66,7 +66,7 @@ func RunProvideLP(args ProvideLPArgs) error {
 	}
 
 	failed := false
-	for _, marketName := range []string{"AAPL", "AAVEDAI", "BTCUSD", "ETHBTC", "TSLA", "UNIDAI"} {
+	for _, marketName := range []string{"AAPL", "AAVEDAI", "BTCUSD", "ETHBTC", "TSLA", "UNIDAI", "ETHDAI"} {
 		market := getMarket(markets, proposerVegawallet.PublicKey, fmt.Sprintf("auto:%s", strings.ToLower(marketName)))
 		if market == nil {
 			logger.Info("market does not exists", zap.String("market", marketName))
