@@ -84,3 +84,29 @@ func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
 func (network *NetworkTools) GetNodeURL(nodeId string) string {
 	return fmt.Sprintf("%s.%s", nodeId, network.DNSSuffix)
 }
+
+//
+// Tendermint endpoints
+//
+
+func (network *NetworkTools) GetNetworkTendermintRESTEndpoints() []string {
+	switch network.Name {
+	case types.NetworkMainnet:
+		return []string{"http://api2.vega.xyz:26657", "http://api3.vega.xyz:26657"}
+	}
+	hosts := []string{}
+	previousMissing := false
+	for i := 0; i < 100; i++ {
+		host := fmt.Sprintf("tm.n%02d.%s", i, network.DNSSuffix)
+		if _, err := tools.GetIP(host); err != nil {
+			if previousMissing {
+				break
+			} else {
+				previousMissing = true
+			}
+		} else {
+			hosts = append(hosts, fmt.Sprintf("https://%s", host))
+		}
+	}
+	return hosts
+}
