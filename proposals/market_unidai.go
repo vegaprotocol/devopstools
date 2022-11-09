@@ -46,35 +46,51 @@ func NewUNIDAIMarketProposal(
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
 									QuoteName:       "DAI",
-									DataSourceSpecForSettlementData: &datav1.DataSourceSpecConfiguration{
-										Signers: []*datav1.Signer{pubKey.IntoProto()},
-										Filters: []*datav1.Filter{
-											{
-												Key: &datav1.PropertyKey{
-													Name: "prices.UNI.value",
-													Type: datav1.PropertyKey_TYPE_INTEGER,
-												},
-												Conditions: []*datav1.Condition{
-													{
-														Operator: datav1.Condition_OPERATOR_EQUALS,
-														Value:    "1",
+									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
+										SourceType: &vega.DataSourceDefinition_External{
+											External: &vega.DataSourceDefinitionExternal{
+												SourceType: &vega.DataSourceDefinitionExternal_Oracle{
+													Oracle: &vega.DataSourceSpecConfiguration{
+														Signers: []*datav1.Signer{pubKey.IntoProto()},
+														Filters: []*datav1.Filter{
+															{
+																Key: &datav1.PropertyKey{
+																	Name: "prices.UNI.value",
+																	Type: datav1.PropertyKey_TYPE_INTEGER,
+																},
+																Conditions: []*datav1.Condition{
+																	{
+																		Operator: datav1.Condition_OPERATOR_EQUALS,
+																		Value:    "1",
+																	},
+																},
+															},
+														},
 													},
 												},
 											},
 										},
 									},
-									DataSourceSpecForTradingTermination: &datav1.DataSourceSpecConfiguration{
-										Signers: []*datav1.Signer{pubKey.IntoProto()},
-										Filters: []*datav1.Filter{
-											{
-												Key: &datav1.PropertyKey{
-													Name: "termination.UNI.value",
-													Type: datav1.PropertyKey_TYPE_BOOLEAN,
-												},
-												Conditions: []*datav1.Condition{
-													{
-														Operator: datav1.Condition_OPERATOR_EQUALS,
-														Value:    "1",
+									DataSourceSpecForTradingTermination: &vega.DataSourceDefinition{
+										SourceType: &vega.DataSourceDefinition_External{
+											External: &vega.DataSourceDefinitionExternal{
+												SourceType: &vega.DataSourceDefinitionExternal_Oracle{
+													Oracle: &vega.DataSourceSpecConfiguration{
+														Signers: []*datav1.Signer{pubKey.IntoProto()},
+														Filters: []*datav1.Filter{
+															{
+																Key: &datav1.PropertyKey{
+																	Name: "termination.UNI.value",
+																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
+																},
+																Conditions: []*datav1.Condition{
+																	{
+																		Operator: datav1.Condition_OPERATOR_EQUALS,
+																		Value:    "1",
+																	},
+																},
+															},
+														},
 													},
 												},
 											},

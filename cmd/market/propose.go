@@ -257,11 +257,13 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil ||
 			market.TradableInstrument.Instrument.GetFuture() == nil ||
 			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.Config == nil {
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData() == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal() == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal().GetOracle() == nil {
 			continue
 		}
 
-		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.Config.Signers
+		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal().GetOracle().Signers
 		stringSigners := []string{}
 		for _, signer := range signers {
 			if signer.GetPubKey() == nil {
