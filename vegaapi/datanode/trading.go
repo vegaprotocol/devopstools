@@ -32,13 +32,13 @@ func (n *DataNode) GetAllMarkets() ([]*vega.Market, error) {
 // 		return
 // 	}
 
-// 	if n.conn.GetState() != connectivity.Ready {
+// 	if n.Conn.GetState() != connectivity.Ready {
 // 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 // 		return
 // 	}
 
-// 	c := dataapipb.NewTradingDataServiceClient(n.conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+// 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+// 	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 // 	defer cancel()
 
 // 	response, err = c.PartyAccounts(ctx, req)
@@ -56,13 +56,13 @@ func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapi
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.GetMarket(ctx, req)
@@ -80,13 +80,13 @@ func (n *DataNode) ListMarkets(req *dataapipb.ListMarketsRequest) (response *dat
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.ListMarkets(ctx, req)
@@ -104,13 +104,13 @@ func (n *DataNode) ListMarkets(req *dataapipb.ListMarketsRequest) (response *dat
 // 		return
 // 	}
 
-// 	if n.conn.GetState() != connectivity.Ready {
+// 	if n.Conn.GetState() != connectivity.Ready {
 // 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 // 		return
 // 	}
 
-// 	c := dataapipb.NewTradingDataServiceClient(n.conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+// 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+// 	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 // 	defer cancel()
 
 // 	response, err = c.PositionsByParty(ctx, req)
@@ -128,13 +128,13 @@ func (n *DataNode) ListMarkets(req *dataapipb.ListMarketsRequest) (response *dat
 // 		return
 // 	}
 
-// 	if n.conn.GetState() != connectivity.Ready {
+// 	if n.Conn.GetState() != connectivity.Ready {
 // 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 // 		return
 // 	}
 
-// 	c := dataapipb.NewTradingDataServiceClient(n.conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+// 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+// 	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 // 	defer cancel()
 
 // 	response, err = c.AssetByID(ctx, req)

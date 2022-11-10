@@ -49,13 +49,13 @@ func (n *DataNode) ListNetworkParameters(req *dataapipb.ListNetworkParametersReq
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.ListNetworkParameters(ctx, req)
@@ -72,13 +72,13 @@ func (n *DataNode) GetNetworkParameter(req *dataapipb.GetNetworkParameterRequest
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.GetNetworkParameter(ctx, req)
@@ -95,13 +95,13 @@ func (n *DataNode) GetEpoch(req *dataapipb.GetEpochRequest) (response *dataapipb
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.GetEpoch(ctx, req)
@@ -118,13 +118,13 @@ func (n *DataNode) ListAssets(req *dataapipb.ListAssetsRequest) (response *dataa
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.ListAssets(ctx, req)
@@ -141,13 +141,13 @@ func (n *DataNode) ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) 
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.ListGovernanceData(ctx, req)

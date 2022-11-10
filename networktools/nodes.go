@@ -72,6 +72,15 @@ func (network *NetworkTools) GetNetworkDataNodes() []string {
 // GRPC
 //
 
+func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
+	nodes := network.GetNetworkNodes()
+	addresses := make([]string, len(nodes))
+	for i, node := range nodes {
+		addresses[i] = fmt.Sprintf("%s:3002", node)
+	}
+	return addresses
+}
+
 func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
 	nodes := network.GetNetworkDataNodes()
 	addresses := make([]string, len(nodes))
