@@ -303,26 +303,28 @@ func RunJoin(args JoinArgs) error {
 		if err != nil {
 			return err
 		}
-		for i := 0; i < eventNum+3; i += 1 {
-			// result, err := coreClient.DepositBuiltinAsset(
-			// 	"XYZalpha", "bc15c6930f8f19ced37551280fbbf1118926c84eb2e8aadf867b3afe26fd9eed", "1",
-			// 	faucetVegaWallet.SignAny,
-			// )
-			result, err := coreClient.DepositERC20Asset(
-				"c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d",
-				"0x40ff2D218740EF033b43B8Ce0342aEBC81934554",
-				"bc15c6930f8f19ced37551280fbbf1118926c84eb2e8aadf867b3afe26fd9eed",
-				"1",
+		var (
+			vegaAssetId = "XYZepsilon"
+			partyId     = currentNodeSecrets.VegaPubKey
+			amount      = "3"
+		)
+		for i := 0; i < eventNum+10; i += 1 {
+			result, err := coreClient.DepositBuiltinAsset(
+				vegaAssetId,
+				partyId,
+				amount,
 				faucetVegaWallet.SignAny,
 			)
 			if err != nil {
 				return err
 			}
-			if result {
-				fmt.Printf("%d Deposit OK\n", i)
-			} else {
-				fmt.Printf("%d Deposit not OK\n", i)
+			status := "OK"
+			if !result {
+				status = "FAILED"
 			}
+			args.Logger.Info("Deposit", zap.String("status", status), zap.String("vegaAssetId", vegaAssetId),
+				zap.String("partyId", partyId), zap.String("amount", amount),
+			)
 		}
 	}
 

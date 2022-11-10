@@ -59,9 +59,11 @@ func (n *CoreClient) DepositERC20Asset(
 	amount string,
 	signAny func([]byte) ([]byte, string, error),
 ) (bool, error) {
+	// TODO: this event needs to be published to All Validator Nodes
 
 	chainEvent := &commandspb.ChainEvent{
 		Nonce: vgrand.NewNonce(),
+		TxId:  "0",
 		Event: &commandspb.ChainEvent_Erc20{
 			Erc20: &types.ERC20Event{
 				Index: 0,
