@@ -290,7 +290,7 @@ func RunJoin(args JoinArgs) error {
 		if err != nil {
 			return err
 		}
-		// Get Node Secrets
+		// Get Faucet Secrets & wallet
 		walletecretStore, err := args.GetWalletSecretStore()
 		if err != nil {
 			return err
