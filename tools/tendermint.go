@@ -15,7 +15,7 @@ type TendermintRESTClient struct {
 func NewTendermintRESTClient() *TendermintRESTClient {
 	return &TendermintRESTClient{
 		httpClient: &http.Client{
-			Timeout: time.Second * 1,
+			Timeout: time.Second * 5,
 		},
 	}
 }
