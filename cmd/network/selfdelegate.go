@@ -254,7 +254,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		}
 
 		wg.Add(1)
-		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string) {
+		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string, hasVisibleStake bool) {
 			defer wg.Done()
 			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
 				Id:             nodeSecrets.VegaId,
@@ -276,34 +276,43 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					},
 				},
 			}
-			logger.Info("tx", zap.Any("walletTxReq", walletTxReq))
+			logger.Info("tx", zap.String("node", name), zap.Any("walletTxReq", walletTxReq))
 
-			signedTx, err := vegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
-			if err != nil {
-				logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
-				resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
-				return
-			}
-			logger.Info("tx", zap.Any("signedTx", signedTx))
+			for i := 1; i <= 2; i += 1 {
+				if i > 1 {
+					logger.Info("seelp for 1 min before retry", zap.String("node", name), zap.Int("try", i))
+					time.Sleep(time.Minute)
+				}
+				signedTx, err := vegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
+				if err != nil {
+					logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
+					resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
+					return
+				}
+				logger.Info("tx", zap.String("node", name), zap.Int("try", i), zap.Any("signedTx", signedTx))
 
-			submitReq := &vegaapipb.SubmitTransactionRequest{
-				Tx:   signedTx,
-				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+				submitReq := &vegaapipb.SubmitTransactionRequest{
+					Tx:   signedTx,
+					Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+				}
+				submitResponse, err := network.DataNodeClient.SubmitTransaction(submitReq)
+				if err != nil {
+					logger.Error("failed to submit a trasnaction", zap.String("node", name), zap.Int("try", i), zap.Error(err))
+					resultsChannel <- fmt.Errorf("failed to submit a transaction for %s node", name)
+					return
+				}
+				logger.Info("tx", zap.Any("submitResponse", submitResponse))
+				if submitResponse.Success {
+					logger.Info("successful delegation", zap.String("node", name), zap.Int("try", i), zap.Any("response", submitResponse))
+					break
+				}
+				logger.Error("transaction submission failure", zap.String("node", name), zap.Int("try", i), zap.Error(err))
+				if i > 1 || hasVisibleStake {
+					resultsChannel <- fmt.Errorf("transaction submission failure for %s node", name)
+					return
+				}
 			}
-			submitResponse, err := network.DataNodeClient.SubmitTransaction(submitReq)
-			if err != nil {
-				logger.Error("failed to submit a trasnaction", zap.String("node", name), zap.Error(err))
-				resultsChannel <- fmt.Errorf("failed to submit a transaction for %s node", name)
-				return
-			}
-			logger.Info("tx", zap.Any("submitResponse", submitResponse))
-			if !submitResponse.Success {
-				logger.Error("transaction submission failure", zap.String("node", name), zap.Error(err))
-				resultsChannel <- fmt.Errorf("transaction submission failure for %s node", name)
-				return
-			}
-			logger.Info("successful delegation", zap.String("node", name), zap.Any("response", submitResponse))
-		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId)
+		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId, partyTotalStake.Cmp(minValidatorStake) >= 0)
 	}
 	wg.Wait()
 	close(resultsChannel)
