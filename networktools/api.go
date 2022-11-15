@@ -33,17 +33,17 @@ func (network *NetworkTools) GetVegaCoreClientForNode(nodeId string) (vegaapi.Ve
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy Vega Core GRPC endpoint for '%s'", network.Name)
 	}
-	host := make([]string, 1)
+	host := ""
 	for _, address := range addresses {
 		if strings.HasPrefix(address, nodeId) {
-			host[0] = address
+			host = address
 			break
 		}
 	}
-	if len(host[0]) == 0 {
+	if len(host) == 0 {
 		return nil, fmt.Errorf("host '%s' is not healthy in '%s' network", nodeId, network.Name)
 	}
-	node := core.NewCoreClient(host, 3*time.Second, network.logger)
+	node := core.NewCoreClient([]string{host}, 3*time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
