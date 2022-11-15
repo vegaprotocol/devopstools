@@ -28,6 +28,7 @@ type JoinArgs struct {
 	Stake                       bool
 	SelfDelegate                bool
 	GetEthAddressToSubmitBundle bool
+	SendEthereumEvents          bool
 }
 
 var joinArgs JoinArgs
@@ -62,6 +63,7 @@ func init() {
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.Stake, "stake", false, "Stake Vega token to validator's VegaPub key. Skip if there is enough stake already.")
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.SelfDelegate, "self-delegate", false, "Delegate from node's vegaPubKey to node's id. You need to stake to node's vegaPubKey first.")
 	joinCmd.PersistentFlags().BoolVar(&joinArgs.GetEthAddressToSubmitBundle, "get-eth-to-submit-bundle", false, "Prints ethereum address of a wallet that will be used to submit Multisig Control bundle.")
+	joinCmd.PersistentFlags().BoolVar(&joinArgs.SendEthereumEvents, "send-ethereum-events", false, "Send ethereum events to the node. Required for new Validator by network parameter")
 }
 
 func RunJoin(args JoinArgs) error {
@@ -83,6 +85,7 @@ func RunJoin(args JoinArgs) error {
 	args.Logger.Info("executing Join",
 		zap.String("network", args.VegaNetworkName), zap.String("node", args.NodeId), zap.Bool("generate secrets", args.GenerateSecrets),
 		zap.Bool("unstake from old vegaPubKey", args.UnstakeFromOld), zap.Bool("stake", args.Stake), zap.Bool("self delegate", args.SelfDelegate),
+		zap.Bool("send ethereum events", args.SendEthereumEvents),
 	)
 
 	//
@@ -275,6 +278,53 @@ func RunJoin(args JoinArgs) error {
 				args.Logger.Error("transaction submission failure", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
+		}
+	}
+
+	if args.SendEthereumEvents {
+		eventNum, err := networkParams.GetMinimumEthereumEventsForNewValidator()
+		if err != nil {
+			return err
+		}
+		coreClient, err := network.GetVegaCoreClientForNode(args.NodeId)
+		if err != nil {
+			return err
+		}
+		// Get Faucet Secrets & wallet
+		walletecretStore, err := args.GetWalletSecretStore()
+		if err != nil {
+			return err
+		}
+		faucetSecrets, err := walletecretStore.GetVegaWallet("faucet")
+		if err != nil {
+			return err
+		}
+		faucetVegaWallet, err := wallet.NewVegaWallet(faucetSecrets)
+		if err != nil {
+			return err
+		}
+		var (
+			vegaAssetId = "XYZepsilon"
+			partyId     = currentNodeSecrets.VegaPubKey
+			amount      = "3"
+		)
+		for i := 0; i < eventNum+10; i += 1 {
+			result, err := coreClient.DepositBuiltinAsset(
+				vegaAssetId,
+				partyId,
+				amount,
+				faucetVegaWallet.SignAny,
+			)
+			if err != nil {
+				return err
+			}
+			status := "OK"
+			if !result {
+				status = "FAILED"
+			}
+			args.Logger.Info("Deposit", zap.String("status", status), zap.String("vegaAssetId", vegaAssetId),
+				zap.String("partyId", partyId), zap.String("amount", amount),
+			)
 		}
 	}
 

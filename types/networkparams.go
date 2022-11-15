@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	"code.vegaprotocol.io/vega/protos/vega"
@@ -46,4 +47,17 @@ func (p *NetworkParams) GetEthereumConfig() (*vega.EthereumConfig, error) {
 	}
 
 	return result, nil
+}
+
+func (p *NetworkParams) GetMinimumEthereumEventsForNewValidator() (int, error) {
+	param := netparams.MinimumEthereumEventsForNewValidator
+	val, ok := p.Params[param]
+	if !ok {
+		return -1, fmt.Errorf("failed to get MinimumEthereumEventsForNewValidator, missing '%s' network parameter", param)
+	}
+	intVal, err := strconv.Atoi(val)
+	if err != nil {
+		return -1, fmt.Errorf("failed to get MinimumEthereumEventsForNewValidator, value '%s' is not an integer", val)
+	}
+	return intVal, nil
 }

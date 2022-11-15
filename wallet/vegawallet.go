@@ -17,7 +17,7 @@ type VegaWallet struct {
 	*secrets.VegaWalletPrivate
 
 	hdWallet *wallet.HDWallet
-	keyPair  *wallet.KeyPair
+	keyPair  wallet.KeyPair
 }
 
 func NewVegaWallet(
@@ -34,7 +34,7 @@ func NewVegaWallet(
 	return &VegaWallet{
 		VegaWalletPrivate: private,
 		hdWallet:          hdWallet,
-		keyPair:           &keyPair,
+		keyPair:           keyPair,
 	}, nil
 }
 
@@ -76,4 +76,9 @@ func (vw *VegaWallet) SignTxWithPoW(req *walletpb.SubmitTransactionRequest, last
 	}
 
 	return signedTx, nil
+}
+
+func (vw *VegaWallet) SignAny(data []byte) ([]byte, string, error) {
+	sig, err := vw.hdWallet.SignAny(vw.PublicKey, data)
+	return sig, vw.PublicKey, err
 }

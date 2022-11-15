@@ -54,13 +54,13 @@ func (n *DataNode) GetStake(req *dataapipb.GetStakeRequest) (response *dataapipb
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.GetStake(ctx, req)
@@ -78,13 +78,13 @@ func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (respo
 		return
 	}
 
-	if n.conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
 		return
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.callTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	response, err = c.ListDelegations(ctx, req)

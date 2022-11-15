@@ -8,14 +8,17 @@ import (
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 )
 
-type VegaClient interface {
+type VegaCoreClient interface {
 	LastBlockData() (*vegaapipb.LastBlockHeightResponse, error)
 	Statistics() (*vegaapipb.StatisticsResponse, error)
 	SubmitTransaction(req *vegaapipb.SubmitTransactionRequest) (response *vegaapipb.SubmitTransactionResponse, err error)
+	PropagateChainEvent(req *vegaapipb.PropagateChainEventRequest) (response *vegaapipb.PropagateChainEventResponse, err error)
+	DepositBuiltinAsset(vegaAssetId string, partyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
+	DepositERC20Asset(vegaAssetId string, sourceEthereumAddress string, targetPartyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
 }
 
 type DataNodeClient interface {
-	VegaClient
+	VegaCoreClient
 	GetAllNetworkParameters() (map[string]string, error)
 	GetCurrentEpoch() (*vega.Epoch, error)
 	GetAssets() (map[string]*vega.AssetDetails, error)
