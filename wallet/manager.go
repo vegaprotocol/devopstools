@@ -32,15 +32,9 @@ func (wm *WalletManager) GetNetworkMainEthWallet(
 	vegaNetwork string,
 ) (*EthWallet, error) {
 	var (
-		secretPath string
-		errMsg     = "failed to get Main Ethereum Wallet for %s network, %w"
+		secretPath string = fmt.Sprintf("%s/main", vegaNetwork)
+		errMsg            = "failed to get Main Ethereum Wallet for %s network, %w"
 	)
-	switch vegaNetwork {
-	case "devnet", "stagnet3":
-		secretPath = "OldMain"
-	default:
-		secretPath = fmt.Sprintf("%s/main", vegaNetwork)
-	}
 	ethWallet, err := wm.getEthereumWallet(ethNetwork, secretPath)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, vegaNetwork, err)
