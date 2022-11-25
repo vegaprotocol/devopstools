@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"code.vegaprotocol.io/vega/wallet/wallet"
+	"github.com/ipfs/kubo/config"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
 	"github.com/vegaprotocol/devopstools/secrets"
@@ -130,6 +131,17 @@ func fillOutNodeData(nodeSecrets *secrets.VegaNodePrivate) (updatedFields map[st
 			return
 		}
 		updatedFields["AvatarURL"] = nodeSecrets.AvatarURL
+	}
+	if len(nodeSecrets.DeHistoryPeerId) == 0 || len(nodeSecrets.DeHistoryPrivateKey) == 0 {
+		var deHistory config.Identity
+		deHistory, err = generate.GenerateDeHistoryIdentity(nodeSecrets.VegaRecoveryPhrase)
+		if err != nil {
+			return
+		}
+		nodeSecrets.DeHistoryPeerId = deHistory.PeerID
+		nodeSecrets.DeHistoryPrivateKey = deHistory.PrivKey
+		updatedFields["DeHistoryPeerId"] = nodeSecrets.DeHistoryPeerId
+		updatedFields["DeHistoryPrivateKey"] = nodeSecrets.DeHistoryPrivateKey
 	}
 
 	return

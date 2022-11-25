@@ -21,6 +21,9 @@ type VegaNodePrivate struct {
 	VegaPrivateKey     string  `json:"vega_private_key"`
 	VegaRecoveryPhrase string  `json:"vega_recovery_phrase"`
 	VegaPubKeyIndex    *uint64 `json:"vega_public_key_index"`
+	// Data-Node DeHistory
+	DeHistoryPeerId     string `json:"de_history_peer_id"`
+	DeHistoryPrivateKey string `json:"de_history_private_key"`
 	// Tendermint
 	TendermintNodeId              string `json:"tendermint_node_id"`
 	TendermintNodePubKey          string `json:"tendermint_node_public_key"`
