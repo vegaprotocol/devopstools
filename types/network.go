@@ -5,5 +5,6 @@ const (
 	NetworkStagnet1   = "stagnet1"
 	NetworkStagnet3   = "stagnet3"
 	NetworkFairground = "fairground"
+	NetworkSandbox    = "sandbox"
 	NetworkMainnet    = "mainnet"
 )
