@@ -120,6 +120,7 @@ func NewUNIDAIMarketProposal(
 								},
 							},
 						},
+						LpPriceRange: "0.5",
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
