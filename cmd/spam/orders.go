@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	"go.uber.org/zap"
 
@@ -58,10 +59,13 @@ type OrderSpammer struct {
 	dataNodeClient vegaapi.DataNodeClient
 	dataNodeMutex  sync.RWMutex
 	lastBlockData  *vegaapipb.LastBlockHeightResponse
-	vegaWallet     *wallet.VegaWallet
+	rootVegaWallet *wallet.VegaWallet
+	spammerWallets []*wallet.VegaWallet
 
 	lastBlockMonitorDone chan bool
 	spammerDone          chan bool
+
+	marketDetails *vega.Market
 
 	threads  uint8
 	marketId string
@@ -95,6 +99,11 @@ func NewOrderSpammer(threads uint8, marketId string, minPrice, maxPrice uint64, 
 		return nil, fmt.Errorf("max price must be bigger than 0")
 	}
 
+	marketDetails, err := network.DataNodeClient.GetMarketById(marketId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get market details for spammer")
+	}
+
 	return &OrderSpammer{
 		logger:   logger,
 		threads:  threads,
@@ -105,10 +114,69 @@ func NewOrderSpammer(threads uint8, marketId string, minPrice, maxPrice uint64, 
 		spammerDone:          make(chan bool, threads),
 		lastBlockMonitorDone: make(chan bool),
 
-		vegaWallet:     network.VegaTokenWhale,
+		marketDetails: marketDetails,
+
+		rootVegaWallet: network.VegaTokenWhale,
+		spammerWallets: make([]*wallet.VegaWallet, threads),
 		dataNodeClient: network.DataNodeClient,
 		stats:          make([]ordersStats, threads),
 	}, nil
+}
+
+func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount uint32, asset string) error {
+	if spammer.rootVegaWallet == nil {
+		return fmt.Errorf("the root wallet must be valid whale wallet")
+	}
+
+	spammer.dataNodeMutex.RLock()
+	lastBlockDetails := spammer.lastBlockData
+	spammer.dataNodeMutex.RUnlock()
+
+	// must be nil as it is managed in separated thread
+	if lastBlockDetails == nil {
+		return fmt.Errorf("data node details are not set at the moment, it is managed by separated thread, let's wait some more time")
+	}
+
+	orderTx := &walletpb.SubmitTransactionRequest{
+		PubKey: spammer.rootVegaWallet.PublicKey,
+		Command: &walletpb.SubmitTransactionRequest_Transfer{
+			Transfer: &commandspb.Transfer{
+				FromAccountType: vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
+				To:              wallet.PublicKey,
+				ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
+				Asset:           asset,
+				Amount:          fmt.Sprintf("%d", amount),
+				Reference:       "spammer-top-up",
+				Kind: &commandspb.Transfer_OneOff{
+					OneOff: &commandspb.OneOffTransfer{
+						DeliverOn: time.Now().Add(time.Second * 2).Unix(),
+					},
+				},
+			},
+		},
+	}
+
+	signedTx, err := spammer.rootVegaWallet.SignTxWithPoW(orderTx, lastBlockDetails)
+	if err != nil {
+		return fmt.Errorf("failed to sign transaction: %w", err)
+	}
+
+	// wrap in vega Transaction Request
+	submitReq := &vegaapipb.SubmitTransactionRequest{
+		Tx:   signedTx,
+		Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+	}
+
+	submitResponse, err := spammer.dataNodeClient.SubmitTransaction(submitReq)
+	if err != nil {
+		return fmt.Errorf("failed to send the signed transaction: %w", err)
+	}
+
+	if !submitResponse.Success {
+		return fmt.Errorf("sent transaction failed: %s", submitResponse.Data)
+	}
+
+	return nil
 }
 
 func (spammer *OrderSpammer) LastBlockMonitor() {
@@ -124,6 +192,8 @@ func (spammer *OrderSpammer) LastBlockMonitor() {
 			lastBlockData, err := spammer.dataNodeClient.LastBlockData()
 			if err != nil {
 				spammer.logger.Error("failed to get data node last block data", zap.Error(err))
+				// spammer.dataNodeClient.
+				time.Sleep(time.Second)
 				continue
 			}
 			spammer.dataNodeMutex.Lock()
@@ -164,78 +234,99 @@ func (spammer *OrderSpammer) Report() {
 		case <-ticker.C:
 			spammer.statsMutex.RLock()
 			for thread, threadStats := range spammer.stats {
-				spammer.logger.Info(fmt.Sprintf("Spam statistics: %s", threadStats.AsString()), zap.Int("thread", thread))
+				spammer.logger.Info(
+					fmt.Sprintf("Spam statistics: %s", threadStats.AsString()),
+					zap.Int("thread", thread),
+					zap.String("party", spammer.spammerWallets[thread].PublicKey),
+				)
 			}
 			spammer.statsMutex.RUnlock()
 		}
 	}
 }
 
-func (spammer *OrderSpammer) Run() {
+func (spammer *OrderSpammer) Run() error {
 	go spammer.LastBlockMonitor()
 
 	for i := uint8(0); i < spammer.threads; i++ {
-		go func(idx uint8) {
-			ticker := time.NewTicker(time.Millisecond * time.Duration(50+rand.Uint64()%50))
-			defer ticker.Stop()
+		vegaWallet, err := spammer.rootVegaWallet.DeriveKeyPair()
+		if err != nil {
+			return fmt.Errorf("failed to derive spammer wallet for thread %d", i)
+		}
 
-			for {
-				select {
-				case <-spammer.spammerDone:
-					spammer.logger.Info("Spammer thread finished", zap.Uint8("thread", idx))
-					return
-				case <-ticker.C:
-					if spammer.lastBlockData == nil {
-						spammer.logger.Info("Spammer still getting required data from the network", zap.Uint8("thread", idx))
-						time.Sleep(time.Second)
-						continue
-					}
-
-					orderTx := getOrder(
-						fmt.Sprintf("spammer-thread-%d", idx),
-						spammer.vegaWallet.PublicKey,
-						spammer.marketId,
-						spammer.minPrice,
-						spammer.maxPrice,
-					)
-
-					spammer.dataNodeMutex.RLock()
-					signedTx, err := spammer.vegaWallet.SignTxWithPoW(orderTx, spammer.lastBlockData)
-					spammer.dataNodeMutex.RUnlock()
-					if err != nil {
-						spammer.logger.Error("failed to sign transaction with pow", zap.Error(err))
-						continue
-					}
-
-					// wrap in vega Transaction Request
-					submitReq := &vegaapipb.SubmitTransactionRequest{
-						Tx:   signedTx,
-						Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
-					}
-
-					spammer.statsMutex.Lock()
-					spammer.stats[idx].sentOrders++
-					spammer.statsMutex.Unlock()
-					submitResponse, err := spammer.dataNodeClient.SubmitTransaction(submitReq)
-					if err != nil {
-						spammer.logger.Error("failed to send transaction", zap.Error(err))
-						continue
-					}
-
-					if !submitResponse.Success {
-						spammer.logger.Error("order tranzaction failed", zap.String("log", submitResponse.Log), zap.String("data", submitResponse.Data))
-						continue
-					}
-
-					spammer.statsMutex.Lock()
-					spammer.stats[idx].successOrders++
-					spammer.statsMutex.Unlock()
-				}
-			}
-		}(i)
+		go spammer.spammerThread(i, vegaWallet)
+		spammer.spammerWallets[i] = vegaWallet
 	}
 
+	time.Sleep(10)
+	for i := uint8(0); i < spammer.threads; i++ {
+		spammer.TopTheWalletUp(spammer.spammerWallets[i], 1000000000, spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset)
+	}
 	go spammer.Report()
+
+	return nil
+}
+
+func (spammer *OrderSpammer) spammerThread(idx uint8, wallet *wallet.VegaWallet) {
+	ticker := time.NewTicker(time.Millisecond * time.Duration(50+rand.Uint64()%50))
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-spammer.spammerDone:
+			spammer.logger.Info("Spammer thread finished", zap.Uint8("thread", idx))
+			return
+		case <-ticker.C:
+			if spammer.lastBlockData == nil {
+				spammer.logger.Info("Spammer still getting required data from the network", zap.Uint8("thread", idx))
+				time.Sleep(time.Second)
+				continue
+			}
+
+			orderTx := getOrder(
+				fmt.Sprintf("spammer-thread-%d", idx),
+				wallet.PublicKey,
+				spammer.marketId,
+				spammer.minPrice,
+				spammer.maxPrice,
+			)
+
+			spammer.dataNodeMutex.RLock()
+			signedTx, err := wallet.SignTxWithPoW(orderTx, spammer.lastBlockData)
+			spammer.dataNodeMutex.RUnlock()
+			if err != nil {
+				spammer.logger.Error("failed to sign transaction with pow", zap.Error(err))
+				time.Sleep(time.Second)
+				continue
+			}
+
+			// wrap in vega Transaction Request
+			submitReq := &vegaapipb.SubmitTransactionRequest{
+				Tx:   signedTx,
+				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+			}
+
+			spammer.statsMutex.Lock()
+			spammer.stats[idx].sentOrders++
+			spammer.statsMutex.Unlock()
+			submitResponse, err := spammer.dataNodeClient.SubmitTransaction(submitReq)
+			if err != nil {
+				spammer.logger.Error("failed to send transaction", zap.Error(err))
+				time.Sleep(time.Second)
+				continue
+			}
+
+			if !submitResponse.Success {
+				spammer.logger.Error("order tranzaction failed", zap.String("log", submitResponse.Log), zap.String("data", submitResponse.Data))
+				time.Sleep(time.Second)
+				continue
+			}
+
+			spammer.statsMutex.Lock()
+			spammer.stats[idx].successOrders++
+			spammer.statsMutex.Unlock()
+		}
+	}
 }
 
 func (spammer *OrderSpammer) Stop() {

@@ -23,6 +23,7 @@ type DataNodeClient interface {
 	GetCurrentEpoch() (*vega.Epoch, error)
 	GetAssets() (map[string]*vega.AssetDetails, error)
 	GetAllMarkets() ([]*vega.Market, error)
+	GetMarketById(marketId string) (*vega.Market, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
 
 	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
