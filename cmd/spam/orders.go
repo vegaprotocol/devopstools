@@ -32,6 +32,7 @@ type OrdersArgs struct {
 	Threads         uint8
 	MaxPrice        uint64
 	MinPrice        uint64
+	RateLimit       uint64
 }
 
 var ordersArgs OrdersArgs
@@ -67,16 +68,17 @@ type OrderSpammer struct {
 
 	marketDetails *vega.Market
 
-	threads  uint8
-	marketId string
-	minPrice uint64
-	maxPrice uint64
+	threads   uint8
+	marketId  string
+	minPrice  uint64
+	maxPrice  uint64
+	rateLimit uint64
 
 	stats      []ordersStats
 	statsMutex sync.RWMutex
 }
 
-func NewOrderSpammer(threads uint8, marketId string, minPrice, maxPrice uint64, logger *zap.Logger, network *veganetwork.VegaNetwork) (*OrderSpammer, error) {
+func NewOrderSpammer(threads uint8, marketId string, rateLimit, minPrice, maxPrice uint64, logger *zap.Logger, network *veganetwork.VegaNetwork) (*OrderSpammer, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
@@ -105,11 +107,12 @@ func NewOrderSpammer(threads uint8, marketId string, minPrice, maxPrice uint64, 
 	}
 
 	return &OrderSpammer{
-		logger:   logger,
-		threads:  threads,
-		marketId: marketId,
-		minPrice: minPrice,
-		maxPrice: maxPrice,
+		logger:    logger,
+		threads:   threads,
+		marketId:  marketId,
+		minPrice:  minPrice,
+		maxPrice:  maxPrice,
+		rateLimit: rateLimit,
 
 		spammerDone:          make(chan bool, threads),
 		lastBlockMonitorDone: make(chan bool),
@@ -258,7 +261,7 @@ func (spammer *OrderSpammer) Run() error {
 		spammer.spammerWallets[i] = vegaWallet
 	}
 
-	time.Sleep(10)
+	time.Sleep(10 * time.Second)
 	for i := uint8(0); i < spammer.threads; i++ {
 		spammer.TopTheWalletUp(spammer.spammerWallets[i], 1000000000, spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset)
 	}
@@ -268,9 +271,10 @@ func (spammer *OrderSpammer) Run() error {
 }
 
 func (spammer *OrderSpammer) spammerThread(idx uint8, wallet *wallet.VegaWallet) {
-	ticker := time.NewTicker(time.Millisecond * time.Duration(50+rand.Uint64()%50))
+	ticker := time.NewTicker(time.Millisecond * time.Duration(1000/(1+spammer.rateLimit)))
 	defer ticker.Stop()
 
+	spammer.logger.Info("Spammer thread starting", zap.Uint8("thread", idx), zap.Uint64("rate_limit", spammer.rateLimit), zap.Uint64("tick_every", 1000/(1+spammer.rateLimit)))
 	for {
 		select {
 		case <-spammer.spammerDone:
@@ -346,7 +350,7 @@ func RunMarketSpam(args OrdersArgs) error {
 		return fmt.Errorf("failed to connect to the network: %w", err)
 	}
 	defer network.Disconnect()
-	spammer, err := NewOrderSpammer(args.Threads, args.MarketID, args.MinPrice, args.MaxPrice, args.Logger, network)
+	spammer, err := NewOrderSpammer(args.Threads, args.MarketID, args.RateLimit, args.MinPrice, args.MaxPrice, args.Logger, network)
 	if err != nil {
 		return fmt.Errorf("failed to create order spammer: %w", err)
 	}
@@ -371,6 +375,7 @@ func init() {
 	ordersCmd.PersistentFlags().Uint8Var(&ordersArgs.Threads, "threads", 1, "Number of threads")
 	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.MinPrice, "min-price", 1, "Minimum price")
 	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.MaxPrice, "max-price", 10000, "Maximum price")
+	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.RateLimit, "thread-rate-limit", 20, "The orders rate limit per second per thread")
 	if err := ordersCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
