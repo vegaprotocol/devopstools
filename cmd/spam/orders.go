@@ -126,7 +126,7 @@ func NewOrderSpammer(threads uint8, marketId string, rateLimit, minPrice, maxPri
 	}, nil
 }
 
-func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount uint32, asset string) error {
+func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount string, asset string) error {
 	if spammer.rootVegaWallet == nil {
 		return fmt.Errorf("the root wallet must be valid whale wallet")
 	}
@@ -140,7 +140,7 @@ func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount ui
 		return fmt.Errorf("data node details are not set at the moment, it is managed by separated thread, let's wait some more time")
 	}
 
-	orderTx := &walletpb.SubmitTransactionRequest{
+	transferTx := &walletpb.SubmitTransactionRequest{
 		PubKey: spammer.rootVegaWallet.PublicKey,
 		Command: &walletpb.SubmitTransactionRequest_Transfer{
 			Transfer: &commandspb.Transfer{
@@ -148,7 +148,7 @@ func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount ui
 				To:              wallet.PublicKey,
 				ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
 				Asset:           asset,
-				Amount:          fmt.Sprintf("%d", amount),
+				Amount:          amount,
 				Reference:       "spammer-top-up",
 				Kind: &commandspb.Transfer_OneOff{
 					OneOff: &commandspb.OneOffTransfer{
@@ -159,7 +159,7 @@ func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount ui
 		},
 	}
 
-	signedTx, err := spammer.rootVegaWallet.SignTxWithPoW(orderTx, lastBlockDetails)
+	signedTx, err := spammer.rootVegaWallet.SignTxWithPoW(transferTx, lastBlockDetails)
 	if err != nil {
 		return fmt.Errorf("failed to sign transaction: %w", err)
 	}
@@ -214,7 +214,7 @@ func getOrder(reference, pubKey, marketId string, minPrice, maxPrice uint64) *wa
 		Command: &walletpb.SubmitTransactionRequest_OrderSubmission{
 			OrderSubmission: &commandspb.OrderSubmission{
 				MarketId:    marketId,
-				Size:        1 + rand.Uint64()%100,
+				Size:        1 + rand.Uint64()%5,
 				Price:       fmt.Sprintf("%d", price),
 				Side:        vegapb.Side_SIDE_BUY,
 				TimeInForce: vegapb.Order_TIME_IN_FORCE_GTC,
@@ -263,7 +263,7 @@ func (spammer *OrderSpammer) Run() error {
 
 	time.Sleep(10 * time.Second)
 	for i := uint8(0); i < spammer.threads; i++ {
-		spammer.TopTheWalletUp(spammer.spammerWallets[i], 1000000000, spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset)
+		spammer.TopTheWalletUp(spammer.spammerWallets[i], "100000000000000000000", spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset)
 	}
 	go spammer.Report()
 
