@@ -131,7 +131,7 @@ func NewBTCUSDMarketProposal(
 								TimeWindow:    3600,
 								ScalingFactor: 10,
 							},
-							TriggeringRatio:  0.0,
+							TriggeringRatio:  "0.0",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{

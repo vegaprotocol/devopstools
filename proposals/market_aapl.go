@@ -128,7 +128,7 @@ func NewAAPLMarketProposal(
 								TimeWindow:    3600,
 								ScalingFactor: 10,
 							},
-							TriggeringRatio:  0.7,
+							TriggeringRatio:  "0.7",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
