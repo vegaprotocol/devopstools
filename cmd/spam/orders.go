@@ -1,6 +1,7 @@
 package spam
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -32,6 +33,7 @@ type OrdersArgs struct {
 	MaxPrice        uint64
 	MinPrice        uint64
 	RateLimit       uint64
+	Duration        time.Duration
 }
 
 var ordersArgs OrdersArgs
@@ -40,14 +42,15 @@ var ordersCmd = &cobra.Command{
 	Use:   "orders",
 	Short: "Send a lot of orders to the market which stays in the book, but not trades",
 	Example: `
-# Start 4 threads, each thread sends 15 orders per seconds
+# Start 4 threads, each thread sends 15 orders per seconds, run stress-test for 2m15s
 devopstools spam orders \
     --network stagnet1 \
     --market-id 86948f946a64e14bb2e284f825cd46879d1cb581ce405cc62e4f74fcded190d3 \
     --threads 5 \
 	--max-price 10000 \
     --thread-rate-limit 15 \
-    --github-token secret-token	
+    --github-token secret-token
+	--duration 2m15s
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		RunMarketSpam(ordersArgs)
@@ -309,6 +312,8 @@ func (spammer *OrderSpammer) Stop() {
 
 func RunMarketSpam(args OrdersArgs) error {
 	rand.Seed(time.Now().UnixMicro())
+	stressDurationCtx, cancelDuration := context.WithTimeout(context.Background(), args.Duration)
+	defer cancelDuration()
 
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
@@ -325,7 +330,13 @@ func RunMarketSpam(args OrdersArgs) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	<-c
+	select {
+	case <-c:
+		log.Println("Ending with signal")
+	case <-stressDurationCtx.Done():
+		log.Printf("Run finished after %s", args.Duration)
+	}
+
 	spammer.Stop()
 	time.Sleep(time.Second)
 
@@ -340,6 +351,7 @@ func init() {
 	ordersCmd.PersistentFlags().Uint8Var(&ordersArgs.Threads, "threads", 1, "Number of threads")
 	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.MinPrice, "min-price", 1, "Minimum price")
 	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.MaxPrice, "max-price", 10000, "Maximum price")
+	ordersCmd.PersistentFlags().DurationVar(&ordersArgs.Duration, "duration", 5*time.Minute, "Duration of run")
 	ordersCmd.PersistentFlags().Uint64Var(&ordersArgs.RateLimit, "thread-rate-limit", 20, "The orders rate limit per second per thread")
 	if err := ordersCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
