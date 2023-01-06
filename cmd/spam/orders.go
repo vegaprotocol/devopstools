@@ -53,7 +53,9 @@ devopstools spam orders \
 	--duration 2m15s
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		RunMarketSpam(ordersArgs)
+		if err := RunMarketSpam(ordersArgs); err != nil {
+			log.Fatalf("failed: %s", err.Error())
+		}
 	},
 }
 
