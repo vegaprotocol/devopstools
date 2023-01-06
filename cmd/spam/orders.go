@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	"go.uber.org/zap"
 
@@ -40,6 +39,16 @@ var ordersArgs OrdersArgs
 var ordersCmd = &cobra.Command{
 	Use:   "orders",
 	Short: "Send a lot of orders to the market which stays in the book, but not trades",
+	Example: `
+# Start 4 threads, each thread sends 15 orders per seconds
+devopstools spam orders \
+    --network stagnet1 \
+    --market-id 86948f946a64e14bb2e284f825cd46879d1cb581ce405cc62e4f74fcded190d3 \
+    --threads 5 \
+	--max-price 10000 \
+    --thread-rate-limit 15 \
+    --github-token secret-token	
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		RunMarketSpam(ordersArgs)
 	},
@@ -66,7 +75,7 @@ type OrderSpammer struct {
 	lastBlockMonitorDone chan bool
 	spammerDone          chan bool
 
-	marketDetails *vega.Market
+	marketDetails *vegapb.Market
 
 	threads   uint8
 	marketId  string
@@ -124,62 +133,6 @@ func NewOrderSpammer(threads uint8, marketId string, rateLimit, minPrice, maxPri
 		dataNodeClient: network.DataNodeClient,
 		stats:          make([]ordersStats, threads),
 	}, nil
-}
-
-func (spammer *OrderSpammer) TopTheWalletUp(wallet *wallet.VegaWallet, amount string, asset string) error {
-	if spammer.rootVegaWallet == nil {
-		return fmt.Errorf("the root wallet must be valid whale wallet")
-	}
-
-	spammer.dataNodeMutex.RLock()
-	lastBlockDetails := spammer.lastBlockData
-	spammer.dataNodeMutex.RUnlock()
-
-	// must be nil as it is managed in separated thread
-	if lastBlockDetails == nil {
-		return fmt.Errorf("data node details are not set at the moment, it is managed by separated thread, let's wait some more time")
-	}
-
-	transferTx := &walletpb.SubmitTransactionRequest{
-		PubKey: spammer.rootVegaWallet.PublicKey,
-		Command: &walletpb.SubmitTransactionRequest_Transfer{
-			Transfer: &commandspb.Transfer{
-				FromAccountType: vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
-				To:              wallet.PublicKey,
-				ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
-				Asset:           asset,
-				Amount:          amount,
-				Reference:       "spammer-top-up",
-				Kind: &commandspb.Transfer_OneOff{
-					OneOff: &commandspb.OneOffTransfer{
-						DeliverOn: time.Now().Add(time.Second * 2).Unix(),
-					},
-				},
-			},
-		},
-	}
-
-	signedTx, err := spammer.rootVegaWallet.SignTxWithPoW(transferTx, lastBlockDetails)
-	if err != nil {
-		return fmt.Errorf("failed to sign transaction: %w", err)
-	}
-
-	// wrap in vega Transaction Request
-	submitReq := &vegaapipb.SubmitTransactionRequest{
-		Tx:   signedTx,
-		Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
-	}
-
-	submitResponse, err := spammer.dataNodeClient.SubmitTransaction(submitReq)
-	if err != nil {
-		return fmt.Errorf("failed to send the signed transaction: %w", err)
-	}
-
-	if !submitResponse.Success {
-		return fmt.Errorf("sent transaction failed: %s", submitResponse.Data)
-	}
-
-	return nil
 }
 
 func (spammer *OrderSpammer) LastBlockMonitor() {
@@ -260,11 +213,23 @@ func (spammer *OrderSpammer) Run() error {
 		go spammer.spammerThread(i, vegaWallet)
 		spammer.spammerWallets[i] = vegaWallet
 	}
-
-	time.Sleep(10 * time.Second)
-	for i := uint8(0); i < spammer.threads; i++ {
-		spammer.TopTheWalletUp(spammer.spammerWallets[i], "100000000000000000000", spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset)
+	balanceManager, err := NewBalanceManager(spammer.dataNodeClient, spammer.rootVegaWallet, 60*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed to create balance manager: %w", err)
 	}
+
+	go balanceManager.Run()
+
+	for i := uint8(0); i < spammer.threads; i++ {
+		assetPair := NewAssetPartyPair(
+			spammer.marketDetails.TradableInstrument.Instrument.GetFuture().SettlementAsset,
+			spammer.spammerWallets[i].PublicKey,
+		)
+		if err := balanceManager.AddAssetPartyPair(assetPair); err != nil {
+			return fmt.Errorf("failed to add asset-party pair (%s) to balance manager: %w", assetPair.String(), err)
+		}
+	}
+
 	go spammer.Report()
 
 	return nil

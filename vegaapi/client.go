@@ -6,6 +6,7 @@ import (
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 )
 
 type VegaCoreClient interface {
@@ -25,6 +26,7 @@ type DataNodeClient interface {
 	GetAllMarkets() ([]*vega.Market, error)
 	GetMarketById(marketId string) (*vega.Market, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
+	GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)
 
 	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
 }

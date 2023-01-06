@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	"code.vegaprotocol.io/vega/protos/vega"
 	e "github.com/vegaprotocol/devopstools/errors"
 	"google.golang.org/grpc/connectivity"
 )
@@ -92,4 +93,63 @@ func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (respo
 		err = fmt.Errorf(msg, e.ErrorDetail(err))
 	}
 	return
+}
+
+type AccountFunds struct {
+	Balance     *big.Int
+	PartyId     string
+	AccountType vega.AccountType
+	AssetId     string
+}
+
+func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]AccountFunds, error) {
+	if n == nil {
+		return nil, fmt.Errorf("data node object not constructed: %w", e.ErrNil)
+	}
+
+	if n.Conn.GetState() != connectivity.Ready {
+		return nil, fmt.Errorf("data node rpc connection not ready: %w", e.ErrConnectionNotReady)
+	}
+
+	assetIdFilter := ""
+	if assetId != nil {
+		assetIdFilter = *assetId
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	defer cancel()
+	response, err := c.ListAccounts(ctx, &dataapipb.ListAccountsRequest{
+		Filter: &dataapipb.AccountFilter{
+			PartyIds:     []string{partyID},
+			AccountTypes: []vega.AccountType{accountType},
+			AssetId:      assetIdFilter,
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list accounts: %w", err)
+	}
+
+	results := []AccountFunds{}
+
+	if response.Accounts == nil || len(response.Accounts.Edges) < 1 {
+		return results, nil
+	}
+
+	for _, row := range response.Accounts.Edges {
+		if row.Node == nil {
+			continue
+		}
+		balance, _ := big.NewInt(0).SetString(row.Node.Balance, 10)
+
+		results = append(results, AccountFunds{
+			Balance:     balance,
+			PartyId:     partyID,
+			AssetId:     row.Node.Asset,
+			AccountType: row.Node.Type,
+		})
+	}
+
+	return results, nil
 }
