@@ -72,6 +72,21 @@ func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapi
 	return
 }
 
+func (n *DataNode) GetMarketById(marketId string) (*vega.Market, error) {
+	if marketId == "" {
+		return nil, fmt.Errorf("market id cannot be empty")
+	}
+
+	marketResponse, err := n.GetMarket(&dataapipb.GetMarketRequest{
+		MarketId: marketId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get market: %w", err)
+	}
+
+	return marketResponse.GetMarket().DeepClone(), nil
+}
+
 // ListMarkets returns all markets.
 func (n *DataNode) ListMarkets(req *dataapipb.ListMarketsRequest) (response *dataapipb.ListMarketsResponse, err error) {
 	msg := "gRPC call failed (data-node): ListMarkets: %w"

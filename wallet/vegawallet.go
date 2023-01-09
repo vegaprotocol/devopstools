@@ -82,3 +82,24 @@ func (vw *VegaWallet) SignAny(data []byte) ([]byte, string, error) {
 	sig, err := vw.hdWallet.SignAny(vw.PublicKey, data)
 	return sig, vw.PublicKey, err
 }
+
+func (vw *VegaWallet) DeriveKeyPair() (*VegaWallet, error) {
+	if vw == nil || vw.hdWallet == nil {
+		return nil, fmt.Errorf("hd wallet must be given for vega wallet to derive new keys")
+	}
+
+	keyPair, err := vw.hdWallet.GenerateKeyPair(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate key pair %w", err)
+	}
+	return &VegaWallet{
+		VegaWalletPrivate: &secrets.VegaWalletPrivate{
+			Id:             keyPair.Name(),
+			PublicKey:      keyPair.PublicKey(),
+			PrivateKey:     keyPair.PrivateKey(),
+			RecoveryPhrase: "",
+		},
+		hdWallet: vw.hdWallet,
+		keyPair:  keyPair,
+	}, nil
+}

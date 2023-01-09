@@ -11,6 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
+	"github.com/vegaprotocol/devopstools/cmd/spam"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
 )
@@ -31,4 +32,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)
 	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
+	rootCmd.RootCmd.AddCommand(spam.SpamCmd)
 }
