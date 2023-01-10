@@ -278,7 +278,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			}
 			logger.Info("tx", zap.String("node", name), zap.Any("walletTxReq", walletTxReq))
 
-			for i := 1; i <= 2; i += 1 {
+			for i := 1; i <= 5; i += 1 {
 				if i > 1 {
 					logger.Info("seelp for 1 min before retry", zap.String("node", name), zap.Int("try", i))
 					time.Sleep(time.Minute)
