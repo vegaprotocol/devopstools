@@ -22,6 +22,8 @@ var RootCmd = &cobra.Command{
 		if Args.Debug {
 			cfg.Level.SetLevel(zap.DebugLevel)
 		}
+		// https://github.com/uber-go/zap/issues/584
+		cfg.OutputPaths = []string{"stdout"}
 		cfg.Encoding = "console"
 		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 		Args.Logger, err = cfg.Build()
