@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"sync"
@@ -242,19 +243,27 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 				zap.String("StakedByOperator", validator.StakedByOperator))
 			continue
 		}
-		partyTotalStake, err := network.DataNodeClient.GetPartyTotalStake(nodeSecrets.VegaId)
-		if err != nil {
-			return err
-		}
-		if partyTotalStake.Cmp(minValidatorStake) < 0 {
-			logger.Warn("party doesn't have visible stake yet - you might need to wait till next epoch", zap.String("node", name),
-				zap.String("partyTotalStake", partyTotalStake.String()))
-			// TODO: write wait functionality
-			//continue
-		}
-
 		wg.Add(1)
-		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string, hasVisibleStake bool) {
+
+		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string, minValidatorStake *big.Int) {
+			hasVisibleStake := false
+			for i := 0; i < 10; i++ {
+				partyTotalStake, err := network.DataNodeClient.GetPartyTotalStake(nodeSecrets.VegaId)
+				if err != nil {
+					log.Fatalf("failed to get party total stake: %s", err.Error())
+					return
+				}
+				if partyTotalStake.Cmp(minValidatorStake) < 0 {
+					logger.Warn("party doesn't have visible stake yet - you might need to wait till next epoch", zap.String("node", name),
+						zap.String("partyTotalStake", partyTotalStake.String()))
+					time.Sleep(10 * time.Second)
+					// TODO: write wait functionality
+					//continue
+				} else {
+					hasVisibleStake = true
+					break
+				}
+			}
 			defer wg.Done()
 			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
 				Id:             nodeSecrets.VegaId,
@@ -312,7 +321,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					return
 				}
 			}
-		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId, partyTotalStake.Cmp(minValidatorStake) >= 0)
+		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId, minValidatorStake)
 	}
 	wg.Wait()
 	close(resultsChannel)
