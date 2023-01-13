@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func GenerateDeHistoryIdentity(seed string) (config.Identity, error) {
+func GenerateNetworkHistoryIdentity(seed string) (config.Identity, error) {
 	ident := config.Identity{}
 
 	var sk crypto.PrivKey

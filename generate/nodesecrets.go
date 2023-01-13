@@ -22,7 +22,7 @@ func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
 		return nil, err
 	}
 	vegaPubKeyIndex := uint64(1)
-	deHistory, err := GenerateDeHistoryIdentity(vegaWallet.RecoveryPhrase)
+	deHistory, err := GenerateNetworkHistoryIdentity(vegaWallet.RecoveryPhrase)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
 		VegaPrivateKey:                vegaWallet.PrivateKey,
 		VegaRecoveryPhrase:            vegaWallet.RecoveryPhrase,
 		VegaPubKeyIndex:               &vegaPubKeyIndex,
-		DeHistoryPeerId:               deHistory.PeerID,
-		DeHistoryPrivateKey:           deHistory.PrivKey,
+		NetworkHistoryPeerId:               deHistory.PeerID,
+		NetworkHistoryPrivateKey:           deHistory.PrivKey,
 		TendermintNodeId:              tendermintNodeKeys.Address,
 		TendermintNodePubKey:          tendermintNodeKeys.PublicKey,
 		TendermintNodePrivateKey:      tendermintNodeKeys.PrivateKey,

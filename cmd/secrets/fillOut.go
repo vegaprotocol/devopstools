@@ -132,16 +132,16 @@ func fillOutNodeData(nodeSecrets *secrets.VegaNodePrivate) (updatedFields map[st
 		}
 		updatedFields["AvatarURL"] = nodeSecrets.AvatarURL
 	}
-	if len(nodeSecrets.DeHistoryPeerId) == 0 || len(nodeSecrets.DeHistoryPrivateKey) == 0 {
+	if len(nodeSecrets.NetworkHistoryPeerId) == 0 || len(nodeSecrets.NetworkHistoryPrivateKey) == 0 {
 		var deHistory config.Identity
-		deHistory, err = generate.GenerateDeHistoryIdentity(nodeSecrets.VegaRecoveryPhrase)
+		deHistory, err = generate.GenerateNetworkHistoryIdentity(nodeSecrets.VegaRecoveryPhrase)
 		if err != nil {
 			return
 		}
-		nodeSecrets.DeHistoryPeerId = deHistory.PeerID
-		nodeSecrets.DeHistoryPrivateKey = deHistory.PrivKey
-		updatedFields["DeHistoryPeerId"] = nodeSecrets.DeHistoryPeerId
-		updatedFields["DeHistoryPrivateKey"] = nodeSecrets.DeHistoryPrivateKey
+		nodeSecrets.NetworkHistoryPeerId = deHistory.PeerID
+		nodeSecrets.NetworkHistoryPrivateKey = deHistory.PrivKey
+		updatedFields["NetworkHistoryPeerId"] = nodeSecrets.NetworkHistoryPeerId
+		updatedFields["NetworkHistoryPrivateKey"] = nodeSecrets.NetworkHistoryPrivateKey
 	}
 
 	return
