@@ -307,7 +307,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					break
 				}
 				logger.Error("transaction submission failure", zap.String("node", name), zap.Int("try", i), zap.Error(err))
-				if i > 1 || hasVisibleStake {
+				if i > 4 || hasVisibleStake {
 					resultsChannel <- fmt.Errorf("transaction submission failure for %s node", name)
 					return
 				}
