@@ -40,8 +40,10 @@ var (
 		EthNetwork: types.ETHSepolia,
 		Version:    erc20token.ERC20TokenBase,
 	}
+	
+	// Sandbox
 	VT_S VegaAsset = VegaAsset{
-		Name:       "Vega Token Sepolia",
+		Name:       "Vega Token Sandbox",
 		HexAddress: "0x51d9dbe9a724c6a8383016fad566e55c95359d36",
 		EthNetwork: types.ETHSepolia,
 		Version:    erc20token.ERC20TokenBase,
