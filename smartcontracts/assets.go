@@ -40,6 +40,14 @@ var (
 		EthNetwork: types.ETHSepolia,
 		Version:    erc20token.ERC20TokenBase,
 	}
+	// Sandbox
+	TBTC_S VegaAsset = VegaAsset{
+		Name:       "tBTC",
+		HexAddress: "0x51d9dbe9a724c6a8383016fad566e55c95359d36",
+		EthNetwork: types.ETHSepolia,
+		Version:    erc20token.ERC20TokenBase,
+	}
+
 
 	// New Fairground
 	TEURO_F VegaAsset = VegaAsset{
@@ -165,7 +173,7 @@ var (
 )
 
 var allAssets = []VegaAsset{
-	TEURO, TDAI, TUSDC, TBTC, TEURO_F, TDAI_F, TUSDC_F, TBTC_F, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten,
+	TEURO, TDAI, TUSDC, TBTC, TBTC_S, TEURO_F, TDAI_F, TUSDC_F, TBTC_F, TEURORopsten, TDAIRopsten, TUSDCRopsten, TBTCRopsten,
 	VEGA_S3, LIQ_S3, TDAI_S3, TBTC_S3, TUSDC_S3, TAK_S3, TEURO_S3, MAK_S3, TIM_S3, WOZ_S3}
 
 func (m *SmartContractsManager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
