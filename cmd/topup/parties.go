@@ -22,6 +22,7 @@ type PartiesArgs struct {
 	FakeTokenAssetId     string
 	PartiesVegaPubKeys   []string
 	Amount               string
+	Repeat               uint16
 }
 
 var partiesArgs PartiesArgs
@@ -47,8 +48,8 @@ func init() {
 	if err := topUpPartiesCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	topUpPartiesCmd.PersistentFlags().StringVar(&partiesArgs.ERC20TokenHexAddress, "erc20-token-address", "", "Vega Network name")
-	topUpPartiesCmd.PersistentFlags().StringVar(&partiesArgs.FakeTokenAssetId, "fake-asset-id", "", "Vega Network name")
+	topUpPartiesCmd.PersistentFlags().StringVar(&partiesArgs.ERC20TokenHexAddress, "erc20-token-address", "", "Ethereum Address of the Asset (asset needs to be listed, and the whale account must have it)")
+	topUpPartiesCmd.PersistentFlags().StringVar(&partiesArgs.FakeTokenAssetId, "fake-asset-id", "", "Vega Asset Id of the fake token")
 	topUpPartiesCmd.PersistentFlags().StringSliceVar(&partiesArgs.PartiesVegaPubKeys, "parties", nil, "Comma separated list of parties pub keys")
 	if err := topUpPartiesCmd.MarkPersistentFlagRequired("parties"); err != nil {
 		log.Fatalf("%v\n", err)
@@ -57,6 +58,7 @@ func init() {
 	if err := topUpPartiesCmd.MarkPersistentFlagRequired("amount"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
+	topUpPartiesCmd.PersistentFlags().Uint16Var(&partiesArgs.Repeat, "repeat", 1, "Repeat the topup multiple times (useful if you are interested in generating deposit events).")
 }
 
 func RunTopUpParties(args PartiesArgs) error {
@@ -69,6 +71,9 @@ func RunTopUpParties(args PartiesArgs) error {
 	)
 	if len(args.ERC20TokenHexAddress) > 0 {
 		traders.ByERC20TokenHexAddress[args.ERC20TokenHexAddress] = args.PartiesVegaPubKeys
+		for i := uint16(1); i < args.Repeat; i++ {
+			traders.ByERC20TokenHexAddress[args.ERC20TokenHexAddress] = append(traders.ByERC20TokenHexAddress[args.ERC20TokenHexAddress], args.PartiesVegaPubKeys...)
+		}
 	} else if len(args.FakeTokenAssetId) > 0 {
 		traders.ByFakeAssetId[args.FakeTokenAssetId] = args.PartiesVegaPubKeys
 	} else {
