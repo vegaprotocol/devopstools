@@ -143,6 +143,12 @@ func fillOutNodeData(nodeSecrets *secrets.VegaNodePrivate) (updatedFields map[st
 		updatedFields["DeHistoryPeerId"] = nodeSecrets.DeHistoryPeerId
 		updatedFields["DeHistoryPrivateKey"] = nodeSecrets.DeHistoryPrivateKey
 	}
+	if len(nodeSecrets.NetworkHistoryPeerId) == 0 || len(nodeSecrets.NetworkHistoryPrivateKey) == 0 {
+		nodeSecrets.NetworkHistoryPeerId = nodeSecrets.DeHistoryPeerId
+		nodeSecrets.NetworkHistoryPrivateKey = nodeSecrets.DeHistoryPrivateKey
+		updatedFields["NetworkHistoryPeerId"] = nodeSecrets.NetworkHistoryPeerId
+		updatedFields["NetworkHistoryPrivateKey"] = nodeSecrets.NetworkHistoryPrivateKey
+	}
 
 	return
 }
