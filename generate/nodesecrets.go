@@ -58,6 +58,8 @@ func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
 		VegaPubKeyIndex:               &vegaPubKeyIndex,
 		DeHistoryPeerId:               deHistory.PeerID,
 		DeHistoryPrivateKey:           deHistory.PrivKey,
+		NetworkHistoryPeerId:          deHistory.PeerID,
+		NetworkHistoryPrivateKey:      deHistory.PrivKey,
 		TendermintNodeId:              tendermintNodeKeys.Address,
 		TendermintNodePubKey:          tendermintNodeKeys.PublicKey,
 		TendermintNodePrivateKey:      tendermintNodeKeys.PrivateKey,
