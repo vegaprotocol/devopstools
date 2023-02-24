@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -19,16 +20,16 @@ type Traders struct {
 // TRADERBOT
 //
 
-func (network *NetworkTools) GetTraderbotBaseURL() (string, error) {
+func (network *NetworkTools) GetTraderbotBaseURL(traderbotId string) (string, error) {
 	switch network.Name {
 	case "devnet":
-		return "https://traderbot-devnet-k8s.ops.vega.xyz", nil
+		return fmt.Sprintf("https://traderbot%s-devnet-k8s.ops.vega.xyz", traderbotId), nil
 	case types.NetworkStagnet3:
-		return "https://traderbot-stagnet3-k8s.ops.vega.xyz", nil
+		return fmt.Sprintf("https://traderbot%s-stagnet3-k8s.ops.vega.xyz", traderbotId), nil
 	case types.NetworkFairground:
-		return "https://traderbot-testnet-k8s.ops.vega.xyz", nil
+		return fmt.Sprintf("https://traderbot%s-testnet-k8s.ops.vega.xyz", traderbotId), nil
 	default:
-		return fmt.Sprintf("https://traderbot-%s-k8s.ops.vega.xyz", network.Name), nil
+		return fmt.Sprintf("https://traderbot%s-%s-k8s.ops.vega.xyz", traderbotId, network.Name), nil
 	}
 }
 
@@ -44,13 +45,15 @@ type TraderbotResponse struct {
 	} `json:"traders"`
 }
 
-func (network *NetworkTools) GetTraderbotTraders() (*Traders, error) {
+func (network *NetworkTools) GetTraderbotTraders(traderbotId string) (*Traders, error) {
 	errMsg := fmt.Sprintf("failed to get traderbot traders for %s", network.Name)
-	baseURL, err := network.GetTraderbotBaseURL()
+	baseURL, err := network.GetTraderbotBaseURL(traderbotId)
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}
 	url := fmt.Sprintf("%s/traders", baseURL)
+
+	log.Printf("Getting traders from: %s", url)
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{

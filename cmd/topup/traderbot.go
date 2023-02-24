@@ -18,6 +18,7 @@ import (
 type TraderbotArgs struct {
 	*TopUpArgs
 	VegaNetworkName string
+	TraderBotId     string
 }
 
 var traderbotArgs TraderbotArgs
@@ -40,6 +41,7 @@ func init() {
 
 	TopUpCmd.AddCommand(topUpTraderbotCmd)
 	topUpTraderbotCmd.PersistentFlags().StringVar(&traderbotArgs.VegaNetworkName, "network", "", "Vega Network name")
+	topUpTraderbotCmd.PersistentFlags().StringVar(&traderbotArgs.TraderBotId, "traderbot-id", "", "Workaround for additional traderbot instances. If not empty this part is added to the url, example: traderbotXXX-stagnet1.vega.xyz/...")
 	if err := topUpTraderbotCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
@@ -50,7 +52,7 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 	if err != nil {
 		return err
 	}
-	traders, err := networktools.GetTraderbotTraders()
+	traders, err := networktools.GetTraderbotTraders(traderbotArgs.TraderBotId)
 	if err != nil {
 		return err
 	}
