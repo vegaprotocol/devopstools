@@ -3,6 +3,7 @@ package main
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
+	"github.com/vegaprotocol/devopstools/cmd/helper"
 	"github.com/vegaprotocol/devopstools/cmd/live"
 	"github.com/vegaprotocol/devopstools/cmd/market"
 	"github.com/vegaprotocol/devopstools/cmd/network"
@@ -33,4 +34,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)
 	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
 	rootCmd.RootCmd.AddCommand(spam.SpamCmd)
+	rootCmd.RootCmd.AddCommand(helper.HelperCmd)
 }
