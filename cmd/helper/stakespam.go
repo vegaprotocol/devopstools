@@ -70,7 +70,7 @@ func init() {
 	stakeSpamCmd.PersistentFlags().StringVar(&stakeSpamArgs.StakingBridgeAddress, "staking-bridge-address", "", "The staking bridge address")
 	stakeSpamCmd.PersistentFlags().StringVar(&stakeSpamArgs.CollateralBridgeAddress, "collateral-bridge-address", "", "The collateral bridge address")
 	stakeSpamCmd.PersistentFlags().BoolVar(&stakeSpamArgs.DoDeposit, "deposit", true, "If true, vega tokens are deposited to given receiver")
-	stakeSpamCmd.PersistentFlags().BoolVar(&stakeSpamArgs.DoStake, "stake", true, "If true, vega tokens are staked to given receiver")
+	stakeSpamCmd.PersistentFlags().BoolVar(&stakeSpamArgs.DoStake, "stake", false, "If true, vega tokens are staked to given receiver")
 	stakeSpamCmd.PersistentFlags().IntVar(&stakeSpamArgs.RepeatAmount, "repeat-amount", 10, "Number of deposits(or stakes)")
 }
 
