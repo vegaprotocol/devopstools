@@ -37,8 +37,10 @@ func NewBTCUSDMarketProposal(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
-						DecimalPlaces:         decimalPlaces,
-						PositionDecimalPlaces: 3,
+						DecimalPlaces:           decimalPlaces,
+						PositionDecimalPlaces:   3,
+						LinearSlippageFactor:    "0.1",
+						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
 							Code: "BTCUSD.MF21",

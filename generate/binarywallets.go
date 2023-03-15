@@ -151,10 +151,13 @@ func createVegawallet(
 	if err != nil {
 		return "", err
 	}
-	if err := vegaWalletStore.SaveWallet(context.Background(), vegaWallet, walletPassphrase); err != nil {
+	if err := vegaWalletStore.CreateWallet(context.Background(), vegaWallet, walletPassphrase); err != nil {
 		return "", err
 	}
-	_, err = vegaWalletStore.GetWallet(context.Background(), vegaWalletName, walletPassphrase)
+	if err := vegaWalletStore.UnlockWallet(context.Background(), vegaWalletName, walletPassphrase); err != nil {
+		return "", err
+	}
+	_, err = vegaWalletStore.GetWallet(context.Background(), vegaWalletName)
 	if err != nil {
 		return "", err
 	}
