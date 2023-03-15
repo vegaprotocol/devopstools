@@ -9,7 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.11.2
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.18.1
-	github.com/libp2p/go-libp2p-core v0.19.1
+	github.com/libp2p/go-libp2p-core v0.20.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
