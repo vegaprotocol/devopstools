@@ -28,13 +28,16 @@ func (c *HCVaultSecretStore) GetSecret(root string, path string) (map[string]int
 func (c *HCVaultSecretStore) GetSecretWithPath(path string) (map[string]interface{}, error) {
 	resp, err := c.Client.Logical().Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get '%s' secret from Vega Vault %w", path, err)
+		return nil, fmt.Errorf("failed to get '%s' secret from Vega Vault: %w", path, err)
 	}
-	if resp == nil {
+	if resp == nil || resp.Data == nil || resp.Data["data"] == nil {
 		return nil, fmt.Errorf("secret '%s' from Vega Vault is empty", path)
 	}
 
-	data := resp.Data["data"].(map[string]interface{})
+	data, conversionOk := resp.Data["data"].(map[string]interface{})
+	if !conversionOk {
+		return nil, fmt.Errorf("failed to convert secret %s", path)
+	}
 
 	if data == nil {
 		return nil, fmt.Errorf("value for secret '%s' is empty", path)
