@@ -15,6 +15,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/spam"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
+	"github.com/vegaprotocol/devopstools/cmd/backup"
 )
 
 func main() {
@@ -35,4 +36,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
 	rootCmd.RootCmd.AddCommand(spam.SpamCmd)
 	rootCmd.RootCmd.AddCommand(helper.HelperCmd)
+	rootCmd.RootCmd.AddCommand(backup.BackupRootCmd)
 }
