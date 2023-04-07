@@ -8,6 +8,8 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+const StanzaName = "main_archive"
+
 // Example config
 // [global]
 // repo1-retention-full-type=count
@@ -72,4 +74,17 @@ func ReadConfig(location string) (PgBackrestConfig, error) {
 	}
 
 	return resultConfig, nil
+}
+
+func Check(postgresqlUser, pgBackrestBinary string) error {
+	args := []string{
+		"check",
+		"--stanza", StanzaName,
+	}
+
+	if _, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil); err != nil {
+		return fmt.Errorf("failed to check pgbackrest: %w", err)
+	}
+
+	return nil
 }

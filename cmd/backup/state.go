@@ -34,8 +34,7 @@ type State struct {
 	LastUpdated time.Time
 	Backups     []BackupEntry
 
-	StanzaStarted     bool
-	StanzaInitialized bool
+	Locked bool
 
 	localFilePath string
 	remoteS3Path  string
@@ -57,7 +56,7 @@ func (state *State) WriteLocal(filePath string) error {
 		return fmt.Errorf("failed to write state into local file: failed to convert state into json: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, []byte(jsonState)); err != nil {
+	if err := os.WriteFile(filePath, []byte(jsonState), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to save state into file: %w", err)
 	}
 
@@ -80,9 +79,30 @@ func LoadFromRemote() (State, error) {
 	return State{}, nil
 }
 
-func NewEmptyState() State {
-	return State{
-		StanzaStarted:     false,
-		StanzaInitialized: false,
+func LoadFromLocal(location string) (State, error) {
+	result := State{}
+	content, err := os.ReadFile(location)
+	if err == nil {
+
+		if err := json.Unmarshal(content, &result); err != nil {
+			return result, fmt.Errorf("failed to unmarshal file: %w", err)
+		}
 	}
+
+	return result, fmt.Errorf("failed to read state file from local: %w", err)
+}
+
+func NewEmptyState() State {
+	return State{}
+}
+
+// LoadOrCreateNew tries to load state from file otherwise it returns empty state
+func LoadOrCreateNew(locaLocation string) State {
+	// todo: add support for s3
+	localState, err := LoadFromLocal(locaLocation)
+	if err != nil {
+		return NewEmptyState()
+	}
+
+	return localState
 }
