@@ -1,11 +1,12 @@
 package backup
 
-
 import (
 	// "log"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +35,16 @@ func init() {
 }
 
 func DoBackup(args BackupArgs) error {
+	pgBackrestConfig, err := pgbackrest.ReadConfig("/etc/pgbackrest.conf")
+	if err != nil {
+		return fmt.Errorf("failed to read pgbackrest config: %w", err)
+	}
+
+	if err := pgbackrest.CheckPgBackRestSetup("pgbackrest", pgBackrestConfig); err != nil {
+		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
+	}
+
+	fmt.Printf("%#v", pgBackrestConfig)
 
 	return nil
 }
