@@ -5,7 +5,15 @@ import (
 	"os"
 
 	"github.com/vegaprotocol/devopstools/tools"
+	"go.uber.org/zap"
 	"gopkg.in/ini.v1"
+)
+
+type BackupType string
+
+const (
+	BackupFull        BackupType = "full"
+	BackupIncremental BackupType = "incr"
 )
 
 const StanzaName = "main_archive"
@@ -76,14 +84,47 @@ func ReadConfig(location string) (PgBackrestConfig, error) {
 	return resultConfig, nil
 }
 
-func Check(postgresqlUser, pgBackrestBinary string) error {
+func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 	args := []string{
 		"check",
 		"--stanza", StanzaName,
 	}
 
-	if _, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil); err != nil {
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
+	logger.Debug(string(out))
+	if err != nil {
 		return fmt.Errorf("failed to check pgbackrest: %w", err)
+	}
+
+	return nil
+}
+
+func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	args := []string{
+		"stanza-create",
+		"--stanza", StanzaName,
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
+	logger.Debug(string(out))
+	if err != nil {
+		return fmt.Errorf("failed to create pgbackrest stanza: %w, command output: %s", err, out)
+	}
+
+	return nil
+}
+
+func Backup(logger zap.Logger, postgresqlUser, pgBackrestBinary string, backupType BackupType) error {
+	args := []string{
+		"stanza-create",
+		"--stanza", StanzaName,
+		"--type", string(backupType),
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
+	logger.Debug(string(out))
+	if err != nil {
+		return fmt.Errorf("failed to perform a backup operation pgbackrest stanza: %w, command output: %s", err, out)
 	}
 
 	return nil

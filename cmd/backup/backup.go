@@ -47,6 +47,7 @@ func DoBackup(args BackupArgs) error {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
 	}
 
+	args.Logger.Info("Verifying stanza setup")
 	if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
@@ -56,11 +57,17 @@ func DoBackup(args BackupArgs) error {
 		return fmt.Errorf("backup operation is locked in the state file")
 	}
 
-	if err := pgbackrest.Check(args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
-		return fmt.Errorf("failed to check pgbackrest: %w", err)
+	args.Logger.Info("Ensuring pgbackrest stanza exists")
+	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+		return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
 	}
 
-	fmt.Printf("%#v", pgBackrestConfig)
+	args.Logger.Info("Checking pgbackrest stanza configuration")
+	if err := pgbackrest.Check(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+		return fmt.Errorf("failed to check pgbackrest stanza: %w", err)
+	}
+
+	// fmt.Printf("%#v", pgBackrestConfig)
 
 	return nil
 }
