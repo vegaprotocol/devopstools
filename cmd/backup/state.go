@@ -27,6 +27,16 @@ type PgBackrestEntry struct {
 	Finished time.Time
 }
 
+type VegaChainEntry struct {
+	Location struct {
+		Bucket string
+		Path   string
+	}
+
+	Started  time.Time
+	Finished time.Time
+}
+
 type BackupEntry struct {
 	ID         uuid.UUID
 	Started    time.Time
@@ -34,6 +44,7 @@ type BackupEntry struct {
 	ServerHost string
 	Status     BackupStatus
 	Postgresql PgBackrestEntry
+	VegaChain  VegaChainEntry
 }
 
 type State struct {

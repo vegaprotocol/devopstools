@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -48,8 +49,6 @@ func init() {
 }
 
 func DoBackup(args BackupArgs) error {
-	var stateMutex sync.Mutex
-
 	pgBackrestConfig, err := pgbackrest.ReadConfig("/etc/pgbackrest.conf")
 	if err != nil {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
@@ -70,9 +69,6 @@ func DoBackup(args BackupArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to create s3 session: %w", err)
 	}
-
-	_ = s3Session
-	os.Exit(1)
 
 	currentState := LoadOrCreateNew(args.localStateFile)
 	if currentState.Locked {
@@ -108,6 +104,20 @@ func DoBackup(args BackupArgs) error {
 		}
 	}()
 
+	_, postgresqlBackupDir := filepath.Split(pgBackrestConfig.Global.R1Path)
+	currentBackup.VegaChain.Location.Bucket = pgBackrestConfig.Global.R1S3Bucket
+	currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain/%s/%s", postgresqlBackupDir, currentBackup.ID)
+
+	if err := vegachain.BackupChainData(
+		args.Logger,
+		s3Session,
+		postgresqlBackupDir,
+		currentBackup.VegaChain.Location.Bucket,
+		currentBackup.VegaChain.Location.Path); err != nil {
+		return fmt.Errorf("failed to backup vega chain data: %w", err)
+	}
+	os.Exit(1)
+
 	args.Logger.Info("Ensuring pgbackrest stanza exists")
 	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
 		currentBackup.Status = BackupStatusFailed
@@ -136,9 +146,13 @@ func DoBackup(args BackupArgs) error {
 	currentBackup.Postgresql.Type = backupType
 	currentState.AddOrModifyEntry(currentBackup, true)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	var (
+		wg         sync.WaitGroup
+		stateMutex sync.Mutex
+		failed     bool
+	)
 
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 
@@ -151,48 +165,80 @@ func DoBackup(args BackupArgs) error {
 			currentBackup.Status = BackupStatusFailed
 			currentBackup.Postgresql.Status = BackupStatusFailed
 			currentBackup.Postgresql.Finished = time.Now()
+			failed = true
 			stateMutex.Unlock()
 
 			args.Logger.Error("failed to backup data", zap.Error(err))
+			return
 		}
 		args.Logger.Info("Pgbackrest backup finished")
 
 		stateMutex.Lock()
 		currentBackup.Postgresql.Finished = time.Now()
 		stateMutex.Unlock()
+
+		// We have to stop stanza to avoid issues with automatic backup of postgresql data
+		args.Logger.Info("Stopping pgbackrest stanza")
+		if err := pgbackrest.Stop(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+			stateMutex.Lock()
+			currentBackup.Status = BackupStatusFailed
+			currentBackup.Postgresql.Status = BackupStatusFailed
+			failed = true
+			stateMutex.Unlock()
+			args.Logger.Error("failed to stop pgbackrest stanza", zap.Error(err))
+			return
+		}
+
+		pgBackrestBackups, err := pgbackrest.Info(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+		if err != nil {
+			stateMutex.Lock()
+			currentBackup.Status = BackupStatusFailed
+			currentBackup.Postgresql.Status = BackupStatusFailed
+			failed = true
+			stateMutex.Unlock()
+			args.Logger.Error("failed to list pgbackrest backups", zap.Error(err))
+			return
+		}
+		lastBackup := pgbackrest.LastPgBackRestBackupInfo(pgBackrestBackups, true)
+		if lastBackup == nil {
+			stateMutex.Lock()
+			currentBackup.Status = BackupStatusFailed
+			currentBackup.Postgresql.Status = BackupStatusFailed
+			failed = true
+			stateMutex.Unlock()
+			args.Logger.Error("failed to find last pgbackrest backup", zap.Error(err))
+			return
+		}
+		args.Logger.Info("Found last postgresql backup label", zap.String("label", lastBackup.Label))
+
+		stateMutex.Lock()
+		currentBackup.Postgresql.Label = lastBackup.Label
+		currentBackup.Postgresql.Status = BackupStatusSuccess
+		stateMutex.Unlock()
 	}()
 
 	go func() {
-		time.Sleep(10 * time.Second)
 		defer wg.Done()
+
+		stateMutex.Lock()
+		currentBackup.VegaChain.Started = time.Now()
+		stateMutex.Unlock()
+
+		args.Logger.Info("Starting vega chain data backup")
+		time.Sleep(10 * time.Second)
+		args.Logger.Info("Finished vega chain data backup")
+
+		stateMutex.Lock()
+		currentBackup.VegaChain.Finished = time.Now()
+		stateMutex.Unlock()
 	}()
+
+	args.Logger.Info("Waiting for backup to finish")
 	wg.Wait()
 
-	// We have to stop stanza to avoid issues with automatic backup of postgresql data
-	args.Logger.Info("Stopping pgbackrest stanza")
-	if err := pgbackrest.Stop(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
-		currentBackup.Status = BackupStatusFailed
-		currentBackup.Postgresql.Status = BackupStatusFailed
-		return fmt.Errorf("failed to stop pgbackrest stanza: %w", err)
+	if !failed {
+		currentBackup.Status = BackupStatusSuccess
 	}
-
-	pgBackrestBackups, err := pgbackrest.Info(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
-	if err != nil {
-		currentBackup.Status = BackupStatusFailed
-		currentBackup.Postgresql.Status = BackupStatusFailed
-		return fmt.Errorf("failed to list pgbackrest backups: %w", err)
-	}
-	lastBackup := pgbackrest.LastPgBackRestBackupInfo(pgBackrestBackups, true)
-	if lastBackup == nil {
-		currentBackup.Status = BackupStatusFailed
-		currentBackup.Postgresql.Status = BackupStatusFailed
-		return fmt.Errorf("failed to find last pgbackrest backup")
-	}
-	args.Logger.Info("Found last postgresql backup label", zap.String("label", lastBackup.Label))
-
-	currentBackup.Postgresql.Label = lastBackup.Label
-	currentBackup.Postgresql.Status = BackupStatusSuccess
-	currentBackup.Status = BackupStatusSuccess
 
 	// fmt.Printf("%#v", pgBackrestConfig)
 
