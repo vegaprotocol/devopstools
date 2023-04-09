@@ -3,6 +3,7 @@ package pgbackrest
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
@@ -53,6 +54,20 @@ type PgBackrestConfig struct {
 	} `ini:"global"`
 }
 
+type PgBackrestBackupInfo struct {
+	Type      string `json:"type"`
+	Label     string `json:"label"`
+	Error     bool   `json:"error"`
+	Timestamp struct {
+		Start uint64 `json:"start"`
+		Stop  uint64 `json:"stop"`
+	} `json:"timestamp"`
+}
+
+type PgBackRestInfo []struct {
+	Backup []PgBackrestBackupInfo `json:"backup"`
+}
+
 func CheckPgBackRestSetup(pgBackrestBinary string, config PgBackrestConfig) error {
 	if config.Global.R1Type != "s3" {
 		return fmt.Errorf("invalid repository type(repo1-type): got %s, only s3 supported", config.Global.R1Type)
@@ -87,6 +102,7 @@ func ReadConfig(location string) (PgBackrestConfig, error) {
 func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 	args := []string{
 		"check",
+		"--log-level-console", "info",
 		"--stanza", StanzaName,
 	}
 
@@ -102,12 +118,19 @@ func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 	args := []string{
 		"stanza-create",
+		"--log-level-console", "info",
 		"--stanza", StanzaName,
 	}
 
 	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
 	logger.Debug(string(out))
+
 	if err != nil {
+		// stanza already exists but it is stopped
+		if strings.Contains(err.Error(), "stop file exists for stanza main_archive") {
+			return nil
+		}
+
 		return fmt.Errorf("failed to create pgbackrest stanza: %w, command output: %s", err, out)
 	}
 
@@ -116,7 +139,8 @@ func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) er
 
 func Backup(logger zap.Logger, postgresqlUser, pgBackrestBinary string, backupType BackupType) error {
 	args := []string{
-		"stanza-create",
+		"backup",
+		"--log-level-console", "info",
 		"--stanza", StanzaName,
 		"--type", string(backupType),
 	}
@@ -128,4 +152,75 @@ func Backup(logger zap.Logger, postgresqlUser, pgBackrestBinary string, backupTy
 	}
 
 	return nil
+}
+
+func Start(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	args := []string{
+		"start",
+		"--log-level-console", "info",
+		"--stanza", StanzaName,
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
+	logger.Debug(string(out))
+	if err != nil {
+		return fmt.Errorf("failed to start pgbackrest stanza: %w, command output: %s", err, out)
+	}
+
+	return nil
+}
+
+func Stop(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	args := []string{
+		"stop",
+		"--log-level-console", "info",
+		"--stanza", StanzaName,
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
+	logger.Debug(string(out))
+	if err != nil {
+		return fmt.Errorf("failed to stop pgbackrest stanza: %w, command output: %s", err, out)
+	}
+
+	return nil
+}
+
+func Info(logger zap.Logger, postgresqlUser, pgBackrestBinary string) (PgBackRestInfo, error) {
+	result := PgBackRestInfo{}
+	args := []string{
+		"info",
+		"--log-level-console", "info",
+		"--output", "json",
+		"--stanza", StanzaName,
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, &result)
+	logger.Debug(string(out))
+	if err != nil {
+		return result, fmt.Errorf("failed to get info about pgbackrest stanza: %w, command output: %s", err, out)
+	}
+
+	return result, nil
+}
+
+func LastPgBackRestBackupInfo(info PgBackRestInfo, onlySuccessfull bool) *PgBackrestBackupInfo {
+	if len(info) < 1 || len(info[0].Backup) < 1 {
+		return nil
+	}
+
+	var result *PgBackrestBackupInfo
+	for idx, backupInfo := range info[0].Backup {
+		if result != nil && result.Timestamp.Stop >= backupInfo.Timestamp.Stop {
+			continue
+		}
+
+		if backupInfo.Error && onlySuccessfull {
+			continue
+		}
+
+		result = &info[0].Backup[idx]
+	}
+
+	return result
 }
