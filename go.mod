@@ -5,8 +5,10 @@ go 1.19
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
 	code.vegaprotocol.io/vega v0.69.0
+	github.com/aws/aws-sdk-go v1.40.45
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.2
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.18.1
 	github.com/libp2p/go-libp2p-core v0.20.1
@@ -64,7 +66,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.9.0 // indirect
 	github.com/gtank/merlin v0.1.1 // indirect
@@ -110,6 +111,7 @@ require (
 	github.com/ipld/go-codec-dagpb v1.5.0 // indirect
 	github.com/ipld/go-ipld-prime v0.19.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.1 // indirect

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
+	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
 	"go.uber.org/zap"
 )
 
@@ -55,6 +56,20 @@ func DoBackup(args BackupArgs) error {
 	if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
+
+	args.Logger.Info("Creating session for S3 connection")
+	s3Session, err := vegachain.NewSession(vegachain.S3Credentials{
+		Region:       pgBackrestConfig.Global.R1S3Region,
+		Endpoint:     pgBackrestConfig.Global.R1S3Endpoint,
+		AccessKey:    pgBackrestConfig.Global.R1S3Key,
+		AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create s3 session: %w", err)
+	}
+
+	_ = s3Session
+	os.Exit(1)
 
 	currentState := LoadOrCreateNew(args.localStateFile)
 	if currentState.Locked {
