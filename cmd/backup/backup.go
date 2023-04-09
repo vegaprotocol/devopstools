@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,6 +48,8 @@ func init() {
 }
 
 func DoBackup(args BackupArgs) error {
+	var stateMutex sync.Mutex
+
 	pgBackrestConfig, err := pgbackrest.ReadConfig("/etc/pgbackrest.conf")
 	if err != nil {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
@@ -133,16 +136,37 @@ func DoBackup(args BackupArgs) error {
 	currentBackup.Postgresql.Type = backupType
 	currentState.AddOrModifyEntry(currentBackup, true)
 
-	currentBackup.Postgresql.Started = time.Now()
-	args.Logger.Info("Starting pgbackrest backup")
-	if err := pgbackrest.Backup(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary, backupType); err != nil {
-		currentBackup.Status = BackupStatusFailed
-		currentBackup.Postgresql.Status = BackupStatusFailed
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		stateMutex.Lock()
+		currentBackup.Postgresql.Started = time.Now()
+		stateMutex.Unlock()
+		args.Logger.Info("Starting pgbackrest backup")
+		if err := pgbackrest.Backup(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary, backupType); err != nil {
+			stateMutex.Lock()
+			currentBackup.Status = BackupStatusFailed
+			currentBackup.Postgresql.Status = BackupStatusFailed
+			currentBackup.Postgresql.Finished = time.Now()
+			stateMutex.Unlock()
+
+			args.Logger.Error("failed to backup data", zap.Error(err))
+		}
+		args.Logger.Info("Pgbackrest backup finished")
+
+		stateMutex.Lock()
 		currentBackup.Postgresql.Finished = time.Now()
-		return fmt.Errorf("failed to backup data: %w", err)
-	}
-	args.Logger.Info("Pgbackrest backup finished")
-	currentBackup.Postgresql.Finished = time.Now()
+		stateMutex.Unlock()
+	}()
+
+	go func() {
+		time.Sleep(10 * time.Second)
+		defer wg.Done()
+	}()
+	wg.Wait()
 
 	// We have to stop stanza to avoid issues with automatic backup of postgresql data
 	args.Logger.Info("Stopping pgbackrest stanza")
