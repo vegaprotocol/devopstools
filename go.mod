@@ -5,7 +5,6 @@ go 1.19
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
 	code.vegaprotocol.io/vega v0.69.0
-	github.com/aws/aws-sdk-go v1.44.19
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.2
 	github.com/google/uuid v1.3.0
@@ -13,6 +12,7 @@ require (
 	github.com/ipfs/kubo v0.18.1
 	github.com/libp2p/go-libp2p-core v0.20.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/seqsense/s3sync v1.8.2
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -34,6 +34,7 @@ require (
 	github.com/adrg/xdg v0.4.0 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
+	github.com/aws/aws-sdk-go v1.44.19 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.22.2 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.1 // indirect
@@ -124,6 +125,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-pointer v0.0.1 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
@@ -155,6 +157,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
