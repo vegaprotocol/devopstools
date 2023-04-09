@@ -74,11 +74,15 @@ func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outp
 	}
 	cmd.Start()
 
+	stdErrBuffer := NewFixedBuffer(make([]byte, 0, 1024))
+
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		scanner.Split(bufio.ScanWords)
 		for scanner.Scan() {
 			logLine := scanner.Text()
+			stdErrBuffer.Write([]byte(logLine))
+
 			logParser("stderr", logLine)
 		}
 	}()
@@ -93,6 +97,10 @@ func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outp
 	}()
 
 	cmd.Wait()
+
+	if !stdErrBuffer.Empty() {
+		return fmt.Errorf("failed to execute %s %v: %s", binaryPath, args, stdErrBuffer.String())
+	}
 
 	return nil
 }

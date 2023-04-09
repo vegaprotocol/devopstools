@@ -79,3 +79,25 @@ func S3Sync(s3CmdBinary, source, destination string, debug bool) error {
 
 	return nil
 }
+
+func S3Copy(s3CmdBinary, source, destination string, debug bool) error {
+	args := []string{
+		"cp",
+		source,
+		destination,
+		"--follow-symlinks",
+		"--stop-on-error",
+		"--preserve",
+		"--recursive",
+		// "--check-md5", "--skip-existing", // TODO: need verification
+	}
+	if !debug {
+		args = append(args, "--quiet")
+	}
+
+	if _, err := tools.ExecuteBinary(s3CmdBinary, args, nil); err != nil {
+		return fmt.Errorf("failed to copy files from \"%s\" to \"%s\": %w", source, destination, err)
+	}
+
+	return nil
+}

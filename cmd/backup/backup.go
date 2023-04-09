@@ -124,7 +124,7 @@ func DoBackup(args BackupArgs) error {
 
 	_, postgresqlBackupDir := filepath.Split(pgBackrestConfig.Global.R1Path)
 	currentBackup.VegaChain.Location.Bucket = pgBackrestConfig.Global.R1S3Bucket
-	currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain/%s/%s", postgresqlBackupDir, currentBackup.ID)
+	currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain_snapshots/%s/%s", postgresqlBackupDir, currentBackup.ID)
 
 	if err := vegachain.BackupChainData(
 		args.Logger,
@@ -134,7 +134,6 @@ func DoBackup(args BackupArgs) error {
 		currentBackup.VegaChain.Location.Path); err != nil {
 		return fmt.Errorf("failed to backup vega chain data: %w", err)
 	}
-	os.Exit(1)
 
 	args.Logger.Info("Ensuring pgbackrest stanza exists")
 	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {

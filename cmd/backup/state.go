@@ -16,6 +16,7 @@ const (
 	BackupStatusFailed     BackupStatus = "failed"
 	BackupStatusSuccess    BackupStatus = "success"
 	BackupStatusInProgress BackupStatus = "in-progress"
+	BackupStatusUnknown    BackupStatus = "unknown"
 )
 
 type PgBackrestEntry struct {
@@ -35,6 +36,7 @@ type VegaChainEntry struct {
 
 	Started  time.Time
 	Finished time.Time
+	Status   BackupStatus
 }
 
 type BackupEntry struct {
@@ -150,6 +152,8 @@ func NewBackupEntry() (BackupEntry, error) {
 	result.ID = uuid.New()
 	result.Started = time.Now()
 	result.Status = BackupStatusInProgress
+	result.Postgresql.Status = BackupStatusUnknown
+	result.VegaChain.Status = BackupStatusUnknown
 
 	result.ServerHost, err = os.Hostname()
 	if err != nil {

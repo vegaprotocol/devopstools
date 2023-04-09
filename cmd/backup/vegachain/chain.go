@@ -90,14 +90,14 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", tendermintHomeS3DestinationPath),
 	)
 
-	snapshotSource := fmt.Sprintf("s3://%s/%s", destinationBucket, destinationPath)
+	snapshotSource := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
 	snapshotDestination := fmt.Sprintf("s3://%s/%s/", destinationBucket, snapshotDestinationPath)
 	logger.Info(
 		"Creating vega chain backup snapshot",
 		zap.String("source", snapshotSource),
 		zap.String("destination", snapshotDestination),
 	)
-	if err := S3Sync(s3CmdBinary, TendermintHome, tendermintHomeS3DestinationPath, debug); err != nil {
+	if err := S3Sync(s3CmdBinary, snapshotSource, snapshotDestination, debug); err != nil {
 		return fmt.Errorf("failed to create backup snapshot: %w", err)
 	}
 	logger.Info(
