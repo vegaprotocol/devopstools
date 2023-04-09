@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -58,4 +59,40 @@ func executeCmd(command *exec.Cmd, v interface{}) ([]byte, error) {
 	}
 
 	return nil, nil
+}
+
+func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outputType, logLine string)) error {
+	cmd := exec.Command(binaryPath, args...)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to execute %s %v: failed to create stderr pipe: %w", binaryPath, args, err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to execute %s %v: failed to create stdout pipe: %w", binaryPath, args, err)
+	}
+	cmd.Start()
+
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		scanner.Split(bufio.ScanWords)
+		for scanner.Scan() {
+			logLine := scanner.Text()
+			logParser("stderr", logLine)
+		}
+	}()
+
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		scanner.Split(bufio.ScanWords)
+		for scanner.Scan() {
+			logLine := scanner.Text()
+			logParser("stderr", logLine)
+		}
+	}()
+
+	cmd.Wait()
+
+	return nil
 }

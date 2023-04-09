@@ -21,6 +21,8 @@ type BackupArgs struct {
 	postgresqlUser   string
 	pgBackrestBinary string
 	pgBackrestFull   bool
+
+	s3CmdBinary string
 }
 
 var backupArgs BackupArgs
@@ -44,6 +46,7 @@ func init() {
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlUser, "postgresql-user", "postgres", "The username who runs the postgresql")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Perform the full backup")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
 
 	BackupRootCmd.AddCommand(performBackupCmd)
 }
@@ -59,15 +62,30 @@ func DoBackup(args BackupArgs) error {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
 
-	args.Logger.Info("Creating session for S3 connection")
-	s3Session, err := vegachain.NewSession(vegachain.S3Credentials{
+	// args.Logger.Info("Creating session for S3 connection")
+	// s3Session, err := vegachain.NewSession(vegachain.S3Credentials{
+	// 	Region:       pgBackrestConfig.Global.R1S3Region,
+	// 	Endpoint:     pgBackrestConfig.Global.R1S3Endpoint,
+	// 	AccessKey:    pgBackrestConfig.Global.R1S3Key,
+	// 	AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create s3 session: %w", err)
+	// }
+
+	args.Logger.Info("Verifying s3cmd setup")
+	if err := vegachain.CheckS3Setup(args.s3CmdBinary); err != nil {
+		return fmt.Errorf("failed to check s3 setup: %w", err)
+	}
+
+	args.Logger.Info("Initializing s3cmd config")
+	if err := vegachain.S3CmdInit(args.s3CmdBinary, vegachain.S3Credentials{
 		Region:       pgBackrestConfig.Global.R1S3Region,
 		Endpoint:     pgBackrestConfig.Global.R1S3Endpoint,
 		AccessKey:    pgBackrestConfig.Global.R1S3Key,
 		AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create s3 session: %w", err)
+	}); err != nil {
+		return fmt.Errorf("failed to init s3cmd: %w", err)
 	}
 
 	currentState := LoadOrCreateNew(args.localStateFile)
@@ -110,7 +128,7 @@ func DoBackup(args BackupArgs) error {
 
 	if err := vegachain.BackupChainData(
 		args.Logger,
-		s3Session,
+		args.s3CmdBinary,
 		postgresqlBackupDir,
 		currentBackup.VegaChain.Location.Bucket,
 		currentBackup.VegaChain.Location.Path); err != nil {
