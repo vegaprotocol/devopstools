@@ -58,6 +58,7 @@ func DoListBackups(args ListBackupsArgs) error {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"ID", "Started", "Finished", "PSQL Status", "Chain Status"})
 
+	// TODO: Add sorting by finished date
 	for _, backup := range state.Backups {
 		table.Append([]string{
 			backup.ID.String(),

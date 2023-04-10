@@ -98,7 +98,7 @@ func ExecuteBinaryWithRealTimeLogs(binaryPath string, args []string, logParser f
 			logLine := scanner.Text()
 
 			stdOutBuffer.Write([]byte(logLine))
-			logParser("stderr", logLine)
+			logParser("stdout", logLine)
 		}
 	}()
 

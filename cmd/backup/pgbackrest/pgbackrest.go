@@ -99,6 +99,19 @@ func ReadConfig(location string) (PgBackrestConfig, error) {
 	return resultConfig, nil
 }
 
+func ReadRawConfig(location string) (string, error) {
+	if !tools.FileExists(location) {
+		return "", fmt.Errorf("pgbackrest config(%s) does not exists", location)
+	}
+
+	content, err := os.ReadFile(location)
+	if err != nil {
+		return "", fmt.Errorf("failed to read pgbackrest config file: %w", err)
+	}
+
+	return string(content), nil
+}
+
 func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 	args := []string{
 		"check",

@@ -17,10 +17,12 @@ import (
 
 type BackupArgs struct {
 	*BackupRootArgs
-	localStateFile   string
-	postgresqlUser   string
-	pgBackrestBinary string
-	pgBackrestFull   bool
+	localStateFile string
+	postgresqlUser string
+	pgBackrestFull bool
+
+	pgBackrestBinary     string
+	pgBackrestConfigFile string
 
 	s3CmdBinary string
 }
@@ -47,12 +49,13 @@ func init() {
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Perform the full backup")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestConfigFile, "pgbackrest-config-file", "/etc/pgbackrest.conf", "Location of pgbackrest config file")
 
 	BackupRootCmd.AddCommand(performBackupCmd)
 }
 
 func DoBackup(args BackupArgs) error {
-	pgBackrestConfig, err := pgbackrest.ReadConfig("/etc/pgbackrest.conf")
+	pgBackrestConfig, err := pgbackrest.ReadConfig(args.pgBackrestConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
 	}
@@ -61,17 +64,6 @@ func DoBackup(args BackupArgs) error {
 	if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
-
-	// args.Logger.Info("Creating session for S3 connection")
-	// s3Session, err := vegachain.NewSession(vegachain.S3Credentials{
-	// 	Region:       pgBackrestConfig.Global.R1S3Region,
-	// 	Endpoint:     pgBackrestConfig.Global.R1S3Endpoint,
-	// 	AccessKey:    pgBackrestConfig.Global.R1S3Key,
-	// 	AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create s3 session: %w", err)
-	// }
 
 	args.Logger.Info("Verifying s3cmd setup")
 	if err := vegachain.CheckS3Setup(args.s3CmdBinary); err != nil {
@@ -105,10 +97,17 @@ func DoBackup(args BackupArgs) error {
 		}
 	}()
 
+	rawPgBackrestConfig, err := pgbackrest.ReadRawConfig(args.pgBackrestConfigFile)
+	if err != nil {
+		return fmt.Errorf("failed to read raw pgbackrest config file: %w", err)
+	}
+	currentState.PgBackrestConfig = rawPgBackrestConfig
+
 	currentBackup, err := NewBackupEntry()
 	if err != nil {
 		return fmt.Errorf("failed to initialize new backup entry: %w", err)
 	}
+
 	if err := currentState.AddOrModifyEntry(currentBackup, true); err != nil {
 		return fmt.Errorf("failed to add backup entry: %w", err)
 	}
@@ -121,19 +120,6 @@ func DoBackup(args BackupArgs) error {
 			args.Logger.Fatal("failed to add or modify backup entry on defer", zap.Error(err))
 		}
 	}()
-
-	_, postgresqlBackupDir := filepath.Split(pgBackrestConfig.Global.R1Path)
-	currentBackup.VegaChain.Location.Bucket = pgBackrestConfig.Global.R1S3Bucket
-	currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain_snapshots/%s/%s", postgresqlBackupDir, currentBackup.ID)
-
-	if err := vegachain.BackupChainData(
-		args.Logger,
-		args.s3CmdBinary,
-		postgresqlBackupDir,
-		currentBackup.VegaChain.Location.Bucket,
-		currentBackup.VegaChain.Location.Path); err != nil {
-		return fmt.Errorf("failed to backup vega chain data: %w", err)
-	}
 
 	args.Logger.Info("Ensuring pgbackrest stanza exists")
 	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
@@ -216,6 +202,7 @@ func DoBackup(args BackupArgs) error {
 			args.Logger.Error("failed to list pgbackrest backups", zap.Error(err))
 			return
 		}
+
 		lastBackup := pgbackrest.LastPgBackRestBackupInfo(pgBackrestBackups, true)
 		if lastBackup == nil {
 			stateMutex.Lock()
@@ -242,7 +229,19 @@ func DoBackup(args BackupArgs) error {
 		stateMutex.Unlock()
 
 		args.Logger.Info("Starting vega chain data backup")
-		time.Sleep(10 * time.Second)
+
+		_, postgresqlBackupDir := filepath.Split(pgBackrestConfig.Global.R1Path)
+		currentBackup.VegaChain.Location.Bucket = pgBackrestConfig.Global.R1S3Bucket
+		currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain_snapshots/%s/%s", postgresqlBackupDir, currentBackup.ID)
+
+		if err := vegachain.BackupChainData(
+			args.Logger,
+			args.s3CmdBinary,
+			postgresqlBackupDir,
+			currentBackup.VegaChain.Location.Bucket,
+			currentBackup.VegaChain.Location.Path); err != nil {
+			args.Logger.Info("failed to backup vega chain data", zap.Error(err))
+		}
 		args.Logger.Info("Finished vega chain data backup")
 
 		stateMutex.Lock()
@@ -256,8 +255,6 @@ func DoBackup(args BackupArgs) error {
 	if !failed {
 		currentBackup.Status = BackupStatusSuccess
 	}
-
-	// fmt.Printf("%#v", pgBackrestConfig)
 
 	return nil
 }

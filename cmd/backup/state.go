@@ -50,8 +50,9 @@ type BackupEntry struct {
 }
 
 type State struct {
-	LastUpdated time.Time
-	Backups     map[string]BackupEntry
+	LastUpdated      time.Time
+	Backups          map[string]BackupEntry
+	PgBackrestConfig string
 
 	Locked bool
 
@@ -125,6 +126,7 @@ func LoadFromLocal(location string) (State, error) {
 		return result, nil
 	}
 
+	result.localFilePath = location
 	return result, fmt.Errorf("failed to read state file from local: %w", err)
 }
 
@@ -142,6 +144,7 @@ func LoadOrCreateNew(locaLocation string) State {
 		return NewEmptyState()
 	}
 
+	localState.localFilePath = locaLocation
 	return localState
 }
 
