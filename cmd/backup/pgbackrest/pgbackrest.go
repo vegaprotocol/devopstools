@@ -217,6 +217,30 @@ func Info(logger zap.Logger, postgresqlUser, pgBackrestBinary string) (PgBackRes
 	return result, nil
 }
 
+func Restore(logger zap.Logger, postgresqlUser, pgBackrestBinary, label string, delta bool) (PgBackRestInfo, error) {
+	result := PgBackRestInfo{}
+	args := []string{
+		"restore",
+		"--type", "none",
+		"--log-level-console", "info",
+		"--stanza", StanzaName,
+		"--set", label,
+		"--archive-mode", "off",
+	}
+
+	if delta {
+		args = append(args, "--delta")
+	}
+
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, &result)
+	logger.Debug(string(out))
+	if err != nil {
+		return result, fmt.Errorf("failed to restore pgbackrest backup: %w, command output: %s", err, out)
+	}
+
+	return result, nil
+}
+
 func LastPgBackRestBackupInfo(info PgBackRestInfo, onlySuccessfull bool) *PgBackrestBackupInfo {
 	if len(info) < 1 || len(info[0].Backup) < 1 {
 		return nil

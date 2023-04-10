@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.18.1
+	github.com/lib/pq v1.10.6
 	github.com/libp2p/go-libp2p-core v0.20.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
