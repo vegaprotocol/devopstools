@@ -53,3 +53,13 @@ func (b *FixedBuffer) Clear() {
 
 	b.data = []byte{}
 }
+
+func (b *FixedBuffer) Read() []byte {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	var data = make([]byte, 0, b.cap)
+	copy(data, b.data)
+
+	return data
+}

@@ -61,24 +61,28 @@ func executeCmd(command *exec.Cmd, v interface{}) ([]byte, error) {
 	return nil, nil
 }
 
-func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outputType, logLine string)) error {
+func ExecuteBinaryWithRealTimeLogs(binaryPath string, args []string, logParser func(outputType, logLine string)) ([]byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("failed to execute %s %v: failed to create stderr pipe: %w", binaryPath, args, err)
+		return nil, fmt.Errorf("failed to execute %s %v: failed to create stderr pipe: %w", binaryPath, args, err)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("failed to execute %s %v: failed to create stdout pipe: %w", binaryPath, args, err)
+		return nil, fmt.Errorf("failed to execute %s %v: failed to create stdout pipe: %w", binaryPath, args, err)
 	}
 	cmd.Start()
 
-	stdErrBuffer := NewFixedBuffer(make([]byte, 0, 1024))
+	// 256 kB for stdErr buffer
+	stdErrBuffer := NewFixedBuffer(make([]byte, 0, 256*1024))
+
+	// 1 MB for stdOut buffer
+	stdOutBuffer := NewFixedBuffer(make([]byte, 0, 1024*1024))
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
-		scanner.Split(bufio.ScanWords)
+		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
 			logLine := scanner.Text()
 			stdErrBuffer.Write([]byte(logLine))
@@ -89,9 +93,11 @@ func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outp
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)
-		scanner.Split(bufio.ScanWords)
+		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
 			logLine := scanner.Text()
+
+			stdOutBuffer.Write([]byte(logLine))
 			logParser("stderr", logLine)
 		}
 	}()
@@ -99,8 +105,8 @@ func ExecuteBinaryRealTime(binaryPath string, args []string, logParser func(outp
 	cmd.Wait()
 
 	if !stdErrBuffer.Empty() {
-		return fmt.Errorf("failed to execute %s %v: %s", binaryPath, args, stdErrBuffer.String())
+		return stdOutBuffer.Read(), fmt.Errorf("failed to execute %s %v: %s", binaryPath, args, stdErrBuffer.String())
 	}
 
-	return nil
+	return stdOutBuffer.Read(), nil
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/vegaprotocol/devopstools/tools"
+	"go.uber.org/zap"
 )
 
 type S3Credentials struct {
@@ -57,7 +58,7 @@ func S3CmdInit(s3CmdBinary string, creds S3Credentials) error {
 	return nil
 }
 
-func S3Sync(s3CmdBinary, source, destination string, debug bool) error {
+func S3Sync(logger *zap.Logger, s3CmdBinary, source, destination string) error {
 	args := []string{
 		"sync",
 		source,
@@ -69,11 +70,9 @@ func S3Sync(s3CmdBinary, source, destination string, debug bool) error {
 		"--recursive",
 		// "--check-md5", "--skip-existing", // TODO: need verification
 	}
-	if !debug {
-		args = append(args, "--quiet")
-	}
-
-	if _, err := tools.ExecuteBinary(s3CmdBinary, args, nil); err != nil {
+	if _, err := tools.ExecuteBinaryWithRealTimeLogs(s3CmdBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("stream", outputType))
+	}); err != nil {
 		return fmt.Errorf("failed to sync files from \"%s\" to \"%s\": %w", source, destination, err)
 	}
 

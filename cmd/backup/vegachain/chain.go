@@ -35,8 +35,6 @@ func (l *S3ManagerLogger) Logf(format string, v ...interface{}) {
 }
 
 func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) error {
-	debug := logger.Level() == zap.DebugLevel
-
 	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vega_home/", destinationBucket, destinationPath)
 	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vegavisor_home/", destinationBucket, destinationPath)
 	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/tendermint_home/", destinationBucket, destinationPath)
@@ -49,7 +47,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("source", VegaHome),
 		zap.String("destination", vegaHomeS3DestinationPath),
 	)
-	if err := S3Sync(s3CmdBinary, VegaHome, vegaHomeS3DestinationPath, debug); err != nil {
+	if err := S3Sync(logger, s3CmdBinary, VegaHome, vegaHomeS3DestinationPath); err != nil {
 		return fmt.Errorf("failed to backup vega data: %w", err)
 	}
 	logger.Info(
@@ -64,7 +62,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 			zap.String("source", VisorHome),
 			zap.String("destination", visorHomeS3DestinationPath),
 		)
-		if err := S3Sync(s3CmdBinary, VisorHome, visorHomeS3DestinationPath, debug); err != nil {
+		if err := S3Sync(logger, s3CmdBinary, VisorHome, visorHomeS3DestinationPath); err != nil {
 			return fmt.Errorf("failed to backup visor data: %w", err)
 		}
 		logger.Info(
@@ -81,7 +79,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("source", TendermintHome),
 		zap.String("destination", tendermintHomeS3DestinationPath),
 	)
-	if err := S3Sync(s3CmdBinary, TendermintHome, tendermintHomeS3DestinationPath, debug); err != nil {
+	if err := S3Sync(logger, s3CmdBinary, TendermintHome, tendermintHomeS3DestinationPath); err != nil {
 		return fmt.Errorf("failed to backup tendermint data: %w", err)
 	}
 	logger.Info(
@@ -97,7 +95,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("source", snapshotSource),
 		zap.String("destination", snapshotDestination),
 	)
-	if err := S3Sync(s3CmdBinary, snapshotSource, snapshotDestination, debug); err != nil {
+	if err := S3Sync(logger, s3CmdBinary, snapshotSource, snapshotDestination); err != nil {
 		return fmt.Errorf("failed to create backup snapshot: %w", err)
 	}
 	logger.Info(
