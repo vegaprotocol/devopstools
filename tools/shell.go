@@ -61,6 +61,19 @@ func executeCmd(command *exec.Cmd, v interface{}) ([]byte, error) {
 	return nil, nil
 }
 
+func ExecuteBinaryWithExitCode(binaryPath string, args []string, v interface{}) (int, []byte, error) {
+	command := exec.Command(binaryPath, args...)
+
+	out, err := executeCmd(command, v)
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode(), out, err
+		}
+	}
+
+	return 0, out, err
+}
+
 func ExecuteBinaryWithRealTimeLogs(binaryPath string, args []string, logParser func(outputType, logLine string)) ([]byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 
