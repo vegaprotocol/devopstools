@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
 	"github.com/vegaprotocol/devopstools/cmd/backup/postgresql"
+	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
 	"go.uber.org/zap"
 )
 
@@ -68,6 +69,12 @@ func init() {
 }
 
 func DoRestore(args RestoreArgs) error {
+	args.Logger.Info("Ensuring postgresql is running")
+	if !systemctl.IsRunning(args.Logger, "postgresql") {
+		return fmt.Errorf("the postgresql service is not running")
+	}
+
+	args.Logger.Info("Loading state from local file", zap.String("file", args.localStateFile))
 	state, err := LoadFromLocal(args.localStateFile)
 	if err != nil {
 		return fmt.Errorf("failed to load backups state: %w", err)
@@ -77,10 +84,12 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("missing pgbackrest config in the state")
 	}
 
+	args.Logger.Info("Writing the pgbackrest config file")
 	if err := os.WriteFile(args.pgBackrestConfigFile, []byte(state.PgBackrestConfig), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write pgbackrest config from state: %w", err)
 	}
 
+	args.Logger.Info("Loading the pgbackrest config file into memory")
 	pgBackrestConfig, err := pgbackrest.ReadConfig(args.pgBackrestConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
@@ -91,10 +100,12 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
 
+	args.Logger.Info("Creating stanza")
 	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
 		return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
 	}
 
+	args.Logger.Info("Collecting the system facts")
 	sysInfo, err := collectSystemInfo(args.postgresqlDBUser, args.postgresqlDBPassword)
 	if err != nil {
 		return fmt.Errorf("failed to collect system info: %w", err)
@@ -172,7 +183,7 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 			return nil, fmt.Errorf("failed to stat the pg_wal to ensure it's a dir: %w", err)
 		}
 		if !walDestination.IsDir() {
-			return nil, fmt.Errorf("the pg_wal file(%s) is not a dir", pgWalPath)
+			return nil, fmt.Errorf("the pg_wal(%s) is not a dir", pgWalPath)
 		}
 	}
 
