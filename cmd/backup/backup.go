@@ -234,18 +234,23 @@ func DoBackup(args BackupArgs) error {
 		currentBackup.VegaChain.Location.Bucket = pgBackrestConfig.Global.R1S3Bucket
 		currentBackup.VegaChain.Location.Path = fmt.Sprintf("vega_chain_snapshots/%s/%s", postgresqlBackupDir, currentBackup.ID)
 
-		if err := vegachain.BackupChainData(
+		chainBackupInfo, err := vegachain.BackupChainData(
 			args.Logger,
 			args.s3CmdBinary,
 			postgresqlBackupDir,
 			currentBackup.VegaChain.Location.Bucket,
-			currentBackup.VegaChain.Location.Path); err != nil {
+			currentBackup.VegaChain.Location.Path,
+		)
+		if err != nil {
 			args.Logger.Info("failed to backup vega chain data", zap.Error(err))
 		}
 		args.Logger.Info("Finished vega chain data backup")
 
 		stateMutex.Lock()
 		currentBackup.VegaChain.Finished = time.Now()
+		currentBackup.VegaChain.Components.VegaHome = chainBackupInfo.WithVegaHome
+		currentBackup.VegaChain.Components.TendermintHome = chainBackupInfo.WithTendermintHome
+		currentBackup.VegaChain.Components.VisorHome = chainBackupInfo.WithVisorHome
 		stateMutex.Unlock()
 	}()
 

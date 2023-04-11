@@ -34,9 +34,14 @@ type VegaChainEntry struct {
 		Path   string
 	}
 
-	Started  time.Time
-	Finished time.Time
-	Status   BackupStatus
+	Started    time.Time
+	Finished   time.Time
+	Status     BackupStatus
+	Components struct {
+		VegaHome       bool
+		TendermintHome bool
+		VisorHome      bool
+	}
 }
 
 type BackupEntry struct {

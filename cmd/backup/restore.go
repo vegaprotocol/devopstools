@@ -11,6 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
 	"github.com/vegaprotocol/devopstools/cmd/backup/postgresql"
 	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
+	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +19,8 @@ type RestoreArgs struct {
 	*BackupRootArgs
 	localStateFile string
 
-	backupID string
+	backupID    string
+	s3CmdBinary string
 
 	postgresqlUser       string
 	pgBackrestBinary     string
@@ -58,6 +60,7 @@ func init() {
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performRestoreCmd.PersistentFlags().BoolVar(&restoreArgs.pgBackrestDeltaRestore, "delta", false, "Perform the delta restore for postgresql")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestConfigFile, "pgbackrest-config-file", "/etc/pgbackrest.conf", "Location of pgbackrest config file")
+	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
 
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlDBUser, "db-user", "vega_backup_manager", "The super user for postgresql db")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlDBPassword, "db-pass", "examplePassword", "Password for the db-user")
@@ -95,6 +98,20 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
 	}
 
+	args.Logger.Info("Verifying s3cmd setup")
+	if err := vegachain.CheckS3Setup(args.s3CmdBinary); err != nil {
+		return fmt.Errorf("failed to check s3 setup: %w", err)
+	}
+
+	if err := vegachain.S3CmdInit(args.s3CmdBinary, vegachain.S3Credentials{
+		Endpoint:     pgBackrestConfig.Global.R1S3Endpoint,
+		Region:       pgBackrestConfig.Global.R1S3Region,
+		AccessKey:    pgBackrestConfig.Global.R1S3Key,
+		AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
+	}); err != nil {
+		return fmt.Errorf("failed to initialize s3cmd credentials: %w", err)
+	}
+
 	args.Logger.Info("Verifying stanza setup")
 	if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
@@ -111,7 +128,26 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to collect system info: %w", err)
 	}
 
-	fmt.Printf("%#v", sysInfo)
+	args.Logger.Info("Stopping postgresql before resoring")
+	if err := systemctl.Stop(args.Logger, "postgresql"); err != nil {
+		return fmt.Errorf("failed to stop postgresql: %w", err)
+	}
+
+	args.Logger.Info("Stopping vegavisor before resoring")
+	if err := systemctl.Stop(args.Logger, "vegavisor"); err != nil {
+		return fmt.Errorf("failed to stop vegavisor: %w", err)
+	}
+
+	// Ensure postgresql and visor are not running
+	if systemctl.IsRunning(args.Logger, "postgresql") {
+		return fmt.Errorf("postgresql is still running after servise has been stopped")
+	}
+
+	if systemctl.IsRunning(args.Logger, "vegavisor") {
+		return fmt.Errorf("vegavisor is still running after servise has been stopped")
+	}
+
+	_ = sysInfo
 
 	return nil
 }

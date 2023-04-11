@@ -34,7 +34,13 @@ func (l *S3ManagerLogger) Logf(format string, v ...interface{}) {
 	}
 }
 
-func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) error {
+type ChainBackupInfo struct {
+	WithVegaHome       bool
+	WithVisorHome      bool
+	WithTendermintHome bool
+}
+
+func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) (*ChainBackupInfo, error) {
 	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vega_home/", destinationBucket, destinationPath)
 	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vegavisor_home/", destinationBucket, destinationPath)
 	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/tendermint_home/", destinationBucket, destinationPath)
@@ -48,7 +54,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", vegaHomeS3DestinationPath),
 	)
 	if err := S3Sync(logger, s3CmdBinary, VegaHome, vegaHomeS3DestinationPath); err != nil {
-		return fmt.Errorf("failed to backup vega data: %w", err)
+		return nil, fmt.Errorf("failed to backup vega data: %w", err)
 	}
 	logger.Info(
 		fmt.Sprintf("Backup for %s finished", VegaHome),
@@ -56,14 +62,16 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", vegaHomeS3DestinationPath),
 	)
 
+	withVegaVisorHome := false
 	if tools.FileExists(VisorHome) {
+		withVegaVisorHome = true
 		logger.Info(
 			fmt.Sprintf("Starting backup for %s", VisorHome),
 			zap.String("source", VisorHome),
 			zap.String("destination", visorHomeS3DestinationPath),
 		)
 		if err := S3Sync(logger, s3CmdBinary, VisorHome, visorHomeS3DestinationPath); err != nil {
-			return fmt.Errorf("failed to backup visor data: %w", err)
+			return nil, fmt.Errorf("failed to backup visor data: %w", err)
 		}
 		logger.Info(
 			fmt.Sprintf("Backup for %s finished", VisorHome),
@@ -80,7 +88,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", tendermintHomeS3DestinationPath),
 	)
 	if err := S3Sync(logger, s3CmdBinary, TendermintHome, tendermintHomeS3DestinationPath); err != nil {
-		return fmt.Errorf("failed to backup tendermint data: %w", err)
+		return nil, fmt.Errorf("failed to backup tendermint data: %w", err)
 	}
 	logger.Info(
 		fmt.Sprintf("Backup for %s finished", TendermintHome),
@@ -96,7 +104,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", snapshotDestination),
 	)
 	if err := S3Sync(logger, s3CmdBinary, snapshotSource, snapshotDestination); err != nil {
-		return fmt.Errorf("failed to create backup snapshot: %w", err)
+		return nil, fmt.Errorf("failed to create backup snapshot: %w", err)
 	}
 	logger.Info(
 		"Vega chain backup snapshot finished",
@@ -104,5 +112,9 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", snapshotDestination),
 	)
 
-	return nil
+	return &ChainBackupInfo{
+		WithVegaHome:       true,
+		WithTendermintHome: true,
+		WithVisorHome:      withVegaVisorHome,
+	}, nil
 }
