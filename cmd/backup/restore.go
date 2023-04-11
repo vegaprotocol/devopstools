@@ -95,6 +95,13 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
 	}
 
+	sysInfo, err := collectSystemInfo(args.postgresqlDBUser, args.postgresqlDBPassword)
+	if err != nil {
+		return fmt.Errorf("failed to collect system info: %w", err)
+	}
+
+	fmt.Printf("%#v", sysInfo)
+
 	return nil
 }
 
@@ -107,6 +114,8 @@ type systemInfo struct {
 	CustomTablespaces map[string]string
 }
 
+// We are collecting system information to detect all customization, and then after restore procedure we have to
+// revert them, because they are done for some reason.
 func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, error) {
 	psqlClient, err := postgresql.Client(postgresqlDbUser, postgresqlDbPass, "localhost", 5432, nil)
 	if err != nil {
@@ -128,8 +137,8 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 		CustomTablespaces: customTablespaces,
 	}
 
-	pgWalPath := filepath.Join(postgresqlDataDir, "/pg_wall")
-	walInfo, err := os.Stat(pgWalPath)
+	pgWalPath := filepath.Join(postgresqlDataDir, "pg_wal2")
+	walInfo, err := os.Lstat(pgWalPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("failed to stat pg_wall dir: %w", err)
@@ -139,11 +148,7 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 		return result, nil
 	}
 
-	if !walInfo.IsDir() {
-		return nil, fmt.Errorf("pg_wall is not a directory")
-	}
-
-	if walInfo.Mode()&os.ModeSymlink != 0 {
+	if walInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 		result.PostgreSqlPgWalDir.IsLink = true
 
 		link, err := os.Readlink(pgWalPath)
@@ -151,7 +156,32 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 			return nil, fmt.Errorf("failed to read pg_wal link: %w", err)
 		}
 		result.PostgreSqlPgWalDir.LinkTarget = link
+
+		// Make sure destination exists and it is a directory
+		walDestination, err := os.Stat(link)
+		if err != nil {
+			return nil, fmt.Errorf("failed to access the pg_wal link destination: %w", err)
+		}
+		if !walDestination.IsDir() {
+			return nil, fmt.Errorf("the pg_wal link destination(%s) is not a dir", link)
+		}
+	} else {
+		// PG_WAL is not a link, make sure can be accessed and it is a directory
+		walDestination, err := os.Stat(pgWalPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat the pg_wal to ensure it's a dir: %w", err)
+		}
+		if !walDestination.IsDir() {
+			return nil, fmt.Errorf("the pg_wal file(%s) is not a dir", pgWalPath)
+		}
 	}
 
 	return result, nil
+}
+
+// After restoring of the chain data
+func patchSystem(sysInfo systemInfo) error {
+
+	// TODO: Implement it
+	return nil
 }
