@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
+	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
 	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
 	"go.uber.org/zap"
 )
@@ -68,6 +69,11 @@ func DoBackup(args BackupArgs) error {
 	args.Logger.Info("Verifying s3cmd setup")
 	if err := vegachain.CheckS3Setup(args.s3CmdBinary); err != nil {
 		return fmt.Errorf("failed to check s3 setup: %w", err)
+	}
+
+	args.Logger.Info("Checking postgresql service")
+	if !systemctl.IsRunning(args.Logger, "postgresql") {
+		return fmt.Errorf("postgresql service is not running")
 	}
 
 	args.Logger.Info("Initializing s3cmd config")
@@ -148,6 +154,24 @@ func DoBackup(args BackupArgs) error {
 	}
 	currentBackup.Postgresql.Type = backupType
 	currentState.AddOrModifyEntry(currentBackup, true)
+
+	args.Logger.Info("Stopping vegavisor service")
+	if err := systemctl.Stop(args.Logger, "vegavisor"); err != nil {
+		return fmt.Errorf("failed to stop vegavisor: %w", err)
+	}
+	defer func() {
+		args.Logger.Info("Starting vegavisor service")
+		if err := systemctl.Start(args.Logger, "vegavisor"); err != nil {
+			args.Logger.Error("failed to start vegavisor service", zap.Error(err))
+			return
+		}
+
+		time.Sleep(30 * time.Second)
+		if !systemctl.IsRunning(args.Logger, "vegavisor") {
+			args.Logger.Error("the vegavisor service failed within 30 seconds after start", zap.Error(err))
+		}
+
+	}()
 
 	var (
 		wg         sync.WaitGroup
@@ -243,11 +267,18 @@ func DoBackup(args BackupArgs) error {
 		)
 		if err != nil {
 			args.Logger.Info("failed to backup vega chain data", zap.Error(err))
+			stateMutex.Lock()
+			currentBackup.Status = BackupStatusFailed
+			currentBackup.VegaChain.Status = BackupStatusFailed
+			stateMutex.Unlock()
+
+			return
 		}
 		args.Logger.Info("Finished vega chain data backup")
 
 		stateMutex.Lock()
 		currentBackup.VegaChain.Finished = time.Now()
+		currentBackup.VegaChain.Status = BackupStatusSuccess
 		currentBackup.VegaChain.Components.VegaHome = chainBackupInfo.WithVegaHome
 		currentBackup.VegaChain.Components.TendermintHome = chainBackupInfo.WithTendermintHome
 		currentBackup.VegaChain.Components.VisorHome = chainBackupInfo.WithVisorHome
@@ -259,6 +290,8 @@ func DoBackup(args BackupArgs) error {
 
 	if !failed {
 		currentBackup.Status = BackupStatusSuccess
+	} else {
+		return fmt.Errorf("one of the backup failed, postgresql-status: %s, chain-status: %s", string(currentBackup.Postgresql.Status), string(currentBackup.VegaChain.Status))
 	}
 
 	return nil
