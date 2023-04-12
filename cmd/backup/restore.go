@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
@@ -87,6 +89,15 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("missing pgbackrest config in the state")
 	}
 
+	if len(state.Backups) < 1 {
+		return fmt.Errorf("no backup found in the local state file: %s", args.localStateFile)
+	}
+
+	currentBackup, backupFound := state.Backups[args.backupID]
+	if !backupFound {
+		return fmt.Errorf("backup %s not found in the state file, run list-backups to see available backups", args.backupID)
+	}
+
 	args.Logger.Info("Writing the pgbackrest config file")
 	if err := os.WriteFile(args.pgBackrestConfigFile, []byte(state.PgBackrestConfig), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write pgbackrest config from state: %w", err)
@@ -147,8 +158,32 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("vegavisor is still running after servise has been stopped")
 	}
 
-	_ = sysInfo
+	args.Logger.Info("Removing local chain data")
+	if err := vegachain.RemoveLocalChainData(); err != nil {
+		return fmt.Errorf("failed to remove local chain data: %w", err)
+	}
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		args.Logger.Info("Restoring backup for vega chain from S3")
+
+		time.Sleep(30)
+	}()
+
+	go func() {
+		defer wg.Done()
+		args.Logger.Info("Restoring the postgresql backup")
+
+		time.Sleep(30)
+	}()
+
+	wg.Wait()
+
+	_ = sysInfo
+	_ = currentBackup
 	return nil
 }
 

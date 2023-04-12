@@ -38,6 +38,8 @@ type ChainBackupInfo struct {
 	WithVegaHome       bool
 	WithVisorHome      bool
 	WithTendermintHome bool
+
+	Destination string
 }
 
 func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) (*ChainBackupInfo, error) {
