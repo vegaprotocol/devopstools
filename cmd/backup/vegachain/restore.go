@@ -3,7 +3,6 @@ package vegachain
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
@@ -35,9 +34,9 @@ func RemoveLocalChainData(logger *zap.Logger) error {
 }
 
 func RestoreChainData(logger *zap.Logger, s3CmdBinary, s3SnapshotLocation string, withVisorHome bool) error {
-	vegaHomeSnapshot := filepath.Join(s3SnapshotLocation, "vega_home")
-	visorHomeSnapshot := filepath.Join(s3SnapshotLocation, "vegavisor_home")
-	tendermintHomeSnapshot := filepath.Join(s3SnapshotLocation, "tendermint_home")
+	vegaHomeSnapshot := S3Join(s3SnapshotLocation, "vega_home")
+	visorHomeSnapshot := S3Join(s3SnapshotLocation, "vegavisor_home")
+	tendermintHomeSnapshot := S3Join(s3SnapshotLocation, "tendermint_home")
 
 	logger.Info("Restoring vega home from remote snapshot", zap.String("source", vegaHomeSnapshot), zap.String("destination", VegaHome))
 	// TODO: Think to add parallel

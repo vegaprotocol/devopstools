@@ -269,7 +269,7 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 		CustomTablespaces: customTablespaces,
 	}
 
-	pgWalPath := filepath.Join(postgresqlDataDir, "pg_wal2")
+	pgWalPath := filepath.Join(postgresqlDataDir, "pg_wal")
 	walInfo, err := os.Lstat(pgWalPath)
 	if err != nil {
 		if !os.IsNotExist(err) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
@@ -99,4 +100,21 @@ func S3Copy(s3CmdBinary, source, destination string, debug bool) error {
 	}
 
 	return nil
+}
+
+// We cannot use the filepath.Join function to concat the S3 paths as S3 standard is slightly different and sometimes
+// it requires double slash, what is not allowed and it is removed in the filepath.Join.
+// Moreover filepath.Join is system-dependant
+func S3Join(args ...string) string {
+	result := ""
+
+	if len(args) < 1 {
+		return ""
+	}
+
+	for _, item := range args {
+		result = fmt.Sprintf("%s/%s", result, strings.Trim(item, "/"))
+	}
+
+	return strings.TrimLeft(result, "/")
 }
