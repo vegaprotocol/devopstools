@@ -9,6 +9,11 @@ import (
 )
 
 const (
+	VegaUser  = "vega"
+	VegaGroup = "vega"
+)
+
+const (
 	VegaHome       = "/home/vega/vega_home"
 	VisorHome      = "/home/vega/vegavisor_home"
 	TendermintHome = "/home/vega/tendermint_home"

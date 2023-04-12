@@ -149,6 +149,29 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to stop vegavisor: %w", err)
 	}
 
+	defer func() {
+		args.Logger.Info("Starting postgresql service")
+		if err := systemctl.Start(args.Logger, "postgresql"); err != nil {
+			args.Logger.Error("failed to start postgresql service", zap.Error(err))
+			return
+		}
+
+		args.Logger.Info("Starting vegavisor service")
+		if err := systemctl.Start(args.Logger, "vegavisor"); err != nil {
+			args.Logger.Error("failed to start vegavisor service", zap.Error(err))
+			return
+		}
+
+		time.Sleep(30 * time.Second)
+		if !systemctl.IsRunning(args.Logger, "postgresql") {
+			args.Logger.Error("the postgresql service failed within 30 seconds after start", zap.Error(err))
+		}
+
+		if !systemctl.IsRunning(args.Logger, "vegavisor") {
+			args.Logger.Error("the vegavisor service failed within 30 seconds after start", zap.Error(err))
+		}
+	}()
+
 	// Ensure postgresql and visor are not running
 	if systemctl.IsRunning(args.Logger, "postgresql") {
 		return fmt.Errorf("postgresql is still running after servise has been stopped")
@@ -159,18 +182,39 @@ func DoRestore(args RestoreArgs) error {
 	}
 
 	args.Logger.Info("Removing local chain data")
-	if err := vegachain.RemoveLocalChainData(); err != nil {
+	if err := vegachain.RemoveLocalChainData(args.Logger); err != nil {
 		return fmt.Errorf("failed to remove local chain data: %w", err)
 	}
 
-	var wg sync.WaitGroup
+	var (
+		wg               sync.WaitGroup
+		chainDataFailed  bool
+		postgresqlFailed bool
+	)
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
-		args.Logger.Info("Restoring backup for vega chain from S3")
 
-		time.Sleep(30)
+		args.Logger.Info("Removing local vega chain data")
+		if err := vegachain.RemoveLocalChainData(args.Logger); err != nil {
+			chainDataFailed = true
+			args.Logger.Error("failed to remove local chain data", zap.Error(err))
+			return
+		}
+
+		args.Logger.Info("Restoring vega chain data from remote")
+		snapshotDestination := fmt.Sprintf("s3://%s/%s", currentBackup.VegaChain.Location.Bucket, currentBackup.VegaChain.Location.Path)
+		if err := vegachain.RestoreChainData(
+			args.Logger,
+			args.s3CmdBinary,
+			snapshotDestination,
+			currentBackup.VegaChain.Components.VisorHome,
+		); err != nil {
+			chainDataFailed = true
+			args.Logger.Error("failed to restore chain data", zap.Error(err))
+			return
+		}
 	}()
 
 	go func() {
@@ -182,8 +226,14 @@ func DoRestore(args RestoreArgs) error {
 
 	wg.Wait()
 
-	_ = sysInfo
-	_ = currentBackup
+	patchSystem(*sysInfo)
+
+	args.Logger.Info(
+		"Backup finished",
+		zap.Bool("chain_data_successfull", !chainDataFailed),
+		zap.Bool("postgresql_successfull", !postgresqlFailed),
+	)
+
 	return nil
 }
 

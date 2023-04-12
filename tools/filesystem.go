@@ -10,3 +10,7 @@ func FileExists(filePath string) bool {
 
 	return err == nil
 }
+
+func ChownR(path, username, group string) error {
+	return nil
+}

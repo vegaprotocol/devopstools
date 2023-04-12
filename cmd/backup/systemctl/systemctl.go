@@ -39,6 +39,7 @@ func Stop(logger *zap.Logger, service string) error {
 	return nil
 }
 
+// ref: https://www.freedesktop.org/software/systemd/man/systemctl.html#Exit%20status
 func IsRunning(logger *zap.Logger, service string) bool {
 	exitCode, out, err := tools.ExecuteBinaryWithExitCode("systemctl", []string{"status", service}, nil)
 

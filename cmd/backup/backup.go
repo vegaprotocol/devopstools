@@ -170,7 +170,6 @@ func DoBackup(args BackupArgs) error {
 		if !systemctl.IsRunning(args.Logger, "vegavisor") {
 			args.Logger.Error("the vegavisor service failed within 30 seconds after start", zap.Error(err))
 		}
-
 	}()
 
 	var (
