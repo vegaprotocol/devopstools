@@ -113,30 +113,43 @@ func ReadRawConfig(location string) (string, error) {
 }
 
 func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"check",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
 	if err != nil {
-		return fmt.Errorf("failed to check pgbackrest: %w", err)
+		return fmt.Errorf("failed to check pgbackrest: %w, command output: %s", err, out)
 	}
 
 	return nil
 }
 
 func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"stanza-create",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
 
 	if err != nil {
 		// stanza already exists but it is stopped
@@ -151,15 +164,22 @@ func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) er
 }
 
 func Backup(logger zap.Logger, postgresqlUser, pgBackrestBinary string, backupType BackupType) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"backup",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 		"--type", string(backupType),
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to perform a backup operation pgbackrest stanza: %w, command output: %s", err, out)
 	}
@@ -168,14 +188,21 @@ func Backup(logger zap.Logger, postgresqlUser, pgBackrestBinary string, backupTy
 }
 
 func Start(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"start",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to start pgbackrest stanza: %w, command output: %s", err, out)
 	}
@@ -184,14 +211,21 @@ func Start(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 }
 
 func Stop(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"stop",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to stop pgbackrest stanza: %w, command output: %s", err, out)
 	}
@@ -200,10 +234,15 @@ func Stop(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 }
 
 func Info(logger zap.Logger, postgresqlUser, pgBackrestBinary string) (PgBackRestInfo, error) {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	result := PgBackRestInfo{}
 	args := []string{
 		"info",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--output", "json",
 		"--stanza", StanzaName,
 	}
@@ -217,12 +256,16 @@ func Info(logger zap.Logger, postgresqlUser, pgBackrestBinary string) (PgBackRes
 	return result, nil
 }
 
-func Restore(logger zap.Logger, postgresqlUser, pgBackrestBinary, label string, delta bool) (PgBackRestInfo, error) {
-	result := PgBackRestInfo{}
+func Restore(logger zap.Logger, postgresqlUser, pgBackrestBinary, label string, delta bool) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
 	args := []string{
 		"restore",
 		"--type", "none",
-		"--log-level-console", "info",
+		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 		"--set", label,
 		"--archive-mode", "off",
@@ -232,13 +275,15 @@ func Restore(logger zap.Logger, postgresqlUser, pgBackrestBinary, label string, 
 		args = append(args, "--delta")
 	}
 
-	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, &result)
-	logger.Debug(string(out))
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
 	if err != nil {
-		return result, fmt.Errorf("failed to restore pgbackrest backup: %w, command output: %s", err, out)
+		return fmt.Errorf("failed to restore pgbackrest backup: %w, command output: %s", err, out)
 	}
 
-	return result, nil
+	return nil
 }
 
 func LastPgBackRestBackupInfo(info PgBackRestInfo, onlySuccessfull bool) *PgBackrestBackupInfo {

@@ -74,16 +74,42 @@ func ExecuteBinaryWithExitCode(binaryPath string, args []string, v interface{}) 
 	return 0, out, err
 }
 
+func ExecuteBinaryAsUserWithRealTimeLogs(userName string, binaryPath string, args []string, logParser func(outputType, logLine string)) ([]byte, error) {
+	command := exec.Command(binaryPath, args...)
+
+	u, err := user.Lookup(userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute command %s %v as a %s: %w", binaryPath, args, userName, err)
+	}
+	uid, err := strconv.ParseInt(u.Uid, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert user id from string to int: %w", err)
+	}
+	gid, err := strconv.ParseInt(u.Gid, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert group id from string to int: %w", err)
+	}
+
+	command.SysProcAttr = &syscall.SysProcAttr{}
+	command.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
+
+	return executeBinaryWithRealTimeLogs(command, logParser)
+}
+
 func ExecuteBinaryWithRealTimeLogs(binaryPath string, args []string, logParser func(outputType, logLine string)) ([]byte, error) {
 	cmd := exec.Command(binaryPath, args...)
 
+	return executeBinaryWithRealTimeLogs(cmd, logParser)
+}
+
+func executeBinaryWithRealTimeLogs(cmd *exec.Cmd, logParser func(outputType, logLine string)) ([]byte, error) {
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute %s %v: failed to create stderr pipe: %w", binaryPath, args, err)
+		return nil, fmt.Errorf("failed to execute %s %v: failed to create stderr pipe: %w", cmd.Path, cmd.Args, err)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute %s %v: failed to create stdout pipe: %w", binaryPath, args, err)
+		return nil, fmt.Errorf("failed to execute %s %v: failed to create stdout pipe: %w", cmd.Path, cmd.Args, err)
 	}
 	cmd.Start()
 
@@ -118,7 +144,7 @@ func ExecuteBinaryWithRealTimeLogs(binaryPath string, args []string, logParser f
 	cmd.Wait()
 
 	if !stdErrBuffer.Empty() {
-		return stdOutBuffer.Read(), fmt.Errorf("failed to execute %s %v: %s", binaryPath, args, stdErrBuffer.String())
+		return stdOutBuffer.Read(), fmt.Errorf("failed to execute %s %v: %s", cmd.Path, cmd.Args, stdErrBuffer.String())
 	}
 
 	return stdOutBuffer.Read(), nil

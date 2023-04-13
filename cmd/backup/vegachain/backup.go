@@ -14,9 +14,9 @@ const (
 )
 
 const (
-	VegaHome       = "/home/vega/vega_home"
-	VisorHome      = "/home/vega/vegavisor_home"
-	TendermintHome = "/home/vega/tendermint_home"
+	VegaHome       = "/home/vega/vega_home/"
+	VisorHome      = "/home/vega/vegavisor_home/"
+	TendermintHome = "/home/vega/tendermint_home/"
 )
 
 type S3ManagerLogger struct {
@@ -48,9 +48,9 @@ type ChainBackupInfo struct {
 }
 
 func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) (*ChainBackupInfo, error) {
-	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vega_home/", destinationBucket, destinationPath)
-	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vegavisor_home/", destinationBucket, destinationPath)
-	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/tendermint_home/", destinationBucket, destinationPath)
+	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
+	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
+	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
 
 	s3sync.SetLogger(&S3ManagerLogger{logger: logger})
 
@@ -61,7 +61,7 @@ func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, de
 		zap.String("destination", vegaHomeS3DestinationPath),
 	)
 	if err := S3Sync(logger, s3CmdBinary, VegaHome, vegaHomeS3DestinationPath); err != nil {
-		return nil, fmt.Errorf("failed to backup vega data: %w", err)
+		return nil, fmt.Errorf("failed to backup vega home: %w", err)
 	}
 	logger.Info(
 		fmt.Sprintf("Backup for %s finished", VegaHome),
