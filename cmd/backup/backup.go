@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -183,11 +184,15 @@ func DoBackup(args BackupArgs) error {
 		wg         sync.WaitGroup
 		stateMutex sync.Mutex
 		failed     bool
+
+		postgresqlBranchFinished atomic.Bool
+		s3BranchFinished         atomic.Bool
 	)
 
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		defer postgresqlBranchFinished.Store(true)
 
 		stateMutex.Lock()
 		currentBackup.Postgresql.Started = time.Now()
@@ -245,6 +250,10 @@ func DoBackup(args BackupArgs) error {
 		}
 		args.Logger.Info("Found last postgresql backup label", zap.String("label", lastBackup.Label))
 
+		if !s3BranchFinished.Load() {
+			args.Logger.Info("S3 backup is still in prtogress")
+		}
+
 		stateMutex.Lock()
 		currentBackup.Postgresql.Label = lastBackup.Label
 		currentBackup.Postgresql.Status = BackupStatusSuccess
@@ -253,6 +262,7 @@ func DoBackup(args BackupArgs) error {
 
 	go func() {
 		defer wg.Done()
+		defer s3BranchFinished.Store(true)
 
 		stateMutex.Lock()
 		currentBackup.VegaChain.Started = time.Now()
@@ -281,6 +291,9 @@ func DoBackup(args BackupArgs) error {
 			return
 		}
 		args.Logger.Info("Finished vega chain data backup")
+		if !postgresqlBranchFinished.Load() {
+			args.Logger.Info("The postgreSQL backup is still in prtogress")
+		}
 
 		stateMutex.Lock()
 		currentBackup.VegaChain.Finished = time.Now()
