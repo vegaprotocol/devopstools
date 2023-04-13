@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 // To execute this function you have to run your program with syscall permissions to switch user
@@ -119,14 +120,18 @@ func executeBinaryWithRealTimeLogs(cmd *exec.Cmd, logParser func(outputType, log
 	// 1 MB for stdOut buffer
 	stdOutBuffer := NewFixedBuffer(make([]byte, 0, 1024*1024))
 
+	processingTicker := time.NewTicker(500 * time.Millisecond)
+
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
+			// Give some time for program to write line output into a buffer
+			processingTicker.Reset(500 * time.Millisecond)
 			logLine := scanner.Text()
 			stdErrBuffer.Write([]byte(logLine))
 
-			logParser("stderr", logLine)
+			logParser("stderr", logLine) // TODO: should be another goroutine?
 		}
 	}()
 
@@ -134,18 +139,21 @@ func executeBinaryWithRealTimeLogs(cmd *exec.Cmd, logParser func(outputType, log
 		scanner := bufio.NewScanner(stdout)
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
+			// Give some time for program to write line output into a buffer
+			processingTicker.Reset(500 * time.Millisecond)
 			logLine := scanner.Text()
 
 			stdOutBuffer.Write([]byte(logLine))
-			logParser("stdout", logLine)
+			logParser("stdout", logLine) // TODO: should be another goroutine?
 		}
 	}()
 
-	cmd.Wait()
-
-	if !stdErrBuffer.Empty() {
-		return stdOutBuffer.Read(), fmt.Errorf("failed to execute %s %v: %s", cmd.Path, cmd.Args, stdErrBuffer.String())
+	if err := cmd.Wait(); err != nil {
+		<-processingTicker.C // Wait for the ticker to finish its work
+		return stdOutBuffer.Read(), fmt.Errorf("failed to execute %s %v,  stderr: %s: %w", cmd.Path, cmd.Args, stdErrBuffer.String(), err)
 	}
+
+	<-processingTicker.C // Wait for the ticker to finish its work
 
 	return stdOutBuffer.Read(), nil
 }

@@ -199,11 +199,14 @@ func Start(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 		"--stanza", StanzaName,
 	}
 
-	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
-		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
-	})
+	out, err := tools.ExecuteBinaryAsUser(postgresqlUser, pgBackrestBinary, args, nil)
 
 	if err != nil {
+		// Ignore warning
+		if strings.Contains(err.Error(), "WARN") && strings.Contains(string(out), "completed successfully") {
+			return nil
+		}
+
 		return fmt.Errorf("failed to start pgbackrest stanza: %w, command output: %s", err, out)
 	}
 

@@ -48,9 +48,9 @@ type ChainBackupInfo struct {
 }
 
 func BackupChainData(logger *zap.Logger, s3CmdBinary string, destinationPath, destinationBucket, snapshotDestinationPath string) (*ChainBackupInfo, error) {
-	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
-	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
-	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/", destinationBucket, destinationPath)
+	vegaHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vega_home/", destinationBucket, destinationPath)
+	visorHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/vegavisor_home/", destinationBucket, destinationPath)
+	tendermintHomeS3DestinationPath := fmt.Sprintf("s3://%s/%s/tendermint_home/", destinationBucket, destinationPath)
 
 	s3sync.SetLogger(&S3ManagerLogger{logger: logger})
 
