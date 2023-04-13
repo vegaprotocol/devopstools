@@ -13,6 +13,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
 	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
 	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
+	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
 )
 
@@ -119,7 +120,7 @@ func DoBackup(args BackupArgs) error {
 	}
 
 	defer func() {
-		args.Logger.Info("Finissing current backup")
+		args.Logger.Info("Finishing current backup")
 		currentBackup.Finished = time.Now()
 
 		if err := currentState.AddOrModifyEntry(currentBackup, true); err != nil {
@@ -128,21 +129,27 @@ func DoBackup(args BackupArgs) error {
 	}()
 
 	args.Logger.Info("Ensuring pgbackrest stanza exists")
-	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+	if err := tools.Retry(3, 5*time.Second, func() error {
+		return pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+	}); err != nil {
 		currentBackup.Status = BackupStatusFailed
 		currentBackup.Postgresql.Status = BackupStatusFailed
 		return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
 	}
 
 	args.Logger.Info("Starting pgbackrest stanza")
-	if err := pgbackrest.Start(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+	if err := tools.Retry(3, 5*time.Second, func() error {
+		return pgbackrest.Start(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+	}); err != nil {
 		currentBackup.Status = BackupStatusFailed
 		currentBackup.Postgresql.Status = BackupStatusFailed
 		return fmt.Errorf("failed to start pgbackrest stanza: %w", err)
 	}
 
 	args.Logger.Info("Checking pgbackrest stanza configuration")
-	if err := pgbackrest.Check(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+	if err := tools.Retry(3, 5*time.Second, func() error {
+		return pgbackrest.Check(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+	}); err != nil {
 		currentBackup.Status = BackupStatusFailed
 		currentBackup.Postgresql.Status = BackupStatusFailed
 		return fmt.Errorf("failed to check pgbackrest stanza: %w", err)
