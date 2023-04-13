@@ -237,15 +237,6 @@ func DoRestore(args RestoreArgs) error {
 			return
 		}
 
-		args.Logger.Info("Checking pgbackrest stanza configuration")
-		if err := tools.Retry(3, 5*time.Second, func() error {
-			return pgbackrest.Check(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
-		}); err != nil {
-			postgresqlFailed = true
-			args.Logger.Error("failed to check pgbackrest stanza", zap.Error(err))
-			return
-		}
-
 		args.Logger.Info("Stopping postgresql before restoring it")
 		if err := systemctl.Stop(args.Logger, "postgresql"); err != nil {
 			postgresqlFailed = true
