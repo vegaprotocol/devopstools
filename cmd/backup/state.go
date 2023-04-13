@@ -62,7 +62,7 @@ type State struct {
 	Locked bool
 
 	localFilePath string
-	remoteS3Path  string
+	_remoteS3Path string
 }
 
 func (state *State) AddOrModifyEntry(entry BackupEntry, writeLocal bool) error {
@@ -103,14 +103,12 @@ func (state *State) WriteLocal(filePath string) error {
 }
 
 func (state *State) WriteRemote() error {
+	// TODO: Implement it
 	return nil
 }
 
-func (state *State) UpdateFromRemote() error {
-	return nil
-}
-
-func (state *State) UpdateFromLocal() error {
+func (state *State) LoadFromRemote() error {
+	// TODO: Implement it
 	return nil
 }
 

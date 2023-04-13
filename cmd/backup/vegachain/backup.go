@@ -14,6 +14,8 @@ const (
 )
 
 const (
+	HomesParentDir = "/home/vega" // Without trailing slash
+
 	VegaHome       = "/home/vega/vega_home/"
 	VisorHome      = "/home/vega/vegavisor_home/"
 	TendermintHome = "/home/vega/tendermint_home/"

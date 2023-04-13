@@ -249,9 +249,8 @@ func DoBackup(args BackupArgs) error {
 			return
 		}
 		args.Logger.Info("Found last postgresql backup label", zap.String("label", lastBackup.Label))
-
 		if !s3BranchFinished.Load() {
-			args.Logger.Info("S3 backup is still in prtogress")
+			args.Logger.Info("S3 backup is still in progress")
 		}
 
 		stateMutex.Lock()
@@ -292,7 +291,7 @@ func DoBackup(args BackupArgs) error {
 		}
 		args.Logger.Info("Finished vega chain data backup")
 		if !postgresqlBranchFinished.Load() {
-			args.Logger.Info("The postgreSQL backup is still in prtogress")
+			args.Logger.Info("The PostgreSQL backup is still in progress")
 		}
 
 		stateMutex.Lock()

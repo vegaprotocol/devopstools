@@ -40,32 +40,35 @@ func RestoreChainData(logger *zap.Logger, s3CmdBinary, s3SnapshotLocation string
 
 	logger.Info("Restoring vega home from remote snapshot", zap.String("source", vegaHomeSnapshot), zap.String("destination", VegaHome))
 	// TODO: Think to add parallel
-	if err := S3Sync(logger, s3CmdBinary, vegaHomeSnapshot, VegaHome); err != nil {
+	if err := S3Sync(logger, s3CmdBinary, vegaHomeSnapshot, HomesParentDir); err != nil {
 		return fmt.Errorf("failed to download snapshot for vega home: %w", err)
 	}
 
 	if withVisorHome {
 		logger.Info("Restoring vegavisor home from remote snapshot", zap.String("source", visorHomeSnapshot), zap.String("destination", VisorHome))
-		if err := S3Sync(logger, s3CmdBinary, visorHomeSnapshot, VisorHome); err != nil {
+		if err := S3Sync(logger, s3CmdBinary, visorHomeSnapshot, HomesParentDir); err != nil {
 			return fmt.Errorf("failed to download snapshot for vegavisor home: %w", err)
 		}
 	}
 
 	logger.Info("Restoring tendermint home from remote snapshot", zap.String("source", tendermintHomeSnapshot), zap.String("destination", TendermintHome))
-	if err := S3Sync(logger, s3CmdBinary, tendermintHomeSnapshot, TendermintHome); err != nil {
+	if err := S3Sync(logger, s3CmdBinary, tendermintHomeSnapshot, HomesParentDir); err != nil {
 		return fmt.Errorf("failed to download snapshot for tendermint home: %w", err)
 	}
 
+	logger.Info(fmt.Sprintf("Changing ownership for the %s directory to %s:%s", VegaHome, VegaUser, VegaGroup))
 	if err := tools.ChownR(VegaHome, VegaUser, VegaGroup); err != nil {
 		return fmt.Errorf("failed to change owner for %s: %w", VegaHome, err)
 	}
 
 	if withVisorHome {
+		logger.Info(fmt.Sprintf("Changing ownership for the %s directory to %s:%s", VisorHome, VegaUser, VegaGroup))
 		if err := tools.ChownR(VisorHome, VegaUser, VegaGroup); err != nil {
 			return fmt.Errorf("failed to change owner for %s: %w", VisorHome, err)
 		}
 	}
 
+	logger.Info(fmt.Sprintf("Changing ownership for the %s directory to %s:%s", TendermintHome, VegaUser, VegaGroup))
 	if err := tools.ChownR(TendermintHome, VegaUser, VegaGroup); err != nil {
 		return fmt.Errorf("failed to change owner for %s: %w", TendermintHome, err)
 	}

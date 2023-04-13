@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -14,6 +15,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/backup/postgresql"
 	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
 	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
+	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
 )
 
@@ -31,7 +33,7 @@ type RestoreArgs struct {
 	postgresqlDBUser     string
 	postgresqlDBPassword string
 
-	pgBackrestDeltaRestore bool
+	pgBackrestFullRestore bool
 }
 
 var restoreArgs RestoreArgs
@@ -60,7 +62,7 @@ func init() {
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlUser, "postgresql-user", "postgres", "The linux username who runs the postgresql")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
-	performRestoreCmd.PersistentFlags().BoolVar(&restoreArgs.pgBackrestDeltaRestore, "delta", false, "Perform the delta restore for postgresql")
+	performRestoreCmd.PersistentFlags().BoolVar(&restoreArgs.pgBackrestFullRestore, "full", false, "Perform the full restore for postgresql")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestConfigFile, "pgbackrest-config-file", "/etc/pgbackrest.conf", "Location of pgbackrest config file")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
 
@@ -181,20 +183,21 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("vegavisor is still running after servise has been stopped")
 	}
 
-	args.Logger.Info("Removing local chain data")
-	if err := vegachain.RemoveLocalChainData(args.Logger); err != nil {
-		return fmt.Errorf("failed to remove local chain data: %w", err)
-	}
-
 	var (
 		wg               sync.WaitGroup
 		chainDataFailed  bool
 		postgresqlFailed bool
+
+		postgresqlBranchFinished atomic.Bool
+		s3BranchFinished         atomic.Bool
 	)
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
+		defer s3BranchFinished.Store(true)
+
+		args.Logger.Info("Removing local chain data")
 
 		args.Logger.Info("Removing local vega chain data")
 		if err := vegachain.RemoveLocalChainData(args.Logger); err != nil {
@@ -215,18 +218,110 @@ func DoRestore(args RestoreArgs) error {
 			args.Logger.Error("failed to restore chain data", zap.Error(err))
 			return
 		}
+
+		if !postgresqlBranchFinished.Load() {
+			args.Logger.Info("The PostgreSQL backup restore process is still in progress")
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		args.Logger.Info("Restoring the postgresql backup")
+		defer postgresqlBranchFinished.Store(true)
 
-		time.Sleep(30)
+		args.Logger.Info("Starting pgbackrest stanza")
+		if err := tools.Retry(3, 5*time.Second, func() error {
+			return pgbackrest.Start(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+		}); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to start pgbackrest stanza", zap.Error(err))
+			return
+		}
+
+		args.Logger.Info("Checking pgbackrest stanza configuration")
+		if err := tools.Retry(3, 5*time.Second, func() error {
+			return pgbackrest.Check(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary)
+		}); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to check pgbackrest stanza", zap.Error(err))
+			return
+		}
+
+		args.Logger.Info("Stopping postgresql before restoring it")
+		if err := systemctl.Stop(args.Logger, "postgresql"); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to stop postgresql service", zap.Error(err))
+			return
+		}
+
+		args.Logger.Info("Checking postgresql has been stopped")
+		if err := tools.Retry(3, 5*time.Second, func() error {
+			if systemctl.IsRunning(args.Logger, "postgresql") {
+				return fmt.Errorf("postgresql service is still running")
+			}
+			return nil
+		}); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to check postgresql has been stopped", zap.Error(err))
+			return
+		}
+
+		postmasterPidFile := filepath.Join(sysInfo.PostgreSqlDataDir, "postmaster.pid")
+
+		if err := tools.Retry(20, 2*time.Second, func() error {
+			if tools.FileExists(postmasterPidFile) {
+				return fmt.Errorf("the %s file still exists", postmasterPidFile)
+			}
+
+			return nil
+		}); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to wait until postgresql process has been stopped and the PID file is missing", zap.Error(err))
+			return
+		}
+
+		if args.pgBackrestFullRestore {
+			// Remove all custom tablespaces. We have to do it in case any of the tablespace is in custom location
+			for _, tablespaceLocation := range sysInfo.CustomTablespaces {
+				args.Logger.Info("Removing custom tablespace", zap.String("location", tablespaceLocation))
+				if err := os.RemoveAll(tablespaceLocation); err != nil {
+					postgresqlFailed = true
+					args.Logger.Error("failed remove custom tablespace", zap.Error(err), zap.String("location", tablespaceLocation))
+					return
+				}
+			}
+
+			// Sometimes We link pg_wal to another location. We have to remove all wal files if they are in custom location
+			if sysInfo.PostgreSqlPgWalDir.IsLink {
+				args.Logger.Info("Removing content of linked pg_wal dir", zap.String("location", sysInfo.PostgreSqlPgWalDir.LinkTarget))
+				if err := os.RemoveAll(sysInfo.PostgreSqlPgWalDir.LinkTarget); err != nil {
+					postgresqlFailed = true
+					args.Logger.Error("failed to remove linked pg_wall directory content", zap.Error(err), zap.String("location", sysInfo.PostgreSqlPgWalDir.LinkTarget))
+					return
+				}
+			}
+		}
+
+		args.Logger.Info("Restoring the postgresql backup")
+		if err := pgbackrest.Restore(
+			*args.Logger,
+			args.postgresqlUser,
+			args.pgBackrestBinary,
+			currentBackup.Postgresql.Label,
+			!args.pgBackrestFullRestore,
+		); err != nil {
+			postgresqlFailed = true
+			args.Logger.Error("failed to restore postgresql backup", zap.Error(err))
+			return
+		}
+
+		if !s3BranchFinished.Load() {
+			args.Logger.Info("S3 backup restore procedure is still in progress")
+		}
 	}()
 
 	wg.Wait()
 
-	patchSystem(*sysInfo)
+	patchSystem(*sysInfo, args.pgBackrestFullRestore)
 
 	args.Logger.Info(
 		"Backup finished",
@@ -312,7 +407,11 @@ func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, 
 }
 
 // After restoring of the chain data
-func patchSystem(sysInfo systemInfo) error {
+func patchSystem(sysInfo systemInfo, fullRestore bool) error {
+	// For delta restore we do not need to touch filesystem
+	if !fullRestore {
+		return nil
+	}
 
 	// TODO: Implement it
 	return nil
