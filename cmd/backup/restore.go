@@ -38,11 +38,11 @@ type RestoreArgs struct {
 
 var restoreArgs RestoreArgs
 
-// provideLPCmd represents the provideLP command
 var performRestoreCmd = &cobra.Command{
 	Use:   "restore",
 	Short: "Restore vega node from remote S3 bucket",
 	Long: `
+	TBD
 	TBD:
 	CREATE USER vega_backup_manager WITH ENCRYPTED PASSWORD 'examplePassword';
 	ALTER USER vega_backup_manager  WITH SUPERUSER;

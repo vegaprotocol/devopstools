@@ -32,7 +32,6 @@ type BackupArgs struct {
 
 var backupArgs BackupArgs
 
-// provideLPCmd represents the provideLP command
 var performBackupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Backup vega node to remote S3 bucket",
