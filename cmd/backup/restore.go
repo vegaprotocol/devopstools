@@ -118,18 +118,18 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to initialize s3cmd credentials: %w", err)
 	}
 
-	args.Logger.Info("Verifying stanza setup")
-	if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
-		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
-	}
+	// args.Logger.Info("Verifying stanza setup")
+	// if err := pgbackrest.CheckPgBackRestSetup(backupArgs.pgBackrestBinary, pgBackrestConfig); err != nil {
+	// 	return fmt.Errorf("failed to check pgbackrest setup: %w", err)
+	// }
 
 	if !postgresqlRunning {
-		args.Logger.Info("Postgresql is not running, stanza-create skipped")
+		args.Logger.Info("Postgresql is not running, stanza-upgrade step skipped")
 	} else {
-		args.Logger.Info("Upgrading stanza")
-		if err := pgbackrest.UpgradeStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
-			return fmt.Errorf("failed to upgrade pgbackrest stanza: %w", err)
-		}
+		// args.Logger.Info("Upgrading stanza")
+		// if err := pgbackrest.UpgradeStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+		// 	return fmt.Errorf("failed to upgrade pgbackrest stanza: %w", err)
+		// }
 	}
 
 	args.Logger.Info("Collecting postgresql config")
@@ -139,7 +139,10 @@ func DoRestore(args RestoreArgs) error {
 	}
 
 	// We will update pgbackrest config with the one from the backuped server
-	args.Logger.Info("Creating backup of original pgbackrest config")
+	args.Logger.Info("Creating backup of original pgbackrest config",
+		zap.String("source", args.pgBackrestConfigFile),
+		zap.String("destination", pgbackrest.ConfigBackupFile),
+	)
 	if err := pgbackrest.BackupConfig(args.pgBackrestConfigFile, false); err != nil {
 		return fmt.Errorf("failed to create backup file for pgbackrest config: %w", err)
 	}
@@ -152,7 +155,7 @@ func DoRestore(args RestoreArgs) error {
 	}()
 
 	// Update postgresql data dir, as it could be different for other server
-	args.Logger.Info("Creating backup of original pgbackrest config",
+	args.Logger.Info("Updating pgbackrest config file with new postgresql home",
 		zap.String("file", args.pgBackrestConfigFile),
 		zap.String("data_directory", postgresqlConfig.DataDirectory),
 	)

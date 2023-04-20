@@ -90,5 +90,8 @@ func CopyFile(src, dst string) (int64, error) {
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
 
-	return nBytes, fmt.Errorf("failed to copy content of the source file to destination: %w", err)
+	if err != nil {
+		return 0, fmt.Errorf("failed to copy content of the source file to destination: %w", err)
+	}
+	return nBytes, nil
 }
