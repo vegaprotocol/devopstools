@@ -3,6 +3,7 @@ package pgbackrest
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/vegaprotocol/devopstools/tools"
@@ -18,6 +19,8 @@ const (
 )
 
 const StanzaName = "main_archive"
+
+const ConfigBackupFile = "/tmp/pgbackrest.conf.bk"
 
 // Example config
 // [global]
@@ -112,6 +115,59 @@ func ReadRawConfig(location string) (string, error) {
 	return string(content), nil
 }
 
+func BackupConfig(location string, force bool) error {
+	if force {
+		if err := os.RemoveAll(ConfigBackupFile); err != nil {
+			return fmt.Errorf("failed to remove backup file when force flag is given: %w", err)
+		}
+	} else if tools.FileExists(ConfigBackupFile) {
+		return nil
+	}
+
+	if _, err := tools.CopyFile(location, ConfigBackupFile); err != nil {
+		return fmt.Errorf("failed to backup file: %w", err)
+	}
+
+	return nil
+}
+
+func RestoreConfigFromBackup(location string) error {
+	if !tools.FileExists(ConfigBackupFile) {
+		return fmt.Errorf("backup file does not exists")
+	}
+
+	if err := os.RemoveAll(location); err != nil {
+		return fmt.Errorf("failed to config file: %w", err)
+	}
+
+	if _, err := tools.CopyFile(ConfigBackupFile, location); err != nil {
+		return fmt.Errorf("failed to backup file: %w", err)
+	}
+
+	return nil
+}
+
+func UpdatePgbackrestConfig(logger *zap.Logger, location string, params map[string]string) error {
+	configContent, err := os.ReadFile(location)
+	if err != nil {
+		return fmt.Errorf("failed to read pgbackrest config: %w", err)
+	}
+
+	for k, v := range params {
+		logger.Debug("Update pgbackrest config", zap.String("key", k), zap.String("value", v))
+		re := regexp.MustCompilePOSIX(fmt.Sprintf(`^[\\s]*%s[\\s]*=.*$`, k))
+		configContent = re.ReplaceAll(configContent, []byte(fmt.Sprintf("%s=%s", k, v)))
+	}
+
+	logger.Debug("New config content", zap.String("content", string(configContent)))
+
+	if err := os.WriteFile(location, configContent, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write new config content: %w", err)
+	}
+
+	return nil
+}
+
 func Check(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
 	consoleLevel := "info"
 	if logger.Level() == zap.DebugLevel {
@@ -158,6 +214,29 @@ func CreateStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) er
 		}
 
 		return fmt.Errorf("failed to create pgbackrest stanza: %w, command output: %s", err, out)
+	}
+
+	return nil
+}
+
+func UpgradeStanza(logger zap.Logger, postgresqlUser, pgBackrestBinary string) error {
+	consoleLevel := "info"
+	if logger.Level() == zap.DebugLevel {
+		consoleLevel = "debug"
+	}
+
+	args := []string{
+		"stanza-upgrade",
+		"--log-level-console", consoleLevel,
+		"--stanza", StanzaName,
+	}
+
+	out, err := tools.ExecuteBinaryAsUserWithRealTimeLogs(postgresqlUser, pgBackrestBinary, args, func(outputType, logLine string) {
+		logger.Debug(logLine, zap.String("command", pgBackrestBinary), zap.String("source", outputType))
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to upgrade pgbackrest stanza: %w, command output: %s", err, out)
 	}
 
 	return nil

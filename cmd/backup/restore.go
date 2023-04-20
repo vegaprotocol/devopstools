@@ -126,9 +126,9 @@ func DoRestore(args RestoreArgs) error {
 	if !postgresqlRunning {
 		args.Logger.Info("Postgresql is not running, stanza-create skipped")
 	} else {
-		args.Logger.Info("Creating stanza")
-		if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
-			return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
+		args.Logger.Info("Upgrading stanza")
+		if err := pgbackrest.UpgradeStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+			return fmt.Errorf("failed to upgrade pgbackrest stanza: %w", err)
 		}
 	}
 
@@ -136,6 +136,30 @@ func DoRestore(args RestoreArgs) error {
 	postgresqlConfig, err := postgresql.ReadConfig(args.postgresqlConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to get postgresql config: %w", err)
+	}
+
+	// We will update pgbackrest config with the one from the backuped server
+	args.Logger.Info("Creating backup of original pgbackrest config")
+	if err := pgbackrest.BackupConfig(args.pgBackrestConfigFile, false); err != nil {
+		return fmt.Errorf("failed to create backup file for pgbackrest config: %w", err)
+	}
+
+	defer func() {
+		args.Logger.Info("Restoring original pgbackrest config from backup")
+		if err := pgbackrest.RestoreConfigFromBackup(args.pgBackrestConfigFile); err != nil {
+			args.Logger.Error("failed to restore pgbackrest config from backup", zap.Error(err))
+		}
+	}()
+
+	// Update postgresql data dir, as it could be different for other server
+	args.Logger.Info("Creating backup of original pgbackrest config",
+		zap.String("file", args.pgBackrestConfigFile),
+		zap.String("data_directory", postgresqlConfig.DataDirectory),
+	)
+	if err := pgbackrest.UpdatePgbackrestConfig(args.Logger, args.pgBackrestConfigFile, map[string]string{
+		"pg1-path": postgresqlConfig.DataDirectory,
+	}); err != nil {
+		return fmt.Errorf("failed to update postgresql data directory in pgbackrest config: %w", err)
 	}
 
 	args.Logger.Info("Stopping postgresql before resoring")
