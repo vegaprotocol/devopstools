@@ -2,7 +2,6 @@ package vegachain
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
@@ -11,21 +10,21 @@ import (
 func RemoveLocalChainData(logger *zap.Logger) error {
 	if tools.FileExists(VegaHome) {
 		logger.Info("Removing local vega home", zap.String("path", VegaHome))
-		if err := os.RemoveAll(VegaHome); err != nil {
+		if err := tools.RemoveDirectoryContents(VegaHome); err != nil {
 			return fmt.Errorf("failed to remove vega home(%s): %w", VegaHome, err)
 		}
 	}
 
 	if tools.FileExists(TendermintHome) {
 		logger.Info("Removing local tendermint home", zap.String("path", TendermintHome))
-		if err := os.RemoveAll(TendermintHome); err != nil {
+		if err := tools.RemoveDirectoryContents(TendermintHome); err != nil {
 			return fmt.Errorf("failed to remove tendermint home(%s): %w", TendermintHome, err)
 		}
 	}
 
 	if tools.FileExists(VisorHome) {
 		logger.Info("Removing local vegavisor home", zap.String("path", VisorHome))
-		if err := os.RemoveAll(VisorHome); err != nil {
+		if err := tools.RemoveDirectoryContents(VisorHome); err != nil {
 			return fmt.Errorf("failed to remove vegavisor home(%s): %w", VisorHome, err)
 		}
 	}

@@ -45,3 +45,23 @@ func ChownR(path, userName, groupName string) error {
 		return err
 	})
 }
+
+func RemoveDirectoryContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("failed to open directory: %w", err)
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return fmt.Errorf("failed to read directory content: %w", err)
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return fmt.Errorf("failed to remove the %s directory: %w", name, err)
+		}
+	}
+
+	return nil
+}

@@ -30,9 +30,7 @@ type RestoreArgs struct {
 	pgBackrestBinary     string
 	pgBackrestConfigFile string
 
-	postgresqlDBUser     string
-	postgresqlDBPassword string
-
+	postgresqlConfigFile  string
 	pgBackrestFullRestore bool
 }
 
@@ -44,8 +42,6 @@ var performRestoreCmd = &cobra.Command{
 	Long: `
 	TBD
 	TBD:
-	CREATE USER vega_backup_manager WITH ENCRYPTED PASSWORD 'examplePassword';
-	ALTER USER vega_backup_manager  WITH SUPERUSER;
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := DoRestore(restoreArgs); err != nil {
@@ -66,8 +62,7 @@ func init() {
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestConfigFile, "pgbackrest-config-file", "/etc/pgbackrest.conf", "Location of pgbackrest config file")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
 
-	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlDBUser, "db-user", "vega_backup_manager", "The super user for postgresql db")
-	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlDBPassword, "db-pass", "examplePassword", "Password for the db-user")
+	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlConfigFile, "postgresql-config-file", "/etc/postgresql/14/main/postgresql.conf", "The config file for postgresql")
 
 	if err := performRestoreCmd.MarkPersistentFlagRequired("id"); err != nil {
 		log.Fatalf("%v\n", err)
@@ -76,10 +71,8 @@ func init() {
 }
 
 func DoRestore(args RestoreArgs) error {
-	args.Logger.Info("Ensuring postgresql is running")
-	if !systemctl.IsRunning(args.Logger, "postgresql") {
-		return fmt.Errorf("the postgresql service is not running")
-	}
+	args.Logger.Info("Checking if postgresql is running")
+	postgresqlRunning := systemctl.IsRunning(args.Logger, "postgresql")
 
 	args.Logger.Info("Loading state from local file", zap.String("file", args.localStateFile))
 	state, err := LoadFromLocal(args.localStateFile)
@@ -130,15 +123,19 @@ func DoRestore(args RestoreArgs) error {
 		return fmt.Errorf("failed to check pgbackrest setup: %w", err)
 	}
 
-	args.Logger.Info("Creating stanza")
-	if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
-		return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
+	if !postgresqlRunning {
+		args.Logger.Info("Postgresql is not running, stanza-create skipped")
+	} else {
+		args.Logger.Info("Creating stanza")
+		if err := pgbackrest.CreateStanza(*args.Logger, args.postgresqlUser, backupArgs.pgBackrestBinary); err != nil {
+			return fmt.Errorf("failed to create pgbackrest stanza: %w", err)
+		}
 	}
 
-	args.Logger.Info("Collecting the system facts")
-	sysInfo, err := collectSystemInfo(args.postgresqlDBUser, args.postgresqlDBPassword)
+	args.Logger.Info("Collecting postgresql config")
+	postgresqlConfig, err := postgresql.ReadConfig(args.postgresqlConfigFile)
 	if err != nil {
-		return fmt.Errorf("failed to collect system info: %w", err)
+		return fmt.Errorf("failed to get postgresql config: %w", err)
 	}
 
 	args.Logger.Info("Stopping postgresql before resoring")
@@ -256,7 +253,7 @@ func DoRestore(args RestoreArgs) error {
 			return
 		}
 
-		postmasterPidFile := filepath.Join(sysInfo.PostgreSqlDataDir, "postmaster.pid")
+		postmasterPidFile := filepath.Join(postgresqlConfig.DataDirectory, "postmaster.pid")
 
 		if err := tools.Retry(20, 2*time.Second, func() error {
 			if tools.FileExists(postmasterPidFile) {
@@ -271,24 +268,9 @@ func DoRestore(args RestoreArgs) error {
 		}
 
 		if args.pgBackrestFullRestore {
-			// Remove all custom tablespaces. We have to do it in case any of the tablespace is in custom location
-			for _, tablespaceLocation := range sysInfo.CustomTablespaces {
-				args.Logger.Info("Removing custom tablespace", zap.String("location", tablespaceLocation))
-				if err := os.RemoveAll(tablespaceLocation); err != nil {
-					postgresqlFailed = true
-					args.Logger.Error("failed remove custom tablespace", zap.Error(err), zap.String("location", tablespaceLocation))
-					return
-				}
-			}
-
-			// Sometimes We link pg_wal to another location. We have to remove all wal files if they are in custom location
-			if sysInfo.PostgreSqlPgWalDir.IsLink {
-				args.Logger.Info("Removing content of linked pg_wal dir", zap.String("location", sysInfo.PostgreSqlPgWalDir.LinkTarget))
-				if err := os.RemoveAll(sysInfo.PostgreSqlPgWalDir.LinkTarget); err != nil {
-					postgresqlFailed = true
-					args.Logger.Error("failed to remove linked pg_wall directory content", zap.Error(err), zap.String("location", sysInfo.PostgreSqlPgWalDir.LinkTarget))
-					return
-				}
+			args.Logger.Info("Full backup, removing the content of postgresql data dir", zap.String("data_directory", postgresqlConfig.DataDirectory))
+			if err := tools.RemoveDirectoryContents(postgresqlConfig.DataDirectory); err != nil {
+				args.Logger.Error("failed to remove content of postgresql data dir", zap.Error(err), zap.String("data_directory", postgresqlConfig.DataDirectory))
 			}
 		}
 
@@ -309,10 +291,7 @@ func DoRestore(args RestoreArgs) error {
 			args.Logger.Info("S3 backup restore procedure is still in progress")
 		}
 	}()
-
 	wg.Wait()
-
-	patchSystem(*sysInfo, args.pgBackrestFullRestore)
 
 	args.Logger.Info(
 		"Backup finished",
@@ -320,90 +299,5 @@ func DoRestore(args RestoreArgs) error {
 		zap.Bool("postgresql_successfull", !postgresqlFailed),
 	)
 
-	return nil
-}
-
-type systemInfo struct {
-	PostgreSqlDataDir  string
-	PostgreSqlPgWalDir struct {
-		IsLink     bool
-		LinkTarget string
-	}
-	CustomTablespaces map[string]string
-}
-
-// We are collecting system information to detect all customization, and then after restore procedure we have to
-// revert them, because they are done for some reason.
-func collectSystemInfo(postgresqlDbUser, postgresqlDbPass string) (*systemInfo, error) {
-	psqlClient, err := postgresql.Client(postgresqlDbUser, postgresqlDbPass, "localhost", 5432, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create postgresql client: %w", err)
-	}
-
-	postgresqlDataDir, err := postgresql.GetDataDirectory(psqlClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get postgresql data_directory: %w", err)
-	}
-
-	customTablespaces, err := postgresql.GetCustomTablespaces(psqlClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list custom postgresql tablespaces: %w", err)
-	}
-
-	result := &systemInfo{
-		PostgreSqlDataDir: postgresqlDataDir,
-		CustomTablespaces: customTablespaces,
-	}
-
-	pgWalPath := filepath.Join(postgresqlDataDir, "pg_wal")
-	walInfo, err := os.Lstat(pgWalPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to stat pg_wall dir: %w", err)
-		}
-
-		result.PostgreSqlPgWalDir.IsLink = false
-		return result, nil
-	}
-
-	if walInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
-		result.PostgreSqlPgWalDir.IsLink = true
-
-		link, err := os.Readlink(pgWalPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read pg_wal link: %w", err)
-		}
-		result.PostgreSqlPgWalDir.LinkTarget = link
-
-		// Make sure destination exists and it is a directory
-		walDestination, err := os.Stat(link)
-		if err != nil {
-			return nil, fmt.Errorf("failed to access the pg_wal link destination: %w", err)
-		}
-		if !walDestination.IsDir() {
-			return nil, fmt.Errorf("the pg_wal link destination(%s) is not a dir", link)
-		}
-	} else {
-		// PG_WAL is not a link, make sure can be accessed and it is a directory
-		walDestination, err := os.Stat(pgWalPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to stat the pg_wal to ensure it's a dir: %w", err)
-		}
-		if !walDestination.IsDir() {
-			return nil, fmt.Errorf("the pg_wal(%s) is not a dir", pgWalPath)
-		}
-	}
-
-	return result, nil
-}
-
-// After restoring of the chain data
-func patchSystem(sysInfo systemInfo, fullRestore bool) error {
-	// For delta restore we do not need to touch filesystem
-	if !fullRestore {
-		return nil
-	}
-
-	// TODO: Implement it
 	return nil
 }
