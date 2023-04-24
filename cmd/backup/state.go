@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tendermint/tendermint/libs/json"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
+	"github.com/vegaprotocol/devopstools/tools"
 )
 
 type BackupStatus string
@@ -55,6 +56,7 @@ type BackupEntry struct {
 }
 
 type State struct {
+	encryptionKey    []byte
 	LastUpdated      time.Time
 	Backups          map[string]BackupEntry
 	PgBackrestConfig string
@@ -63,6 +65,18 @@ type State struct {
 
 	localFilePath string
 	_remoteS3Path string
+}
+
+func (state State) DeepClone() State {
+	result := state
+
+	result.Backups = make(map[string]BackupEntry)
+
+	for k, v := range state.Backups {
+		result.Backups[k] = v
+	}
+
+	return result
 }
 
 func (state *State) AddOrModifyEntry(entry BackupEntry, writeLocal bool) error {
@@ -90,7 +104,20 @@ func (state State) AsJSON() (string, error) {
 func (state *State) WriteLocal(filePath string) error {
 	state.localFilePath = filePath
 	state.LastUpdated = time.Now()
-	jsonState, err := state.AsJSON()
+
+	stateCopy := state.DeepClone()
+
+	// Enrypt pgbackrest config before saving it as a plain text
+	if stateCopy.PgBackrestConfig != "" && !tools.IsEncrypted(stateCopy.PgBackrestConfig) {
+		var err error
+
+		stateCopy.PgBackrestConfig, err = tools.EncryptMessage(stateCopy.encryptionKey, stateCopy.PgBackrestConfig)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt pgbackrest config: %w", err)
+		}
+	}
+
+	jsonState, err := stateCopy.AsJSON()
 	if err != nil {
 		return fmt.Errorf("failed to write state into local file: failed to convert state into json: %w", err)
 	}
@@ -118,7 +145,7 @@ func LoadFromRemote() (State, error) {
 	}, nil
 }
 
-func LoadFromLocal(location string) (State, error) {
+func LoadFromLocal(encryptionKey, location string) (State, error) {
 	result := State{}
 	content, err := os.ReadFile(location)
 	if err == nil {
@@ -126,29 +153,45 @@ func LoadFromLocal(location string) (State, error) {
 			return result, fmt.Errorf("failed to unmarshal file: %w", err)
 		}
 
+		result.localFilePath = location
+		result.encryptionKey = []byte(encryptionKey)
+
+		// Decrypt pgbackrest config
+		if result.PgBackrestConfig != "" && tools.IsEncrypted(result.PgBackrestConfig) && encryptionKey != "" {
+			result.PgBackrestConfig, err = tools.DecryptMessage([]byte(encryptionKey), result.PgBackrestConfig)
+			if err != nil {
+				return result, fmt.Errorf("failed to decrypt pgbackrest config from the state: %w", err)
+			}
+		}
+
 		return result, nil
 	}
 
-	result.localFilePath = location
 	return result, fmt.Errorf("failed to read state file from local: %w", err)
 }
 
-func NewEmptyState() State {
+func NewEmptyState(encryptionKey string) State {
 	return State{
-		Backups: map[string]BackupEntry{},
+		Backups:       map[string]BackupEntry{},
+		encryptionKey: []byte(encryptionKey),
 	}
 }
 
 // LoadOrCreateNew tries to load state from file otherwise it returns empty state
-func LoadOrCreateNew(locaLocation string) State {
+// Fails only when it should, and program cannot proceed with an error
+func LoadOrCreateNew(encryptionKey string, locaLocation string) (State, error) {
+	if err := tools.ValidateEncryptionKey(encryptionKey); err != nil {
+		return State{}, fmt.Errorf("failed to check the encryption key: %w", err)
+	}
+
 	// todo: add support for s3
-	localState, err := LoadFromLocal(locaLocation)
+	localState, err := LoadFromLocal(encryptionKey, locaLocation)
 	if err != nil {
-		return NewEmptyState()
+		return NewEmptyState(encryptionKey), nil
 	}
 
 	localState.localFilePath = locaLocation
-	return localState
+	return localState, nil
 }
 
 func NewBackupEntry() (BackupEntry, error) {

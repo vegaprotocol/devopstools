@@ -346,7 +346,7 @@ func Restore(logger zap.Logger, postgresqlUser, pgBackrestBinary, label string, 
 
 	args := []string{
 		"restore",
-		"--type", "none",
+		// "--type", "none",
 		"--log-level-console", consoleLevel,
 		"--stanza", StanzaName,
 		"--set", label,

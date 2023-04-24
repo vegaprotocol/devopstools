@@ -22,11 +22,14 @@ import (
 type RestoreArgs struct {
 	*BackupRootArgs
 	localStateFile string
+	encryptionKey  string
 
 	backupID    string
 	s3CmdBinary string
 
-	postgresqlUser       string
+	postgresqlUser    string
+	postgresqlService string
+
 	pgBackrestBinary     string
 	pgBackrestConfigFile string
 
@@ -56,6 +59,10 @@ func init() {
 
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.backupID, "id", "postgres", "The ID of the backup to restore. See")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlUser, "postgresql-user", "postgres", "The linux username who runs the postgresql")
+	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlService, "postgresql-service", "postgresql", "The service name for the postgresql")
+
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
+
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performRestoreCmd.PersistentFlags().BoolVar(&restoreArgs.pgBackrestFullRestore, "full", false, "Perform the full restore for postgresql")
@@ -72,10 +79,10 @@ func init() {
 
 func DoRestore(args RestoreArgs) error {
 	args.Logger.Info("Checking if postgresql is running")
-	postgresqlRunning := systemctl.IsRunning(args.Logger, "postgresql")
+	postgresqlRunning := systemctl.IsRunning(args.Logger, args.postgresqlService)
 
 	args.Logger.Info("Loading state from local file", zap.String("file", args.localStateFile))
-	state, err := LoadFromLocal(args.localStateFile)
+	state, err := LoadFromLocal(args.encryptionKey, args.localStateFile)
 	if err != nil {
 		return fmt.Errorf("failed to load backups state: %w", err)
 	}
@@ -166,7 +173,7 @@ func DoRestore(args RestoreArgs) error {
 	}
 
 	args.Logger.Info("Stopping postgresql before resoring")
-	if err := systemctl.Stop(args.Logger, "postgresql"); err != nil {
+	if err := systemctl.Stop(args.Logger, args.postgresqlService); err != nil {
 		return fmt.Errorf("failed to stop postgresql: %w", err)
 	}
 
@@ -177,7 +184,7 @@ func DoRestore(args RestoreArgs) error {
 
 	defer func() {
 		args.Logger.Info("Starting postgresql service")
-		if err := systemctl.Start(args.Logger, "postgresql"); err != nil {
+		if err := systemctl.Start(args.Logger, args.postgresqlService); err != nil {
 			args.Logger.Error("failed to start postgresql service", zap.Error(err))
 			return
 		}
@@ -189,17 +196,17 @@ func DoRestore(args RestoreArgs) error {
 		}
 
 		time.Sleep(30 * time.Second)
-		if !systemctl.IsRunning(args.Logger, "postgresql") {
+		if !systemctl.IsRunning(args.Logger, args.postgresqlService) {
 			args.Logger.Error("the postgresql service failed within 30 seconds after start", zap.Error(err))
 		}
 
-		if !systemctl.IsRunning(args.Logger, "vegavisor") {
+		if !systemctl.IsRunning(args.Logger, args.postgresqlService) {
 			args.Logger.Error("the vegavisor service failed within 30 seconds after start", zap.Error(err))
 		}
 	}()
 
 	// Ensure postgresql and visor are not running
-	if systemctl.IsRunning(args.Logger, "postgresql") {
+	if systemctl.IsRunning(args.Logger, args.postgresqlService) {
 		return fmt.Errorf("postgresql is still running after servise has been stopped")
 	}
 
@@ -262,7 +269,7 @@ func DoRestore(args RestoreArgs) error {
 		}
 
 		args.Logger.Info("Stopping postgresql before restoring it")
-		if err := systemctl.Stop(args.Logger, "postgresql"); err != nil {
+		if err := systemctl.Stop(args.Logger, args.postgresqlService); err != nil {
 			postgresqlFailed = true
 			args.Logger.Error("failed to stop postgresql service", zap.Error(err))
 			return
@@ -270,7 +277,7 @@ func DoRestore(args RestoreArgs) error {
 
 		args.Logger.Info("Checking postgresql has been stopped")
 		if err := tools.Retry(3, 5*time.Second, func() error {
-			if systemctl.IsRunning(args.Logger, "postgresql") {
+			if systemctl.IsRunning(args.Logger, args.postgresqlService) {
 				return fmt.Errorf("postgresql service is still running")
 			}
 			return nil

@@ -27,6 +27,8 @@ type BackupArgs struct {
 	pgBackrestBinary     string
 	pgBackrestConfigFile string
 
+	encryptionKey string
+
 	s3CmdBinary string
 }
 
@@ -47,7 +49,9 @@ func init() {
 	backupArgs.BackupRootArgs = &backupRootArgs
 
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlUser, "postgresql-user", "postgres", "The username who runs the postgresql")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Perform the full backup")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
@@ -84,10 +88,13 @@ func DoBackup(args BackupArgs) error {
 		AccessKey:    pgBackrestConfig.Global.R1S3Key,
 		AccessSecret: pgBackrestConfig.Global.R1S3KeySecret,
 	}); err != nil {
-		return fmt.Errorf("failed to init s3cmd: %w", err)
+		return fmt.Errorf("failed to init s3cmd config: %w", err)
 	}
 
-	currentState := LoadOrCreateNew(args.localStateFile)
+	currentState, err := LoadOrCreateNew(args.encryptionKey, args.localStateFile)
+	if err != nil {
+		return fmt.Errorf("failed to load or create new state: %w", err)
+	}
 	if currentState.Locked {
 		return fmt.Errorf("backup operation is locked in the state file")
 	}

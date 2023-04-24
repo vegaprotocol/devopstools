@@ -40,7 +40,7 @@ func init() {
 }
 
 func DoListBackups(args ListBackupsArgs) error {
-	state, err := LoadFromLocal(args.localStateFile)
+	state, err := LoadFromLocal("", args.localStateFile)
 	if err != nil {
 		return fmt.Errorf("failed to read state: %w", err)
 	}

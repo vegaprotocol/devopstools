@@ -57,3 +57,15 @@ func IsEncrypted(str string) bool {
 	base64Regexp := regexp.MustCompilePOSIX(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
 	return base64Regexp.MatchString(str)
 }
+
+func ValidateEncryptionKey(key string) error {
+	if len(key) < 16 {
+		return fmt.Errorf("encryption key must have at least 16 characters")
+	}
+
+	if len(key)%16 != 0 {
+		return fmt.Errorf("encryption key must length of mod 16")
+	}
+
+	return nil
+}
