@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/backup/pgbackrest"
+	"github.com/vegaprotocol/devopstools/cmd/backup/postgresql"
 	"github.com/vegaprotocol/devopstools/cmd/backup/systemctl"
 	"github.com/vegaprotocol/devopstools/cmd/backup/vegachain"
 	"github.com/vegaprotocol/devopstools/tools"
@@ -20,12 +21,14 @@ import (
 
 type BackupArgs struct {
 	*BackupRootArgs
-	localStateFile string
-	postgresqlUser string
-	pgBackrestFull bool
+	localStateFile    string
+	postgresqlUser    string
+	pgBackrestFull    bool
+	postgresqlService string
 
 	pgBackrestBinary     string
 	pgBackrestConfigFile string
+	postgresqlConfigFile string
 
 	encryptionKey string
 
@@ -49,8 +52,9 @@ func init() {
 	backupArgs.BackupRootArgs = &backupRootArgs
 
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlUser, "postgresql-user", "postgres", "The username who runs the postgresql")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlConfigFile, "postgresql-config-file", "/etc/postgresql/14/main/postgresql.conf", "The config file for postgresql")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlService, "postgresql-service", "postgresql", "The service name for the postgresql")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
 	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
 	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Perform the full backup")
@@ -61,9 +65,16 @@ func init() {
 }
 
 func DoBackup(args BackupArgs) error {
+	args.Logger.Info("Reading the pgbackrest config file", zap.String("file", args.pgBackrestConfigFile))
 	pgBackrestConfig, err := pgbackrest.ReadConfig(args.pgBackrestConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to read pgbackrest config: %w", err)
+	}
+
+	args.Logger.Info("Reading the postgresql config file", zap.String("file", args.postgresqlConfigFile))
+	postgresqlConfig, err := postgresql.ReadConfig(args.postgresqlConfigFile)
+	if err != nil {
+		return fmt.Errorf("failed to read postgresql config")
 	}
 
 	args.Logger.Info("Verifying stanza setup")
@@ -77,7 +88,7 @@ func DoBackup(args BackupArgs) error {
 	}
 
 	args.Logger.Info("Checking postgresql service")
-	if !systemctl.IsRunning(args.Logger, "postgresql") {
+	if !systemctl.IsRunning(args.Logger, args.postgresqlService) {
 		return fmt.Errorf("postgresql service is not running")
 	}
 
@@ -110,6 +121,27 @@ func DoBackup(args BackupArgs) error {
 			args.Logger.Fatal("failed to write backup state to local file on defer", zap.Error(err))
 		}
 	}()
+
+	// Sometimes postgresql in the restore command restores the default values for the archive mode and restore command
+	// We do not want to do this because then we cannot create new backups
+	postgresqlAutoConfigFilePath := filepath.Join(postgresqlConfig.DataDirectory, "postgresql.auto.conf")
+	args.Logger.Info("Ignoring the archive_mode and restore_command parameters from the postgresql.auto.conf", zap.String("file", postgresqlAutoConfigFilePath))
+	changedLines, err := postgresql.IgnoreConfigParams(postgresqlAutoConfigFilePath, []string{"archive_mode", "restore_command"}, true)
+	if err != nil {
+		return fmt.Errorf("failed to ignore config params in the %s file: %w", postgresqlAutoConfigFilePath, err)
+	}
+
+	if changedLines > 0 {
+		args.Logger.Info("Restarting the systemctl postgresql service", zap.String("service", args.postgresqlService))
+		if err := systemctl.Restart(args.Logger, args.postgresqlService); err != nil {
+			return fmt.Errorf("failed to restart the postgresql servivce: %w", err)
+		}
+
+		args.Logger.Info("Checking postgresql service after restaqrt")
+		if !systemctl.IsRunning(args.Logger, args.postgresqlService) {
+			return fmt.Errorf("postgresql service is not running after restart")
+		}
+	}
 
 	rawPgBackrestConfig, err := pgbackrest.ReadRawConfig(args.pgBackrestConfigFile)
 	if err != nil {

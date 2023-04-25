@@ -54,7 +54,7 @@ func DecryptMessage(key []byte, message string) (string, error) {
 }
 
 func IsEncrypted(str string) bool {
-	base64Regexp := regexp.MustCompilePOSIX(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
+	base64Regexp := regexp.MustCompile(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
 	return base64Regexp.MatchString(str)
 }
 

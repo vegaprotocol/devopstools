@@ -2,6 +2,7 @@ package systemctl
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
@@ -34,6 +35,23 @@ func Stop(logger *zap.Logger, service string) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to stop systemctl service: %w", err)
+	}
+
+	return nil
+}
+
+func Restart(logger *zap.Logger, service string) error {
+	if err := Stop(logger, service); err != nil {
+		return fmt.Errorf("failed to stop the %s service %w", service, err)
+	}
+
+	if err := tools.Retry(3, 3*time.Second, func() error {
+		if err := Start(logger, service); err != nil {
+			return fmt.Errorf("failed to start service: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("all attempts to start the %s service failed: %w", service, err)
 	}
 
 	return nil

@@ -61,7 +61,7 @@ func init() {
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlUser, "postgresql-user", "postgres", "The linux username who runs the postgresql")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.postgresqlService, "postgresql-service", "postgresql", "The service name for the postgresql")
 
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
+	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
 
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
 	performRestoreCmd.PersistentFlags().StringVar(&restoreArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
