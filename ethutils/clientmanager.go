@@ -45,7 +45,7 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 		case types.ETHMainnet:
 			ethereumURL = fmt.Sprintf("https://mainnet.infura.io/v3/%s", infuraProjectId)
 		case types.ETHSepolia:
-			ethereumURL = fmt.Sprintf("https://sepolia.infura.io/v3/%s", infuraProjectId)
+			ethereumURL = "https://rpc.sepolia.bs.network/"
 		case types.ETHGoerli:
 			ethereumURL = fmt.Sprintf("https://goerli.infura.io/v3/%s", infuraProjectId)
 		case types.ETHRopsten:
