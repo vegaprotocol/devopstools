@@ -3,6 +3,7 @@ package ethutils
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/vegaprotocol/devopstools/etherscan"
@@ -11,6 +12,7 @@ import (
 )
 
 type EthereumClientManager struct {
+	mutex          sync.Mutex
 	serviceSecrets secrets.ServiceSecretStore
 
 	ethClientByNetwork map[types.ETHNetwork]*ethclient.Client
@@ -58,6 +60,9 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 }
 
 func (m *EthereumClientManager) GetEthClient(ethNetwork types.ETHNetwork) (*ethclient.Client, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if ethClient, ok := m.ethClientByNetwork[ethNetwork]; ok {
 		return ethClient, nil
 	}
