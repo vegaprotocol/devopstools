@@ -36,16 +36,26 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 		if m.serviceSecrets == nil {
 			return "", fmt.Errorf("failed to get Ethereum URL for %s, Service Secret Store not provided", ethNetwork)
 		}
-		infuraProjectId, err := m.serviceSecrets.GetInfuraProjectId()
-		if err != nil {
-			return "", fmt.Errorf("failed to get Ethereum URL for %s, cannot get Infura Project Id, %w", ethNetwork, err)
+
+		var (
+			infuraProjectId string
+			err             error
+		)
+		if ethNetwork != types.ETHSepolia {
+			infuraProjectId, err = m.serviceSecrets.GetInfuraProjectId()
+			if err != nil {
+				return "", fmt.Errorf("failed to get Ethereum URL for %s, cannot get Infura Project Id, %w", ethNetwork, err)
+			}
 		}
 
 		switch ethNetwork {
 		case types.ETHMainnet:
 			ethereumURL = fmt.Sprintf("https://mainnet.infura.io/v3/%s", infuraProjectId)
 		case types.ETHSepolia:
-			ethereumURL = "https://rpc.sepolia.bs.network/"
+			ethereumURL, err = m.serviceSecrets.GetEthereumNodeURL("sepolia")
+			if err != nil {
+				return "", fmt.Errorf("failed to get sepolia url from the vault: %w", err)
+			}
 		case types.ETHGoerli:
 			ethereumURL = fmt.Sprintf("https://goerli.infura.io/v3/%s", infuraProjectId)
 		case types.ETHRopsten:
