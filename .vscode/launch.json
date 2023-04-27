@@ -28,6 +28,18 @@
             ],
             "console": "integratedTerminal",
             "asRoot": true,
+        },
+        {
+            "name": "vegatools backup change-encryption-key",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/main.go",
+            "args": [
+                "backup", "change-encryption-key",
+            ],
+            "console": "integratedTerminal",
+            "asRoot": true,
         }
         
     ]
