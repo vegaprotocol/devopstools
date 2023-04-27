@@ -3,6 +3,7 @@ package backup
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -129,6 +130,16 @@ func (state *State) WriteLocal(filePath string) error {
 	return nil
 }
 
+func (state *State) UpdateEncryptionKey(encryptionKey string) error {
+	if err := tools.ValidateEncryptionKey(encryptionKey); err != nil {
+		return fmt.Errorf("failed to check the encryption key: %w", err)
+	}
+
+	state.encryptionKey = []byte(encryptionKey)
+
+	return nil
+}
+
 func (state *State) WriteRemote() error {
 	// TODO: Implement it
 	return nil
@@ -161,6 +172,10 @@ func LoadFromLocal(encryptionKey, location string) (State, error) {
 			result.PgBackrestConfig, err = tools.DecryptMessage([]byte(encryptionKey), result.PgBackrestConfig)
 			if err != nil {
 				return result, fmt.Errorf("failed to decrypt pgbackrest config from the state: %w", err)
+			}
+
+			if !strings.Contains(result.PgBackrestConfig, "[global]") {
+				return result, fmt.Errorf("failed to decrypt pgbackrest config from state: missing global section. have you provide the correct encryption key?")
 			}
 		}
 
