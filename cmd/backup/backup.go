@@ -21,18 +21,18 @@ import (
 
 type BackupArgs struct {
 	*BackupRootArgs
-	localStateFile    string
-	postgresqlUser    string
-	pgBackrestFull    bool
-	postgresqlService string
 
-	pgBackrestBinary     string
+	pgBackrestFull    bool
+	postgresqlUser    string
+	postgresqlService string
+	encryptionKey     string
+
+	localStateFile       string
 	pgBackrestConfigFile string
 	postgresqlConfigFile string
 
-	encryptionKey string
-
-	s3CmdBinary string
+	s3CmdBinary      string
+	pgBackrestBinary string
 }
 
 var backupArgs BackupArgs
@@ -40,6 +40,42 @@ var backupArgs BackupArgs
 var performBackupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Backup vega node to remote S3 bucket",
+	Long: `The backup command combines two methods of backup into one command:
+    - we archive the vega chain data into S3 with the 's3cmd' program
+    - to archive the postgresql database, we use the 'pgbackrest' software
+We save both backups in the S3 bucket.
+
+Both parts of the backup need to be synchronized, and We must collect the data 
+simultaneously after We stop the Vega node.
+
+
+Requirements to make a backup:
+
+    - The 's3cmd' is installed in the system
+    - The 'pgbackrest' is installed.
+    - The pgbackrest stanza is configured, and the 'pgbackrest check' command does not fail.
+    - The postgresql archive_command is configured
+    - The PostgreSQL server is running
+    - The vega_home is initialized under the /home/vega/vega_home
+    - The tendermint home is initialized under the /home/vega/tendermint_home
+    - The vegavisor home is initialized under /home/vega/vegavisor_home
+    - The server uses the systemctl to manage postgresql and vegavisor processes
+
+
+You must start the program with the user who can:
+
+    - read pgbackrest config
+    - read postgresql config
+    - restart the vegavisor service
+    - restart the postgresql service
+    - read and write the backup state file
+    - read the home directory for vega, tendermint, and visor.
+
+
+Full backup
+
+You may provide the '--full' flag is present, the --full flag is passed to the 'pgbackrest backup' subcommand
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := DoBackup(backupArgs); err != nil {
 			backupArgs.Logger.Error("Error", zap.Error(err))
@@ -51,15 +87,17 @@ var performBackupCmd = &cobra.Command{
 func init() {
 	backupArgs.BackupRootArgs = &backupRootArgs
 
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local state file for the vega backup")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlUser, "postgresql-user", "postgres", "The username who runs the postgresql")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlConfigFile, "postgresql-config-file", "/etc/postgresql/14/main/postgresql.conf", "The config file for postgresql")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlService, "postgresql-service", "postgresql", "The service name for the postgresql")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "passphrase", "0123456789abcdef", "The AES passphrase to decrypt/encrypt sensitive data in the state file")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "The binary for pgbackrest")
-	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Perform the full backup")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "The binary for s3cmd")
-	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestConfigFile, "pgbackrest-config-file", "/etc/pgbackrest.conf", "Location of pgbackrest config file")
+	performBackupCmd.PersistentFlags().BoolVar(&backupArgs.pgBackrestFull, "full", false, "Flag enforcing the full backup on the server")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlUser, "postgresql-user", "postgres", "Linux username who runs the postgresql service")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlService, "postgresql-service", "postgresql", "Systemctl service name for the postgresql server")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.encryptionKey, "`passphrase`", "0123456789abcdef", "Encryption key for the sensitive data in the state JSON file. It must be 16 characters in length or multiplied of 16")
+
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.localStateFile, "local-state-file", "/tmp/vega-backup-state.json", "Local path for the backup state json file")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestConfigFile, "`pgbackrest-config-file`", "/etc/pgbackrest.conf", "Path to the pgbackrest config file")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.postgresqlConfigFile, "postgresql-config-file", "/etc/postgresql/14/main/postgresql.conf", "Path to the postgresql.conf file")
+
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.s3CmdBinary, "s3cmd-bin", "s3cmd", "Path to the s3cmd binary")
+	performBackupCmd.PersistentFlags().StringVar(&backupArgs.pgBackrestBinary, "pgbackrest-bin", "pgbackrest", "Path to the pgbackrest binary")
 
 	BackupRootCmd.AddCommand(performBackupCmd)
 }
