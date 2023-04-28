@@ -201,6 +201,9 @@ func depositFakeAssetToParties(
 	humanMintAmount *big.Float, // in full tokens, i.e. without decimals zeros
 	logger *zap.Logger,
 ) error {
+	if asset == nil {
+		return fmt.Errorf("given asset(%s) cannot be nil", assetId)
+	}
 	var (
 		mintAmount = ethutils.TokenFromFullTokens(humanMintAmount, uint8(asset.Decimals))
 		flowId     = rand.Int()

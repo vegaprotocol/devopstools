@@ -100,7 +100,10 @@ func RunTopUpTraderbot(args TraderbotArgs) error {
 	}
 	// Trigger Fake Assets TopUps
 	for assetId, vegaPubKeys := range traders.ByFakeAssetId {
-		asset := networkAssets[assetId]
+		asset, assetFound := networkAssets[assetId]
+		if !assetFound {
+			return fmt.Errorf("given asset %s not found in list of supported fake assets to top up", assetId)
+		}
 		wg.Add(1)
 		go func(assetId string, asset *vega.AssetDetails, vegaPubKeys []string) {
 			defer wg.Done()
