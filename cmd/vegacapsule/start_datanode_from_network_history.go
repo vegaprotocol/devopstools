@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	v1 "code.vegaprotocol.io/vega/protos/vega/events/v1"
 	"github.com/spf13/cobra"
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
@@ -46,7 +47,8 @@ var startDataNodeFromNetworkHistoryCmd = &cobra.Command{
 			startDataNodeFromNetworkHistoryArgs.Logger,
 			startDataNodeFromNetworkHistoryArgs.vegacapsuleBinary,
 			startDataNodeFromNetworkHistoryArgs.baseOnGroup,
-			startDataNodeFromNetworkHistoryArgs.networkHomePath)
+			startDataNodeFromNetworkHistoryArgs.networkHomePath,
+			startDataNodeFromNetworkHistoryArgs.waitForReplay)
 
 		if err != nil {
 			startDataNodeFromNetworkHistoryArgs.Logger.Error("Error", zap.Error(err))
@@ -85,7 +87,7 @@ func init() {
 		"TBD")
 }
 
-func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, baseOnGroup, networkHomePath string) error {
+func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, baseOnGroup, networkHomePath string, waitForReplay bool) error {
 	logger.Info("Listening nodes from vegacapsule")
 	vcNodes, err := vctools.ListNodes(vegacapsuleBinary, networkHomePath)
 	if err != nil {
@@ -139,12 +141,40 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("new node does not include data-node")
 	}
 
+	logger.Info("Getting most recent network history segment")
+	segment, err := dataNodeClient.LastNetworkHistorySegment()
+	if err != nil {
+		return fmt.Errorf("failed to get most recent network history segment: %w", err)
+	}
+	logger.Info("Selected most recent network history segment", zap.Int64("from", segment.FromHeight), zap.Int64("to", segment.ToHeight))
+
+	var selectedSnapshot *v1.CoreSnapshotData
+	for idx, snapshot := range snapshots {
+		if segment.ToHeight < int64(snapshot.BlockHeight) {
+			continue
+		}
+
+		if selectedSnapshot != nil && selectedSnapshot.BlockHeight > snapshot.BlockHeight {
+			continue
+		}
+
+		fmt.Printf("using snapshot for %d\n", snapshot.BlockHeight)
+
+		selectedSnapshot = &(snapshots[idx])
+	}
+
+	if selectedSnapshot == nil {
+		return fmt.Errorf("failed to select core snapshot")
+	}
+
+	logger.Info("Selected snapshot for restart", zap.Uint64("height", selectedSnapshot.BlockHeight), zap.String("hash", selectedSnapshot.BlockHash))
+
 	logger.Info("Updating core config", zap.String("config-file", newNodeDetails.Vega.ConfigFilePath))
-	if err := updateCoreConfig(logger, newNodeDetails.Vega.ConfigFilePath); err != nil {
+	if err := updateCoreConfig(logger, newNodeDetails.Vega.ConfigFilePath, selectedSnapshot.BlockHeight); err != nil {
 		return fmt.Errorf("failed to update core config: %w", err)
 	}
 
-	selectedSnapshot := snapshots[0]
+	// selectedSnapshot := snapshots[0]
 	logger.Info("Updating tendermint config", zap.String("config-file", newNodeDetails.Tendermint.ConfigFilePath))
 	if err := updateTendermintConfig(logger, newNodeDetails.Tendermint.ConfigFilePath, selectedSnapshot.BlockHash, selectedSnapshot.BlockHeight); err != nil {
 		return fmt.Errorf("failed to update tendermint config: %w", err)
@@ -159,16 +189,35 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("failed to start the %s node: %w", newNodeDetails.Name, err)
 	}
 
+	if !waitForReplay {
+		return nil
+	}
+
+	oldNodeRESTPort, err := tools.ReadStructuredFileValue("toml", dataNode.Vega.ConfigFilePath, "Gateway.Port")
+	if err != nil {
+		return fmt.Errorf("failed to read Gateway.Port from the old node config file(%s): %w", dataNode.Vega.ConfigFilePath, err)
+	}
+	newNodeRESTPort, err := tools.ReadStructuredFileValue("toml", newNodeDetails.Vega.ConfigFilePath, "Gateway.Port")
+	if err != nil {
+		return fmt.Errorf("failed to read Gateway.Port from the new node config file(%s): %w", dataNode.Vega.ConfigFilePath, err)
+	}
+
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer waitCancel()
+	if err := waitForNode(waitCtx, oldNodeRESTPort, newNodeRESTPort); err != nil {
+		return fmt.Errorf("failed to wait until new data node replied: %w", err)
+	}
+
 	return nil
 }
 
-func updateCoreConfig(logger *zap.Logger, configPath string) error {
+func updateCoreConfig(logger *zap.Logger, configPath string, height uint64) error {
 	coreConfigNode, err := dasel.NewFromFile(configPath, "toml")
 	if err != nil {
 		return fmt.Errorf("failed to read core config: %w", err)
 	}
-	logger.Info("Setting Snapsgot.StartHeight to -1", zap.String("config-file", configPath))
-	if err := coreConfigNode.Put("Snapshot.StartHeight", -1); err != nil {
+	logger.Info(fmt.Sprintf("Setting Snapsgot.StartHeight to %d", height), zap.String("config-file", configPath))
+	if err := coreConfigNode.Put("Snapshot.StartHeight", height); err != nil {
 		return fmt.Errorf("failed to set Snapshot.StartHeight in the vega node config: %w", err)
 	}
 	if err := coreConfigNode.WriteToFile(configPath, "toml", []storage.ReadWriteOption{}); err != nil {
@@ -221,4 +270,25 @@ func updateDataNodeConfig(logger *zap.Logger, configPath string) error {
 	}
 
 	return nil
+}
+
+func waitForNode(ctx context.Context, oldNodeRestPort, newNodeRestPort string) error {
+	ticker := time.NewTicker(3 * time.Second)
+
+	select {
+	case <-ticker.C:
+		// resp, err := http.Get("")
+		break
+	}
+}
+
+type statistics struct {
+	Statistics struct {
+		BlockHeight uint64 `json:"blockHeight"`
+	} `json:"statistics"`
+}
+
+func getBlockHeight(url string) uint64 {
+
+	return 0
 }
