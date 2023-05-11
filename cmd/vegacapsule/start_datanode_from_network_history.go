@@ -2,8 +2,12 @@ package vegacapsule
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	v1 "code.vegaprotocol.io/vega/protos/vega/events/v1"
@@ -193,18 +197,22 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return nil
 	}
 
-	oldNodeRESTPort, err := tools.ReadStructuredFileValue("toml", dataNode.Vega.ConfigFilePath, "Gateway.Port")
+	logger.Info("Getting Gateway.Port value from the data node for old node", zap.String("config-file", dataNode.DataNode.ConfigFilePath))
+	oldNodeRESTPort, err := tools.ReadStructuredFileValue("toml", dataNode.DataNode.ConfigFilePath, "Gateway.Port")
 	if err != nil {
-		return fmt.Errorf("failed to read Gateway.Port from the old node config file(%s): %w", dataNode.Vega.ConfigFilePath, err)
-	}
-	newNodeRESTPort, err := tools.ReadStructuredFileValue("toml", newNodeDetails.Vega.ConfigFilePath, "Gateway.Port")
-	if err != nil {
-		return fmt.Errorf("failed to read Gateway.Port from the new node config file(%s): %w", dataNode.Vega.ConfigFilePath, err)
+		return fmt.Errorf("failed to read Gateway.Port from the old node config file(%s): %w", dataNode.DataNode.ConfigFilePath, err)
 	}
 
+	logger.Info("Getting Gateway.Port value from the data node for new node", zap.String("config-file", newNodeDetails.DataNode.ConfigFilePath))
+	newNodeRESTPort, err := tools.ReadStructuredFileValue("toml", newNodeDetails.DataNode.ConfigFilePath, "Gateway.Port")
+	if err != nil {
+		return fmt.Errorf("failed to read Gateway.Port from the new node config file(%s): %w", dataNode.DataNode.ConfigFilePath, err)
+	}
+
+	logger.Info("Waiting for node to replay")
 	waitCtx, waitCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer waitCancel()
-	if err := waitForNode(waitCtx, oldNodeRESTPort, newNodeRESTPort); err != nil {
+	if err := waitForNode(logger, waitCtx, oldNodeRESTPort, newNodeRESTPort); err != nil {
 		return fmt.Errorf("failed to wait until new data node replied: %w", err)
 	}
 
@@ -272,23 +280,58 @@ func updateDataNodeConfig(logger *zap.Logger, configPath string) error {
 	return nil
 }
 
-func waitForNode(ctx context.Context, oldNodeRestPort, newNodeRestPort string) error {
+func waitForNode(logger *zap.Logger, ctx context.Context, oldNodeRESTPort, newNodeRESTPort string) error {
+	const threshold = 10
+
 	ticker := time.NewTicker(3 * time.Second)
 
-	select {
-	case <-ticker.C:
-		// resp, err := http.Get("")
-		break
+	for {
+		select {
+		case <-ticker.C:
+			oldNodeHeight := getBlockHeight(logger, oldNodeRESTPort)
+			newNodeHeight := getBlockHeight(logger, newNodeRESTPort)
+
+			if oldNodeHeight != 0 && newNodeHeight != 0 && newNodeHeight > oldNodeHeight-threshold {
+				return nil
+			}
+
+			logger.Info("Still waiting", zap.Int("expected-block", oldNodeHeight-threshold), zap.Int("current-block", newNodeHeight))
+		case <-ctx.Done():
+			return fmt.Errorf("context cancaled")
+		}
 	}
 }
 
 type statistics struct {
 	Statistics struct {
-		BlockHeight uint64 `json:"blockHeight"`
+		BlockHeight string `json:"blockHeight"`
 	} `json:"statistics"`
 }
 
-func getBlockHeight(url string) uint64 {
+func getBlockHeight(logger *zap.Logger, port string) int {
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%s/statistics", port))
+	if err != nil {
+		logger.Debug(fmt.Sprintf("failed to call http://127.0.0.1:%s/statistics", port), zap.Error(err))
+		return 0
+	}
 
-	return 0
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("failed to read response body buffer", zap.Error(err))
+		return 0
+	}
+
+	stats := statistics{}
+	if err := json.Unmarshal(respBytes, &stats); err != nil {
+		logger.Error("failed to unmarshall data", zap.Error(err))
+		return 0
+	}
+
+	result, err := strconv.Atoi(stats.Statistics.BlockHeight)
+	if err != nil {
+		logger.Error("failed to convert block height into int", zap.Error(err))
+		return 0
+	}
+
+	return result
 }
