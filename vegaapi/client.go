@@ -6,6 +6,7 @@ import (
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 )
 
@@ -27,6 +28,7 @@ type DataNodeClient interface {
 	GetMarketById(marketId string) (*vega.Market, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
 	GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)
+	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 
 	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
 }
