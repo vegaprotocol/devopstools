@@ -70,25 +70,25 @@ func init() {
 		&startDataNodeFromNetworkHistoryArgs.vegacapsuleBinary,
 		"vegacapsule-bin",
 		"vegacapsule",
-		"TBD")
+		"Path to the vegacapsule binary")
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
 		&startDataNodeFromNetworkHistoryArgs.baseOnGroup,
 		"base-on-group",
 		"",
-		"TBD")
+		"Node set name to create")
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().BoolVar(
 		&startDataNodeFromNetworkHistoryArgs.waitForReplay,
 		"wait-for-replay",
 		false,
-		"TBD")
+		"Determine if we should wait for the node after it has been started")
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
 		&startDataNodeFromNetworkHistoryArgs.networkHomePath,
 		"network-home-path",
 		"",
-		"TBD")
+		"Custom path for the network")
 }
 
 func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, baseOnGroup, networkHomePath string, waitForReplay bool) error {
