@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 	vctools "github.com/vegaprotocol/devopstools/vegacapsule"
 )
@@ -122,6 +123,13 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	defer cancel()
 	dataNodeClient.MustDialConnection(ctx)
 
+	logger.Info("Checking if enough snapshots is produced")
+	snapshotWaitCtx, snapshotWaitCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer snapshotWaitCancel()
+	if err := wait(logger, snapshotWaitCtx, checkSnapshots(dataNodeClient)); err != nil {
+		return fmt.Errorf("failed to wait until enough snapshots is produced: %w", err)
+	}
+
 	logger.Info("Collecting available snapshots")
 	snapshots, err := dataNodeClient.ListCoreSnapshots()
 	if err != nil {
@@ -212,7 +220,7 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	logger.Info("Waiting for node to replay")
 	waitCtx, waitCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer waitCancel()
-	if err := waitForNode(logger, waitCtx, oldNodeRESTPort, newNodeRESTPort); err != nil {
+	if err := wait(logger, waitCtx, checkNodeReadiness(logger, oldNodeRESTPort, newNodeRESTPort)); err != nil {
 		return fmt.Errorf("failed to wait until new data node replied: %w", err)
 	}
 
@@ -280,25 +288,52 @@ func updateDataNodeConfig(logger *zap.Logger, configPath string) error {
 	return nil
 }
 
-func waitForNode(logger *zap.Logger, ctx context.Context, oldNodeRESTPort, newNodeRESTPort string) error {
-	const threshold = 10
-
+func wait(logger *zap.Logger, ctx context.Context, checker func() error) error {
 	ticker := time.NewTicker(3 * time.Second)
-
 	for {
 		select {
 		case <-ticker.C:
-			oldNodeHeight := getBlockHeight(logger, oldNodeRESTPort)
-			newNodeHeight := getBlockHeight(logger, newNodeRESTPort)
-
-			if oldNodeHeight != 0 && newNodeHeight != 0 && newNodeHeight > oldNodeHeight-threshold {
+			err := checker()
+			if err == nil {
 				return nil
 			}
 
-			logger.Info("Still waiting", zap.Int("expected-block", oldNodeHeight-threshold), zap.Int("current-block", newNodeHeight))
+			logger.Info("Still waiting", zap.String("details", err.Error()))
 		case <-ctx.Done():
 			return fmt.Errorf("context cancaled")
 		}
+	}
+}
+
+func checkNodeReadiness(logger *zap.Logger, oldNodeRESTPort, newNodeRESTPort string) func() error {
+	const threshold = 10
+
+	return func() error {
+		oldNodeHeight := getBlockHeight(logger, oldNodeRESTPort)
+		newNodeHeight := getBlockHeight(logger, newNodeRESTPort)
+
+		if oldNodeHeight != 0 && newNodeHeight != 0 && newNodeHeight > oldNodeHeight-threshold {
+			return nil
+		}
+
+		return fmt.Errorf("node is not ready yet. Current block is %d, expected at least %d", newNodeHeight, oldNodeHeight-threshold)
+	}
+}
+
+func checkSnapshots(client vegaapi.DataNodeClient) func() error {
+	const requiredSnapshots = 5
+
+	return func() error {
+		snapshots, err := client.ListCoreSnapshots()
+		if err != nil {
+			return fmt.Errorf("failed to get snapshots: %w", err)
+		}
+
+		if len(snapshots) < requiredSnapshots {
+			return fmt.Errorf("not enough snapshots, %d required, %d at the moment", requiredSnapshots, len(snapshots))
+		}
+
+		return nil
 	}
 }
 
