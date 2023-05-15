@@ -28,6 +28,7 @@ type StartDataNodeFromNetworkHistoryArgs struct {
 	vegacapsuleBinary string
 	networkHomePath   string
 	baseOnGroup       string
+	outFile           string
 	waitForReplay     bool
 }
 
@@ -53,7 +54,8 @@ var startDataNodeFromNetworkHistoryCmd = &cobra.Command{
 			startDataNodeFromNetworkHistoryArgs.vegacapsuleBinary,
 			startDataNodeFromNetworkHistoryArgs.baseOnGroup,
 			startDataNodeFromNetworkHistoryArgs.networkHomePath,
-			startDataNodeFromNetworkHistoryArgs.waitForReplay)
+			startDataNodeFromNetworkHistoryArgs.waitForReplay,
+			startDataNodeFromNetworkHistoryArgs.outFile)
 
 		if err != nil {
 			startDataNodeFromNetworkHistoryArgs.Logger.Error("Error", zap.Error(err))
@@ -90,9 +92,15 @@ func init() {
 		"network-home-path",
 		"",
 		"Custom path for the network")
+
+	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
+		&startDataNodeFromNetworkHistoryArgs.outFile,
+		"out",
+		"./data-node-info.txt",
+		"The file where we save information about node after node is started")
 }
 
-func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, baseOnGroup, networkHomePath string, waitForReplay bool) error {
+func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, baseOnGroup, networkHomePath string, waitForReplay bool, outFile string) error {
 	logger.Info("Listening nodes from vegacapsule")
 	vcNodes, err := vctools.ListNodes(vegacapsuleBinary, networkHomePath)
 	if err != nil {
@@ -153,6 +161,13 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("new node does not include data-node")
 	}
 
+	networkHistoryCtx, networkHistoryCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer networkHistoryCancel()
+	logger.Info("Waiting untill at least one network history segment is available")
+	if err := wait(logger, networkHistoryCtx, checkHistorySegments(logger, dataNodeClient)); err != nil {
+		return fmt.Errorf("network did not show any history segment: %w", err)
+	}
+
 	logger.Info("Getting most recent network history segment")
 	segment, err := dataNodeClient.LastNetworkHistorySegment()
 	if err != nil {
@@ -201,6 +216,10 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("failed to start the %s node: %w", newNodeDetails.Name, err)
 	}
 
+	if err := DescribeDataNode(logger, *newNodeDetails, outFile); err != nil {
+		return fmt.Errorf("failed to write new node details: %w", err)
+	}
+
 	if !waitForReplay {
 		return nil
 	}
@@ -223,6 +242,7 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	if err := wait(logger, waitCtx, checkNodeReadiness(logger, oldNodeRESTPort, newNodeRESTPort)); err != nil {
 		return fmt.Errorf("failed to wait until new data node replied: %w", err)
 	}
+	logger.Info("Node seems to be ready")
 
 	return nil
 }
@@ -305,6 +325,24 @@ func wait(logger *zap.Logger, ctx context.Context, checker func() error) error {
 	}
 }
 
+func checkHistorySegments(logger *zap.Logger, client vegaapi.DataNodeClient) func() error {
+	const minHistorySegments = 1
+
+	return func() error {
+		segment, err := client.LastNetworkHistorySegment()
+		if err != nil {
+			logger.Info("no network history segments available", zap.Error(err))
+			return err
+		}
+
+		if segment == nil {
+			return fmt.Errorf("no network history segment available: empty response from API")
+		}
+
+		return nil
+	}
+}
+
 func checkNodeReadiness(logger *zap.Logger, oldNodeRESTPort, newNodeRESTPort string) func() error {
 	const threshold = 10
 
@@ -321,7 +359,7 @@ func checkNodeReadiness(logger *zap.Logger, oldNodeRESTPort, newNodeRESTPort str
 }
 
 func checkSnapshots(client vegaapi.DataNodeClient) func() error {
-	const requiredSnapshots = 5
+	const requiredSnapshots = 1
 
 	return func() error {
 		snapshots, err := client.ListCoreSnapshots()
@@ -369,4 +407,49 @@ func getBlockHeight(logger *zap.Logger, port string) int {
 	}
 
 	return result
+}
+
+type StartDataNodeFromNetworkHistoryInfo struct {
+	DataNodeConfigFilePath   string
+	CoreConfigFilePath       string
+	TendermintConfigFilePath string
+
+	GatewayURL string
+	GRPCURL    string
+}
+
+func DescribeDataNode(logger *zap.Logger, nodeDetails vctools.NodeDetails, outFile string) error {
+	result := StartDataNodeFromNetworkHistoryInfo{}
+
+	result.CoreConfigFilePath = nodeDetails.Vega.ConfigFilePath
+	result.TendermintConfigFilePath = nodeDetails.Tendermint.ConfigFilePath
+
+	if nodeDetails.DataNode != nil {
+		result.DataNodeConfigFilePath = nodeDetails.DataNode.ConfigFilePath
+	}
+
+	grpcPort, err := tools.ReadStructuredFileValue("toml", nodeDetails.DataNode.ConfigFilePath, "API.Port")
+	if err != nil {
+		return fmt.Errorf("failed to read API.Port from the data node config file(%s): %w", nodeDetails.DataNode, err)
+	}
+
+	gatewayPort, err := tools.ReadStructuredFileValue("toml", nodeDetails.DataNode.ConfigFilePath, "Gateway.Port")
+	if err != nil {
+		return fmt.Errorf("failed to read Gateway.Port from the data node config file(%s): %w", nodeDetails.DataNode, err)
+	}
+
+	result.GatewayURL = fmt.Sprintf("127.0.0.1:%s", gatewayPort)
+	result.GRPCURL = fmt.Sprintf("127.0.0.1:%s", grpcPort)
+
+	data, err := json.Marshal(result)
+
+	if err != nil {
+		return fmt.Errorf("failed to marshal new data-node details: %w", err)
+	}
+
+	if err := os.WriteFile(outFile, data, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write new node details into file: %w", err)
+	}
+
+	return nil
 }
