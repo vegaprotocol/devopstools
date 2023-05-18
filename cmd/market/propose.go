@@ -283,6 +283,25 @@ func RunPropose(args ProposeArgs) error {
 				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityETHUSD230630MetadataID, sub, logger,
 			)
 		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub, err := proposals.NewCommunityLinkUSD230630(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{proposals.CommunityLinkUSD230630MetadataID},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityLinkUSD230630MetadataID, sub, logger,
+			)
+		}()
 	}
 
 	wg.Wait()
