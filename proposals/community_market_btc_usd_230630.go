@@ -9,7 +9,7 @@ import (
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
 )
 
-const CommunityBTCUSD230630MetadataID = "auto:community_btcusd230630"
+const CommunityBTCUSD230630MetadataID = "auto:community_btcusdc230630"
 
 // settlementVegaAssetId ideally with 6 decimal places
 func NewCommunityBTCUSD230630(
