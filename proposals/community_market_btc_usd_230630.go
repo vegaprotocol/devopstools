@@ -115,7 +115,7 @@ func NewCommunityBTCUSD230630(
 						DecimalPlaces: 1,
 						Metadata: append([]string{
 							"base:BTC",
-							"quote:USDT",
+							"quote:USD",
 							"class:fx/crypto",
 							"quarterly",
 							"sector:defi",

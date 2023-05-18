@@ -115,7 +115,7 @@ func NewCommunityETHUSD230630(
 						DecimalPlaces: 2,
 						Metadata: append([]string{
 							"base:ETH",
-							"quote:USDT",
+							"quote:USD",
 							"class:fx/crypto",
 							"quarterly",
 							"sector:defi",
