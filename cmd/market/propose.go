@@ -245,7 +245,7 @@ func RunPropose(args ProposeArgs) error {
 		}()
 	}
 
-	if network.Network == types.NetworkDevnet1 && args.ProposeCommunity {
+	if network.Network == types.NetworkDevnet1 && (args.ProposeCommunity || args.ProposeAll) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
