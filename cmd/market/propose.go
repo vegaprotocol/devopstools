@@ -293,11 +293,12 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal().GetOracle().Signers
 		stringSigners := []string{}
 		for _, signer := range signers {
-			if signer.GetPubKey() == nil {
-				continue
+			if signer.GetPubKey() != nil {
+				stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
 			}
-
-			stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+			if signer.GetEthAddress() != nil {
+				stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+			}
 		}
 
 		if slices.Contains(
