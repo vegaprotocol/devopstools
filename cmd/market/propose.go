@@ -260,11 +260,29 @@ func RunPropose(args ProposeArgs) error {
 				return
 			}
 			resultsChannel <- proposeVoteProvideLP(
-				"ETHDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityBTCUSD230630MetadataID, sub, logger,
 			)
 		}()
 
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub, err := proposals.NewCommunityETHUSD230630(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{proposals.CommunityETHUSD230630MetadataID},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityETHUSD230630MetadataID, sub, logger,
+			)
+		}()
 	}
 
 	wg.Wait()
