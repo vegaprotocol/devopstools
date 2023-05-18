@@ -4,6 +4,9 @@ import (
 	"github.com/vegaprotocol/devopstools/types"
 )
 
+// The CoinBase Oracle data
+const CoinBaseOraclePubKey = "0xfCEAdAFab14d46e20144F48824d0C09B1a03F2BC"
+
 const (
 	MARKET_AAPL_MARKER    = "auto:aapl"
 	MARKET_AAVEDAI_MARKER = "auto:aavedai"
@@ -22,6 +25,8 @@ type networkAssetsIDs struct {
 	TSLA    string
 	UNIDAI  string
 	ETHDAI  string
+
+	SettlementAsset_USDC string
 }
 
 var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs{
@@ -33,6 +38,8 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		TSLA:    "deadbeef00000000000000000000000000000000000000000000000000000007", // "fEURO"
 		UNIDAI:  "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
 		ETHDAI:  "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
+
+		SettlementAsset_USDC: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 	},
 	types.NetworkStagnet1: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"

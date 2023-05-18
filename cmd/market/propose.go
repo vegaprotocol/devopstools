@@ -15,6 +15,7 @@ import (
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/proposals"
+	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
@@ -30,10 +31,13 @@ type ProposeArgs struct {
 	ProposeTSLA    bool
 	ProposeUNIDAI  bool
 	ProposeETHDAI  bool
-	ProposeAll     bool
-	OraclePubKey   string
-	FakeAsset      bool
-	ERC20Asset     bool
+
+	ProposeAll       bool
+	ProposeCommunity bool
+
+	OraclePubKey string
+	FakeAsset    bool
+	ERC20Asset   bool
 }
 
 var proposeArgs ProposeArgs
@@ -64,6 +68,7 @@ func init() {
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeUNIDAI, "unidai", false, "Propose UNIDAI market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeETHDAI, "ethdai", false, "Propose ETHDI market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeAll, "all", false, "Propose all markets")
+	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeCommunity, "community", false, "Propose community markets(only to devnet1)")
 
 	proposeCmd.PersistentFlags().StringVar(&proposeArgs.OraclePubKey, "oracle-pubkey", "", "Oracle PubKey. Optional, by default proposer")
 }
@@ -238,6 +243,28 @@ func RunPropose(args ProposeArgs) error {
 				oraclePubKey, closingTime, enactmentTime, MARKET_ETHDAI_MARKER, sub, logger,
 			)
 		}()
+	}
+
+	if network.Network == types.NetworkDevnet1 && args.ProposeCommunity {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub, err := proposals.NewCommunityBTCUSD230630(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{proposals.CommunityBTCUSD230630MetadataID},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				"ETHDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityBTCUSD230630MetadataID, sub, logger,
+			)
+		}()
+
 	}
 
 	wg.Wait()
@@ -455,7 +482,7 @@ func submitTx(
 	if !submitResponse.Success {
 		logger.Error("Transaction submission response is not successful",
 			zap.String("proposer", proposerVegawallet.PublicKey), zap.String("description", description),
-			zap.Any("txReq", submitReq.String()), zap.Any("response", submitResponse))
+			zap.Any("txReq", submitReq.String()), zap.String("response", fmt.Sprintf("%#v", submitResponse)))
 		return err
 	}
 	logger.Info("Successful Submision of Market Proposal", zap.String("description", description),
