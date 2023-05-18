@@ -320,14 +320,14 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 	for _, market := range markets {
 		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil ||
 			market.TradableInstrument.Instrument.GetFuture() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal().GetOracle() == nil {
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData() == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal() == nil ||
+			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle() == nil {
 			continue
 		}
 
-		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForTradingTermination.GetData().GetExternal().GetOracle().Signers
+		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle().Signers
 		stringSigners := []string{}
 		for _, signer := range signers {
 			if signer.GetPubKey() != nil {
