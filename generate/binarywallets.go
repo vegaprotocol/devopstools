@@ -147,7 +147,7 @@ func createVegawallet(
 		return "", err
 	}
 	// create vegaWallet store and store new hdwallet
-	vegaWalletStore, err := wallets.InitialiseStore(vegaHome)
+	vegaWalletStore, err := wallets.InitialiseStore(vegaHome, false)
 	if err != nil {
 		return "", err
 	}
