@@ -25,7 +25,7 @@ func NewCommunityETHUSD230630(
 	}
 
 	return &commandspb.ProposalSubmission{
-		Reference: "BTC/USDT-23063",
+		Reference: "ETH/USDT-23063",
 		Rationale: &vega.ProposalRationale{
 			Title:       "ETH/USDT-230630",
 			Description: "## Summary\n\nThis proposal requests to list ETH/USDT-230630 as a market with USDT as a settlement asset on the Vega Network as discussed in: https://community.vega.xyz/.\n\n## Rationale\n\n- ETH is the second largest Crypto asset with the highest volume and Marketcap.\n- Given the price, 2 decimal places will be used for price due to the number of valid digits in asset price. \n- Position decimal places will be set to 3 considering the value per contract\n- USDT is chosen as settlement asset due to its stability.",
