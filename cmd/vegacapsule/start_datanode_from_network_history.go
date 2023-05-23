@@ -125,10 +125,12 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("failed to read API.Port from the data node config file(%s): %w", dataNode.DataNode.ConfigFilePath, err)
 	}
 
-	logger.Info("Creating data-node gRPC connection")
+	logger.Info("Creating data-node gRPC connection", zap.String("url", fmt.Sprintf("127.0.0.1:%s", grpcPort)))
 	dataNodeClient := datanode.NewDataNode([]string{fmt.Sprintf("127.0.0.1:%s", grpcPort)}, 3*time.Second, logger)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
+
+	// can panic
 	dataNodeClient.MustDialConnection(ctx)
 
 	logger.Info("Checking if enough snapshots is produced")
