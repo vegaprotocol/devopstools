@@ -7,6 +7,9 @@ import (
 
 type VegacapsuleArgs struct {
 	*rootCmd.RootArgs
+
+	networkHomePath   string
+	vegacapsuleBinary string
 }
 
 var vegacapsuleArgs VegacapsuleArgs
@@ -19,4 +22,16 @@ var VegacapsuleCmd = &cobra.Command{
 
 func init() {
 	vegacapsuleArgs.RootArgs = &rootCmd.Args
+
+	VegacapsuleCmd.PersistentFlags().StringVar(
+		&vegacapsuleArgs.networkHomePath,
+		"network-home-path",
+		"",
+		"Custom path for the network")
+
+	VegacapsuleCmd.PersistentFlags().StringVar(
+		&vegacapsuleArgs.vegacapsuleBinary,
+		"vegacapsule-bin",
+		"vegacapsule",
+		"Path to the vegacapsule binary")
 }

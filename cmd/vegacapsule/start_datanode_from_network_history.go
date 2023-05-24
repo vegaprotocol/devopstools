@@ -25,11 +25,9 @@ import (
 type StartDataNodeFromNetworkHistoryArgs struct {
 	*VegacapsuleArgs
 
-	vegacapsuleBinary string
-	networkHomePath   string
-	baseOnGroup       string
-	outFile           string
-	waitForReplay     bool
+	baseOnGroup   string
+	outFile       string
+	waitForReplay bool
 }
 
 var startDataNodeFromNetworkHistoryArgs StartDataNodeFromNetworkHistoryArgs
@@ -70,12 +68,6 @@ func init() {
 	VegacapsuleCmd.AddCommand(startDataNodeFromNetworkHistoryCmd)
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
-		&startDataNodeFromNetworkHistoryArgs.vegacapsuleBinary,
-		"vegacapsule-bin",
-		"vegacapsule",
-		"Path to the vegacapsule binary")
-
-	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
 		&startDataNodeFromNetworkHistoryArgs.baseOnGroup,
 		"base-on-group",
 		"",
@@ -86,12 +78,6 @@ func init() {
 		"wait-for-replay",
 		false,
 		"Determine if we should wait for the node after it has been started")
-
-	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
-		&startDataNodeFromNetworkHistoryArgs.networkHomePath,
-		"network-home-path",
-		"",
-		"Custom path for the network")
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
 		&startDataNodeFromNetworkHistoryArgs.outFile,
@@ -133,10 +119,23 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	// can panic
 	dataNodeClient.MustDialConnection(ctx)
 
+	// We have to check if protocol upgrade happened on the network.
+	// If there was a protocol upgrade, we have to wait at least for one snapshot after the protocol upgrade.
+	// Otherwise we are not able to restart network with a new binary.
+	latestProtocolUpgradeEvent, err := findLatestProtocolUpgradeEvent(dataNodeClient)
+	if err != nil {
+		return fmt.Errorf("failed to list upgrade proposals event: %w", err)
+	}
+
+	waitForSnapshotAtBlock := uint64(0)
+	if latestProtocolUpgradeEvent != nil {
+		waitForSnapshotAtBlock = latestProtocolUpgradeEvent.UpgradeBlockHeight
+	}
+
 	logger.Info("Checking if enough snapshots is produced")
 	snapshotWaitCtx, snapshotWaitCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer snapshotWaitCancel()
-	if err := wait(logger, snapshotWaitCtx, checkSnapshots(dataNodeClient)); err != nil {
+	if err := wait(logger, snapshotWaitCtx, checkSnapshots(dataNodeClient, waitForSnapshotAtBlock)); err != nil {
 		return fmt.Errorf("failed to wait until enough snapshots is produced: %w", err)
 	}
 
@@ -281,7 +280,7 @@ func updateTendermintConfig(logger *zap.Logger, configPath, snapshotHash string,
 		return fmt.Errorf("failed to set statesync.trust_hash field in the thendermint config: %w", err)
 	}
 
-	logger.Info(fmt.Sprintf("Setting statesync.trust_height to %s", snapshotHeight), zap.String("config-file", configPath))
+	logger.Info(fmt.Sprintf("Setting statesync.trust_height to %d", snapshotHeight), zap.String("config-file", configPath))
 	if err := tmConfigNode.Put("statesync.trust_height", snapshotHeight); err != nil {
 		return fmt.Errorf("failed to set statesync.trust_height field in the thendermint config: %w", err)
 	}
@@ -360,7 +359,7 @@ func checkNodeReadiness(logger *zap.Logger, oldNodeRESTPort, newNodeRESTPort str
 	}
 }
 
-func checkSnapshots(client vegaapi.DataNodeClient) func() error {
+func checkSnapshots(client vegaapi.DataNodeClient, minimumSnapshotBlock uint64) func() error {
 	const requiredSnapshots = 1
 
 	return func() error {
@@ -369,8 +368,22 @@ func checkSnapshots(client vegaapi.DataNodeClient) func() error {
 			return fmt.Errorf("failed to get snapshots: %w", err)
 		}
 
+		// We do not have minimum number of snapshots
 		if len(snapshots) < requiredSnapshots {
+
 			return fmt.Errorf("not enough snapshots, %d required, %d at the moment", requiredSnapshots, len(snapshots))
+		}
+
+		// Wait for snapshot at specific block
+		highestSnapshotBlock := uint64(0)
+		for _, snapshot := range snapshots {
+			if snapshot.BlockHeight > highestSnapshotBlock {
+				highestSnapshotBlock = snapshot.BlockHeight
+			}
+		}
+
+		if highestSnapshotBlock < minimumSnapshotBlock {
+			return fmt.Errorf("snapshot is on lower block than expected: expected snapshot at least on %d block, latest snapshot on %d block", minimumSnapshotBlock, highestSnapshotBlock)
 		}
 
 		return nil
@@ -454,4 +467,26 @@ func DescribeDataNode(logger *zap.Logger, nodeDetails vctools.NodeDetails, outFi
 	}
 
 	return nil
+}
+
+func findLatestProtocolUpgradeEvent(client vegaapi.DataNodeClient) (*v1.ProtocolUpgradeEvent, error) {
+	protocolUpgradeEvents, err := client.ListProtocolUpgradeProposals()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list protocol upgrade proposals: %w", err)
+	}
+
+	// no protocol upgrade happened in the network
+	if len(protocolUpgradeEvents) < 1 {
+		return nil, nil
+	}
+
+	latestProposalIdx := 0
+	latestProposalHeight := uint64(0)
+	for idx, event := range protocolUpgradeEvents {
+		if event.UpgradeBlockHeight > latestProposalHeight {
+			latestProposalIdx = idx
+		}
+	}
+
+	return &protocolUpgradeEvents[latestProposalIdx], nil
 }
