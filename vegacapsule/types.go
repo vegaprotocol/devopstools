@@ -6,6 +6,7 @@ type NodeDetails struct {
 	Vega struct {
 		HomeDir        string `json:"HomeDir"`
 		ConfigFilePath string `json:"ConfigFilePath"`
+		BinaryPath     string `json:"BinaryPath"`
 	} `json:"Vega"`
 	Tendermint struct {
 		ConfigFilePath string `json:"ConfigFilePath"`
@@ -14,6 +15,10 @@ type NodeDetails struct {
 		HomeDir        string `json:"HomeDir"`
 		ConfigFilePath string `json:"ConfigFilePath"`
 	} `json:"DataNode,omitempty"`
+	Visor *struct {
+		HomeDir        string `json:"HomeDir"`
+		ConfigFilePath string `json:"ConfigFilePath"`
+	} `json:"Visor"`
 }
 
 type VegacapsuleNodesListOut map[string]NodeDetails

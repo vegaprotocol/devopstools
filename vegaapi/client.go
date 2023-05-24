@@ -30,6 +30,6 @@ type DataNodeClient interface {
 	GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
-
+	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)
 	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
 }
