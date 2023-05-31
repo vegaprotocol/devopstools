@@ -15,6 +15,10 @@ import (
 //
 
 func GetByteCodeHash(byteCode []byte) (*string, error) {
+	if len(byteCode) < 1 {
+		return nil, fmt.Errorf("failed to get bytecode for smart contracts: empty bytecode")
+	}
+
 	// the bytecode of the contract is appended which is deployment specific. We only care about
 	// the contract code itself and so we need to strip this meta-data before hashing it. For the version
 	// of Solidity we use, the format is [contract-bytecode]a264[CBOR-encoded meta-data]
