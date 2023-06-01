@@ -2,9 +2,9 @@ package ssh
 
 import (
 	"fmt"
-	"os/exec"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
 	"go.uber.org/zap"
 )
 
@@ -21,20 +21,25 @@ func Download(
 			logger.Info("Retry download in a second")
 			time.Sleep(time.Second)
 		}
-		rsyncCmd := exec.Command(
-			"rsync",
+
+		args := []string{
 			"-avz",
 			"--quiet",
 			"-e", fmt.Sprintf("ssh -i %s", sshPrivateKeyfile),
 			"--rsync-path", "sudo rsync",
 			fmt.Sprintf("%s@%s:%s", sshUsername, serverHost, srcFilepath),
 			dstFilepath,
-		)
-		if err := rsyncCmd.Run(); err == nil {
-			return nil
+		}
+
+		out, err := tools.ExecuteBinary("rsync", args, nil)
+
+		if err != nil {
+			logger.Error("Failed to download file", zap.Error(err), zap.String("stdout", string(out)))
+			time.Sleep(1 * time.Second)
 		} else {
-			logger.Error("Failed to download file", zap.Error(err))
+			return nil
 		}
 	}
-	return fmt.Errorf("Failed to download file")
+
+	return fmt.Errorf("failed to download file")
 }
