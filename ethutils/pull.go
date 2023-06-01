@@ -82,6 +82,7 @@ func PullSmartContractImmutableData(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get byte code for the \"%s\" smart contract: %w", hexAddress, err)
 	}
+
 	// Get Byte Code Hash
 	byteCodeHash, err := GetByteCodeHash(byteCode)
 	if err != nil {
