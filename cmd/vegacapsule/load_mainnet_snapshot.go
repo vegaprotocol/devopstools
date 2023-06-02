@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/tools"
 	vctools "github.com/vegaprotocol/devopstools/vegacapsule"
+	"github.com/vegaprotocol/devopstools/vegasnapshot"
 	"go.uber.org/zap"
 )
 
@@ -15,6 +16,7 @@ type LoadMainnetSnapshotArgs struct {
 	*VegacapsuleArgs
 
 	snapshotSourcePath string
+	workDirPath        string
 }
 
 var loadMainnetSnapshotArgs LoadMainnetSnapshotArgs
@@ -31,6 +33,7 @@ var loadMainnetSnapshotCmd = &cobra.Command{
 			loadMainnetSnapshotArgs.vegacapsuleBinary,
 			loadMainnetSnapshotArgs.networkHomePath,
 			loadMainnetSnapshotArgs.snapshotSourcePath,
+			loadMainnetSnapshotArgs.workDirPath,
 		); err != nil {
 			loadMainnetSnapshotArgs.Logger.Fatal("failed to load snapshot", zap.Error(err))
 		}
@@ -46,6 +49,12 @@ func init() {
 		"",
 		"Path to the snapshot source downloaded from the mainnet")
 
+	loadMainnetSnapshotCmd.PersistentFlags().StringVar(
+		&loadMainnetSnapshotArgs.workDirPath,
+		"work-dir-path",
+		"./",
+		"Path to the work dir")
+
 	if err := loadMainnetSnapshotCmd.MarkPersistentFlagRequired("snapshot-source-path"); err != nil {
 		panic(err)
 	}
@@ -53,7 +62,18 @@ func init() {
 	VegacapsuleCmd.AddCommand(loadMainnetSnapshotCmd)
 }
 
-func loadSnapshot(logger *zap.Logger, vegacapsuleBinary, vegacapsuleHomePath, snapshotSourcePath string) error {
+func loadSnapshot(logger *zap.Logger, vegacapsuleBinary, vegacapsuleHomePath, snapshotSourcePath, workDirPath string) error {
+	snapshot, err := vegasnapshot.OpenSnapshotDB(snapshotSourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to open db snapshot: %w", err)
+	}
+
+	snapshotJSONOutput := filepath.Join(workDirPath, "./snapshot.json")
+
+	if err := snapshot.WriteSnapshotAsJSON(snapshotJSONOutput); err != nil {
+		return fmt.Errorf("failed to write snapshot to the JSON file: %w", err)
+	}
+
 	nodesDetails, err := vctools.ListNodes(vegacapsuleBinary, vegacapsuleHomePath)
 	if err != nil {
 		return fmt.Errorf("failed to list nodes for vegacapsule network: %w", err)

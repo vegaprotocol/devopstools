@@ -5,8 +5,11 @@ go 1.19
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
 	code.vegaprotocol.io/vega v0.71.4
+	github.com/RaveNoX/go-jsonmerge v1.0.0
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
+	github.com/cosmos/iavl v0.19.4
 	github.com/ethereum/go-ethereum v1.11.2
+	github.com/gogo/protobuf v1.3.2
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.18.1
 	github.com/libp2p/go-libp2p-core v0.20.1
@@ -14,7 +17,9 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.1
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/tendermint/tendermint v0.35.9
+	github.com/tendermint/tm-db v0.6.7
 	github.com/tomwright/dasel v1.27.3
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.5.0
@@ -48,7 +53,6 @@ require (
 	github.com/clbanning/mxj/v2 v2.3.3-0.20201214204241-e937bdee5a3e // indirect
 	github.com/confio/ics23/go v0.7.0 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
-	github.com/cosmos/iavl v0.19.4 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
@@ -67,7 +71,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
@@ -172,8 +175,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
-	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
