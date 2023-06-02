@@ -50,13 +50,13 @@ var getLiveBInaryCmd = &cobra.Command{
 func init() {
 	getLiveBinaryArgs.VegacapsuleArgs = &vegacapsuleArgs
 
-	VegacapsuleCmd.PersistentFlags().StringVar(
+	getLiveBInaryCmd.PersistentFlags().StringVar(
 		&getLiveBinaryArgs.copyTo,
 		"copy-to",
 		"",
 		"If not empty binary is copied to given folder")
 
-	VegacapsuleCmd.PersistentFlags().BoolVar(
+	getLiveBInaryCmd.PersistentFlags().BoolVar(
 		&getLiveBinaryArgs.overwrite,
 		"overwrite",
 		true,
