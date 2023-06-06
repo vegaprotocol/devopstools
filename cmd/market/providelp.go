@@ -105,7 +105,7 @@ func provideLiquidity(
 			LiquidityProvisionSubmission: &commandspb.LiquidityProvisionSubmission{
 				Fee:              "0.01",
 				MarketId:         marketId,
-				CommitmentAmount: "10000000",
+				CommitmentAmount: "1000000000",
 				Buys: []*vega.LiquidityOrder{
 					{
 						Reference:  vegatypes.PeggedReferenceBestBid,

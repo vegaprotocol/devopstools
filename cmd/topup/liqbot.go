@@ -90,7 +90,7 @@ func RunTopUpLiqbot(args LiqbotArgs) error {
 		wg.Add(1)
 		go func(tokenHexAddress string, vegaPubKeys []string) {
 			defer wg.Done()
-			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(10000), args.Logger)
+			err := depositERC20TokenToParties(network, tokenHexAddress, vegaPubKeys, big.NewFloat(100000000000), args.Logger)
 			if err != nil {
 				resultsChannel <- err
 			}
