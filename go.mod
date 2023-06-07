@@ -11,6 +11,7 @@ require (
 	github.com/ipfs/kubo v0.18.1
 	github.com/libp2p/go-libp2p-core v0.20.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
+	github.com/pelletier/go-toml v1.9.5
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.1
@@ -149,7 +150,6 @@ require (
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect

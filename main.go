@@ -2,6 +2,7 @@ package main
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/helper"
 	"github.com/vegaprotocol/devopstools/cmd/live"
@@ -37,4 +38,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(spam.SpamCmd)
 	rootCmd.RootCmd.AddCommand(helper.HelperCmd)
 	rootCmd.RootCmd.AddCommand(vegacapsule.VegacapsuleCmd)
+	rootCmd.RootCmd.AddCommand(backup.BackupCmd)
 }
