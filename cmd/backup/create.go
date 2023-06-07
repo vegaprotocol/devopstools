@@ -46,7 +46,58 @@ func init() {
 	BackupCmd.AddCommand(createCmd)
 }
 
+func enforceFullBackup(logger *zap.Logger, state *backup.State, conf backup.FullBackupConfig) bool {
+	// Empty state and corresponding config
+	if conf.WhenEmptyState && state != nil && state.Empty() {
+		logger.Info("Enforced full backup, empty state")
+		return true
+	}
+
+	var (
+		lastFullBackup   *backup.BackupEntry
+		backupsSinceFull int
+	)
+	entries := state.SortedBackups()
+
+	for idx, entry := range entries {
+		if entry.Full {
+			backupsSinceFull = 0
+			lastFullBackup = &(entries[idx])
+			continue
+		}
+
+		backupsSinceFull = backupsSinceFull + 1
+	}
+
+	if lastFullBackup == nil {
+		logger.Info("Enforced full backup, no full backups")
+		return true
+	}
+
+	logger.Info(fmt.Sprintf("Last full backup created %d backups ago, at %s", backupsSinceFull, lastFullBackup.Date))
+
+	lastBackupTime, err := time.Parse(backup.EntryTimeFormat, lastFullBackup.Date)
+	if err != nil {
+		logger.Info("Enforced full backup, error parsing last full backup time", zap.Error(err))
+		return true
+	}
+
+	lastExpectedFullBackup := time.Now().Add(-conf.EveryTimeDuration)
+	if lastBackupTime.Before(lastExpectedFullBackup) {
+		logger.Info(fmt.Sprintf("Enforced full backup. Last full backup %s, full backup expected every %s", lastFullBackup.Date, conf.EveryTimeDuration))
+		return true
+	}
+
+	if backupsSinceFull >= conf.EveryNBackups {
+		logger.Info(fmt.Sprintf("Enforced full backup. %d incremental backups since last full backup, full backup expected evet %d backups", backupsSinceFull, conf.EveryNBackups))
+		return true
+	}
+
+	return false
+}
+
 func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error {
+	totalStart := time.Now()
 	if user, _ := tools.WhoAmI(); user != "root" {
 		return fmt.Errorf("you must run this command from the root user, current user: %s", user)
 	}
@@ -60,6 +111,9 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 	if err := config.Check(); err != nil {
 		return fmt.Errorf("failed to check config: %w", err)
 	}
+
+	state := backup.OpenOrCreateNewState(config.StateFilePath, config)
+	mustBeFullBackup := enforceFullBackup(logger, state, config.FullBackup) || fullBackup
 
 	logger.Info("Loading node height", zap.String("url", config.CoreRestURL))
 	coreHeight, err := getCoreHeight(config.CoreRestURL)
@@ -76,27 +130,37 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 		return fmt.Errorf("failed to check zfs: %w", err)
 	}
 
-	logger.Info("Getting ZFS pools", zap.String("file_system", config.FileSystem))
-	pools, err := backup.ListZfsPools(config.FileSystem)
+	logger.Info("Getting ZFS pools", zap.String("file_system", config.PoolName))
+	pools, err := backup.ListZfsPools(config.PoolName)
 	if err != nil {
 		return fmt.Errorf("failed to list zfs pools: %w", err)
 	}
 	logger.Info("Found ZFS pools", zap.Any("pools", pools))
 
-	logger.Info("Creating zfs snapsgot", zap.String("file_system", config.FileSystem), zap.String("id", snapshotID))
-	if err := backup.CreateRecursiveZfsSnapshot(config.FileSystem, snapshotID); err != nil {
+	logger.Info("Creating zfs snapsgot", zap.String("file_system", config.PoolName), zap.String("id", snapshotID))
+	if err := backup.CreateRecursiveZfsSnapshot(config.PoolName, snapshotID); err != nil {
 		return fmt.Errorf("failed to create snapshot with ID %s: %w", snapshotID, err)
 	}
-	logger.Info("Snapshot created", zap.String("file_system", config.FileSystem), zap.String("id", snapshotID))
+	logger.Info("Snapshot created", zap.String("file_system", config.PoolName), zap.String("id", snapshotID))
 
 	logger.Info("Preparing env variables for sending backup")
 	zfsBackupPrepareEnvVariables(config.Destination)
 
+	if mustBeFullBackup {
+		logger.Info("Creating full backup")
+	} else {
+		logger.Info("Craeting incremental backup")
+	}
+
+	var (
+		backupSizeZFS   uint64 = 0
+		backupSizeTotal uint64 = 0
+	)
 	fullS3Destination := fmt.Sprintf("s3://%s/%s", strings.Trim(config.Destination.Bucket, "/"), strings.Trim(config.Destination.Path, "/"))
 	for _, pool := range pools {
 		sendStart := time.Now()
 		logger.Info("Sending backup, may take some time", zap.String("pool", pool.Name))
-		result, err := zfsBackupSendBackup(config.ZfsBackupBinaryPath, pool, fullS3Destination, fullBackup)
+		result, err := zfsBackupSendBackup(config.ZfsBackupBinaryPath, pool, fullS3Destination, mustBeFullBackup)
 		if err != nil {
 			return fmt.Errorf("failed to send backup to s3 for pool %s: %w", pool.Name, err)
 		}
@@ -104,15 +168,25 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 
 		sendDuration := sendEnd.Sub(sendStart)
 		logger.Info("Backup sent", zap.String("duration", sendDuration.String()), zap.Int("zfs_size_mb", result.TotalZFSBytes/1024/1024), zap.Int("total_size_mb", result.TotalBackupBytes/1024/1024))
+
+		backupSizeZFS = backupSizeZFS + uint64(result.TotalZFSBytes)
+		backupSizeTotal = backupSizeTotal + uint64(result.TotalBackupBytes)
 	}
 
-	state := backup.OpenOrCreateNewState(config.StateFilePath, config)
-	if err := state.AddEntry(snapshotID, fullS3Destination, coreHeight, pools); err != nil {
+	if err := state.AddEntry(snapshotID, fullS3Destination, coreHeight, mustBeFullBackup, pools); err != nil {
 		return fmt.Errorf("failed to add backup entry to state: %w", err)
 	}
+	logger.Info("Saving backup details in the state file", zap.String("path", config.StateFilePath))
 	if err := state.Save(config.StateFilePath); err != nil {
 		return fmt.Errorf("failed to save state into disk: %w", err)
 	}
+
+	totalEnd := time.Now()
+	logger.Info(
+		"Backup finished with no errors",
+		zap.String("duration", totalEnd.Sub(totalStart).String()),
+		zap.Uint64("zfs_size_mb", backupSizeZFS/1024/1024),
+		zap.Uint64("total_size_mb", backupSizeTotal/1024/1024))
 
 	return nil
 }

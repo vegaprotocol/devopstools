@@ -29,6 +29,21 @@ func zfsBackupPrepareEnvVariables(config backup.S3Config) error {
 		return fmt.Errorf("failed set AWS_S3_CUSTOM_ENDPOINT env variable")
 	}
 
+	// zfsbackup-go expects `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as env name for the S3 API credentials, We have to remap it
+	if config.AccessKeyIdEnvName != "AWS_ACCESS_KEY_ID" {
+		accessKeyId := os.Getenv(config.AccessKeyIdEnvName)
+		if err := os.Setenv("AWS_ACCESS_KEY_ID", accessKeyId); err != nil {
+			return fmt.Errorf("failed set AWS_ACCESS_KEY_ID env variable")
+		}
+	}
+
+	if config.AccessKeySecretEnvName != "AWS_SECRET_ACCESS_KEY" {
+		accessKeySecret := os.Getenv(config.AccessKeySecretEnvName)
+		if err := os.Setenv("AWS_SECRET_ACCESS_KEY", accessKeySecret); err != nil {
+			return fmt.Errorf("failed set AWS_SECRET_ACCESS_KEY env variable")
+		}
+	}
+
 	return nil
 }
 
