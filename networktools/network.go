@@ -31,6 +31,8 @@ func NewNetworkTools(
 		network.DNSSuffix = "testnet.vega.xyz"
 	case types.NetworkMainnet:
 		network.DNSSuffix = ""
+	case types.NetworkDevnet1:
+		network.DNSSuffix = fmt.Sprintf("%s.vega.rocks", name)
 	default:
 		network.DNSSuffix = fmt.Sprintf("%s.vega.xyz", name)
 	}
