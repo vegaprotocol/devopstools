@@ -2,6 +2,7 @@ package backup
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 
@@ -16,7 +17,22 @@ type SendBackupOutput struct {
 	FilesUploaded    int `json:"FilesUploaded"`
 }
 
-func SendBackup(bin string, pool backup.Pool, s3Destination string, full bool) (*SendBackupOutput, error) {
+func zfsBackupPrepareEnvVariables(config backup.S3Config) error {
+	// Variable names are defined by 3-rd party libary in the zfsbackup-go program
+
+	// We except some env variables are missing except KEY ID and KEY SECRET
+	if err := os.Setenv("AWS_REGION", config.Region); err != nil {
+		return fmt.Errorf("failed set the AWS_REGION env variable")
+	}
+
+	if err := os.Setenv("AWS_S3_CUSTOM_ENDPOINT", config.Endpoint); err != nil {
+		return fmt.Errorf("failed set AWS_S3_CUSTOM_ENDPOINT env variable")
+	}
+
+	return nil
+}
+
+func zfsBackupSendBackup(bin string, pool backup.Pool, s3Destination string, full bool) (*SendBackupOutput, error) {
 	if !strings.HasPrefix(s3Destination, "s3://") {
 		return nil, fmt.Errorf("destination must start with s3://")
 	}
@@ -36,7 +52,5 @@ func SendBackup(bin string, pool backup.Pool, s3Destination string, full bool) (
 	if _, err := tools.ExecuteBinary(bin, args, result); err != nil {
 		return nil, fmt.Errorf("failed to send backup: %w", err)
 	}
-	fmt.Printf("result: %#v\n\n", result)
-
 	return result, nil
 }

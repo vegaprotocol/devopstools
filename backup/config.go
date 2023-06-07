@@ -3,6 +3,7 @@ package backup
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/pelletier/go-toml"
 	"github.com/vegaprotocol/devopstools/tools"
@@ -51,6 +52,10 @@ func (conf Config) Check() error {
 
 	if conf.FileSystem == "" {
 		return fmt.Errorf("file_system in the config cannot be empty")
+	}
+
+	if _, err := exec.LookPath(conf.ZfsBackupBinaryPath); err != nil {
+		return fmt.Errorf("the given zfsbackup-go binary could not be found: install it from https://github.com/someone1/zfsbackup-go")
 	}
 
 	if conf.Destination.Bucket == "" {

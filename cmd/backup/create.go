@@ -89,22 +89,25 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 	}
 	logger.Info("Snapshot created", zap.String("file_system", config.FileSystem), zap.String("id", snapshotID))
 
+	logger.Info("Preparing env variables for sending backup")
+	zfsBackupPrepareEnvVariables(config.Destination)
+
 	fullS3Destination := fmt.Sprintf("s3://%s/%s", strings.Trim(config.Destination.Bucket, "/"), strings.Trim(config.Destination.Path, "/"))
 	for _, pool := range pools {
 		sendStart := time.Now()
 		logger.Info("Sending backup, may take some time", zap.String("pool", pool.Name))
-		_, err := SendBackup(config.ZfsBackupBinaryPath, pool, fullS3Destination, fullBackup)
+		result, err := zfsBackupSendBackup(config.ZfsBackupBinaryPath, pool, fullS3Destination, fullBackup)
 		if err != nil {
 			return fmt.Errorf("failed to send backup to s3 for pool %s: %w", pool.Name, err)
 		}
 		sendEnd := time.Now()
 
 		sendDuration := sendEnd.Sub(sendStart)
-		logger.Info("Backup sent", zap.String("duration", sendDuration.String()))
+		logger.Info("Backup sent", zap.String("duration", sendDuration.String()), zap.Int("zfs_size_mb", result.TotalZFSBytes/1024/1024), zap.Int("total_size_mb", result.TotalBackupBytes/1024/1024))
 	}
 
 	state := backup.OpenOrCreateNewState(config.StateFilePath, config)
-	if err := state.AddEntry(snapshotID, fullS3Destination, coreHeight); err != nil {
+	if err := state.AddEntry(snapshotID, fullS3Destination, coreHeight, pools); err != nil {
 		return fmt.Errorf("failed to add backup entry to state: %w", err)
 	}
 	if err := state.Save(config.StateFilePath); err != nil {

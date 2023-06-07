@@ -15,6 +15,7 @@ type BackupEntry struct {
 	Block    string
 	Origin   string
 	Location string
+	Pools    []Pool
 }
 
 type State struct {
@@ -23,7 +24,7 @@ type State struct {
 	Backups []BackupEntry
 }
 
-func (state *State) AddEntry(id, location string, blockHeight int) error {
+func (state *State) AddEntry(id, location string, blockHeight int, pools []Pool) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("failed to get server hostname: %w", err)
@@ -33,12 +34,17 @@ func (state *State) AddEntry(id, location string, blockHeight int) error {
 		return fmt.Errorf("backup id cannot be empty")
 	}
 
+	if len(pools) < 1 {
+		pools = []Pool{}
+	}
+
 	entry := BackupEntry{
 		ID:       id,
 		Location: location,
 		Origin:   hostname,
 		Block:    fmt.Sprintf("%d", blockHeight),
 		Date:     time.Now().Format(time.RFC3339),
+		Pools:    pools,
 	}
 
 	state.Backups = append(state.Backups, entry)
