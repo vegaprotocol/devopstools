@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
 	"github.com/vegaprotocol/devopstools/backup"
 	"github.com/vegaprotocol/devopstools/tools"
-	"go.uber.org/zap"
 )
 
 type CreateArgs struct {
@@ -74,7 +75,13 @@ func enforceFullBackup(logger *zap.Logger, state *backup.State, conf backup.Full
 		return true
 	}
 
-	logger.Info(fmt.Sprintf("Last full backup created %d backups ago, at %s", backupsSinceFull, lastFullBackup.Date))
+	logger.Info(
+		fmt.Sprintf(
+			"Last full backup created %d backups ago, at %s",
+			backupsSinceFull,
+			lastFullBackup.Date,
+		),
+	)
 
 	lastBackupTime, err := time.Parse(backup.EntryTimeFormat, lastFullBackup.Date)
 	if err != nil {
@@ -84,12 +91,24 @@ func enforceFullBackup(logger *zap.Logger, state *backup.State, conf backup.Full
 
 	lastExpectedFullBackup := time.Now().Add(-conf.EveryTimeDuration)
 	if lastBackupTime.Before(lastExpectedFullBackup) {
-		logger.Info(fmt.Sprintf("Enforced full backup. Last full backup %s, full backup expected every %s", lastFullBackup.Date, conf.EveryTimeDuration))
+		logger.Info(
+			fmt.Sprintf(
+				"Enforced full backup. Last full backup %s, full backup expected every %s",
+				lastFullBackup.Date,
+				conf.EveryTimeDuration,
+			),
+		)
 		return true
 	}
 
 	if backupsSinceFull >= conf.EveryNBackups {
-		logger.Info(fmt.Sprintf("Enforced full backup. %d incremental backups since last full backup, full backup expected evet %d backups", backupsSinceFull, conf.EveryNBackups))
+		logger.Info(
+			fmt.Sprintf(
+				"Enforced full backup. %d incremental backups since last full backup, full backup expected evet %d backups",
+				backupsSinceFull,
+				conf.EveryNBackups,
+			),
+		)
 		return true
 	}
 
@@ -137,11 +156,19 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 	}
 	logger.Info("Found ZFS pools", zap.Any("pools", pools))
 
-	logger.Info("Creating zfs snapsgot", zap.String("file_system", config.PoolName), zap.String("id", snapshotID))
+	logger.Info(
+		"Creating zfs snapsgot",
+		zap.String("file_system", config.PoolName),
+		zap.String("id", snapshotID),
+	)
 	if err := backup.CreateRecursiveZfsSnapshot(config.PoolName, snapshotID); err != nil {
 		return fmt.Errorf("failed to create snapshot with ID %s: %w", snapshotID, err)
 	}
-	logger.Info("Snapshot created", zap.String("file_system", config.PoolName), zap.String("id", snapshotID))
+	logger.Info(
+		"Snapshot created",
+		zap.String("file_system", config.PoolName),
+		zap.String("id", snapshotID),
+	)
 
 	logger.Info("Preparing env variables for sending backup")
 	zfsBackupPrepareEnvVariables(config.Destination)
@@ -156,18 +183,32 @@ func createBackup(logger *zap.Logger, configFile string, fullBackup bool) error 
 		backupSizeZFS   uint64 = 0
 		backupSizeTotal uint64 = 0
 	)
-	fullS3Destination := fmt.Sprintf("s3://%s/%s", strings.Trim(config.Destination.Bucket, "/"), strings.Trim(config.Destination.Path, "/"))
+	fullS3Destination := fmt.Sprintf(
+		"s3://%s/%s/",
+		strings.Trim(config.Destination.Bucket, "/"),
+		strings.Trim(config.Destination.Path, "/"),
+	)
 	for _, pool := range pools {
 		sendStart := time.Now()
 		logger.Info("Sending backup, may take some time", zap.String("pool", pool.Name))
-		result, err := zfsBackupSendBackup(config.ZfsBackupBinaryPath, pool, fullS3Destination, mustBeFullBackup)
+		result, err := zfsBackupSendBackup(
+			config.ZfsBackupBinaryPath,
+			pool,
+			fullS3Destination,
+			mustBeFullBackup,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to send backup to s3 for pool %s: %w", pool.Name, err)
 		}
 		sendEnd := time.Now()
 
 		sendDuration := sendEnd.Sub(sendStart)
-		logger.Info("Backup sent", zap.String("duration", sendDuration.String()), zap.Int("zfs_size_mb", result.TotalZFSBytes/1024/1024), zap.Int("total_size_mb", result.TotalBackupBytes/1024/1024))
+		logger.Info(
+			"Backup sent",
+			zap.String("duration", sendDuration.String()),
+			zap.Int("zfs_size_mb", result.TotalZFSBytes/1024/1024),
+			zap.Int("total_size_mb", result.TotalBackupBytes/1024/1024),
+		)
 
 		backupSizeZFS = backupSizeZFS + uint64(result.TotalZFSBytes)
 		backupSizeTotal = backupSizeTotal + uint64(result.TotalBackupBytes)
