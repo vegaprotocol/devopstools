@@ -124,7 +124,6 @@ func RunPropose(args ProposeArgs) error {
 		return fmt.Errorf("failed to get staking balance for the %s vega wallet: %w", proposerVegawallet.PublicKey, err)
 	}
 
-	fmt.Printf("EXPEXP: %s", big.NewInt(0).Mul(big.NewInt(3000), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil)).String())
 	// We require at least 3000 tokens
 	if stakeBalance.Cmp(big.NewInt(0).Mul(big.NewInt(3000), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil))) < 0 {
 		logger.Info(fmt.Sprintf(
