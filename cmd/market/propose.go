@@ -2,6 +2,7 @@ package market
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/spf13/cobra"
+	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/proposals"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
@@ -90,6 +92,7 @@ func RunPropose(args ProposeArgs) error {
 
 	var (
 		proposerVegawallet = network.VegaTokenWhale
+		stakingBridge      = network.SmartContracts.StakingBridge
 		oraclePubKey       = args.OraclePubKey
 		closingTime        = time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime      = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
@@ -110,6 +113,58 @@ func RunPropose(args ProposeArgs) error {
 	settlementAssetId, foundSettlementAssetId := settlementAssetIDs[args.VegaNetworkName]
 	if !foundSettlementAssetId {
 		return fmt.Errorf("failed to get assets id's for network %s", err)
+	}
+
+	// Proposed address must have some staking tokens to send proposals on the vega network otherwise
+	// the transaction is rejected with the "party has insufficient associated governance tokens in
+	// their staking account to submit proposal request" error. We have to make sure the proposel has
+	// enough stake, otherwise we should stake some tokens.
+	stakeBalance, err := stakingBridge.GetStakeBalance(proposerVegawallet.PublicKey)
+	if err != nil {
+		return fmt.Errorf("failed to get staking balance for the %s vega wallet: %w", proposerVegawallet.PublicKey, err)
+	}
+
+	fmt.Printf("EXPEXP: %s", big.NewInt(0).Mul(big.NewInt(3000), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil)).String())
+	// We require at least 3000 tokens
+	if stakeBalance.Cmp(big.NewInt(0).Mul(big.NewInt(3000), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil))) < 0 {
+		logger.Info(fmt.Sprintf(
+			"The %s vega wallet has %s tokens staked. We assume at least 3000 staked to this account. Staking additional 5000",
+			proposerVegawallet.PublicKey,
+			ethutils.VegaTokenToFullTokens(stakeBalance).String(),
+		))
+
+		// Stake 5000 to avoid staking every market proposal.
+		extraStake := big.NewInt(0).Mul(big.NewInt(5000), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil))
+		tx, err := stakingBridge.Stake(network.NetworkMainWallet.GetTransactOpts(), extraStake, proposerVegawallet.PublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to stake to %s: %w", proposerVegawallet.PublicKey, err)
+		}
+
+		logger.Info("Waiting for transaction to be executed", zap.String("tx", tx.Hash().Hex()))
+		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+			return fmt.Errorf("failed to execute ethereum transaction(tx: %s): %w", tx.Hash().Hex(), err)
+		}
+		logger.Info(fmt.Sprintf("Staked 5000 tokens to vega wallet %s", proposerVegawallet.PublicKey), zap.String("tx", tx.Hash().Hex()))
+	} else {
+		logger.Info(fmt.Sprintf(
+			"The %s vega wallet has %s tokens staked. No need more stake to send proposal",
+			proposerVegawallet.PublicKey,
+			ethutils.VegaTokenToFullTokens(stakeBalance).String(),
+		))
+	}
+
+	// Wait up to 120 secs for any stake on the account. We do not need to wait for 5000 stake if there was already any.
+	for i := 0; i < 12; i++ {
+		partyTotalStake, err := network.DataNodeClient.GetPartyTotalStake(proposerVegawallet.PublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to call party stake endpoint in the data-node: %w", err)
+		}
+		if partyTotalStake.Cmp(big.NewInt(1)) > 0 {
+			break
+		}
+
+		logger.Info(fmt.Sprintf("Still waiting for any stake on the vega network for party %s", proposerVegawallet.PublicKey))
+		time.Sleep(10 * time.Second)
 	}
 
 	// Propose
