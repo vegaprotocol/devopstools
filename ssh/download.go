@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,7 +25,7 @@ func Download(
 
 		sshFlags := []string{
 			"-i", sshPrivateKeyfile,
-			"-o" "StrictHostKeyChecking=no",
+			"-o", "StrictHostKeyChecking=no",
 		}
 
 		rsyncCmd := exec.Command(
