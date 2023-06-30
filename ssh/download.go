@@ -21,11 +21,17 @@ func Download(
 			logger.Info("Retry download in a second")
 			time.Sleep(time.Second)
 		}
+
+		sshFlags := []string{
+			"-i", sshPrivateKeyfile,
+			"-o" "StrictHostKeyChecking=no",
+		}
+
 		rsyncCmd := exec.Command(
 			"rsync",
 			"-avz",
 			"--quiet",
-			"-e", fmt.Sprintf("ssh -i %s", sshPrivateKeyfile),
+			"-e", fmt.Sprintf("ssh %s", strings.Join(sshFlags, " ")),
 			"--rsync-path", "sudo rsync",
 			fmt.Sprintf("%s@%s:%s", sshUsername, serverHost, srcFilepath),
 			dstFilepath,
