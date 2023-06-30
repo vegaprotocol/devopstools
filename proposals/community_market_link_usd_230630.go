@@ -23,7 +23,7 @@ func NewCommunityLinkUSD230630(
 	if decimalPlaces != 6 {
 		return nil, fmt.Errorf("asset decimal places for market %s(%s) must be 6", "ETH/USDT expiry 2023 June 30th", settlementVegaAssetId)
 	}
-
+	nowTime := time.Now()
 	return &commandspb.ProposalSubmission{
 		Reference: "LINK/USDT-23063",
 		Rationale: &vega.ProposalRationale{
@@ -79,7 +79,7 @@ func NewCommunityLinkUSD230630(
 																Conditions: []*datav1.Condition{
 																	{
 																		Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
-																		Value:    "1688115600",
+																		Value:    fmt.Sprintf("%d", nowTime.Add(time.Hour*(24*31+1)).Unix()),
 																	},
 																},
 															},
@@ -97,7 +97,7 @@ func NewCommunityLinkUSD230630(
 														Conditions: []*datav1.Condition{
 															{
 																Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
-																Value:    "1688112000",
+																Value:    fmt.Sprintf("%d", nowTime.Add(time.Hour*24*31).Unix()),
 															},
 														},
 													},
