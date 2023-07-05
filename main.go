@@ -14,6 +14,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
+	"github.com/vegaprotocol/devopstools/cmd/snapshotcompatibility"
 	"github.com/vegaprotocol/devopstools/cmd/spam"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
@@ -41,4 +42,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(vegacapsule.VegacapsuleCmd)
 	rootCmd.RootCmd.AddCommand(backup.BackupCmd)
 	rootCmd.RootCmd.AddCommand(benchmark.BenchmarkCmd)
+	rootCmd.RootCmd.AddCommand(snapshotcompatibility.SnapshotCompatibilityCmd)
 }
