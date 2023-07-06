@@ -7,22 +7,26 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
+	"github.com/tomwright/dasel"
+	"github.com/tomwright/dasel/storage"
 	"go.uber.org/zap"
 
 	"github.com/vegaprotocol/devopstools/ssh"
 	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegacapsule"
 )
 
 var (
-	SnapshotDBSubPath      = filepath.Join("state", "node", "snapshots")
-	DefaultVegacapsuleHome = filepath.Join(tools.CurrentUserHomePath(), ".vegacapsule")
+	VegaSnapshotPath   = filepath.Join("state", "node", "snapshots")
+	VegaCoreConfigPath = filepath.Join("config", "node", "config.toml")
 )
 
 type LoadSnapshotArgs struct {
 	*SnapshotCompatibilityArgs
 
-	VegacapsuleHome string
-	VegaBinary      string
+	VegacapsuleHome   string
+	VegacapsuleBinary string
+	VegaBinary        string
 
 	SnapshotServerHost     string
 	SnapshotRemoteLocation string
@@ -31,8 +35,8 @@ type LoadSnapshotArgs struct {
 }
 
 func (args LoadSnapshotArgs) Check() error {
-	if !tools.FileExists(args.VegacapsuleHome) {
-		return fmt.Errorf("vega home (%s) does not exists", args.VegacapsuleHome)
+	if _, err := vegacapsule.ListNodes(args.VegacapsuleBinary, args.VegacapsuleHome); err != nil {
+		return fmt.Errorf("no vegacapsule network generated: %w", err)
 	}
 
 	version, err := tools.ExecuteBinary(args.VegaBinary, []string{"version"}, nil)
@@ -88,6 +92,7 @@ var loadSnapshotCmd = &cobra.Command{
 			loadSnapshotArgs.SnapshotServerKeyFile,
 			loadSnapshotArgs.SnapshotRemoteLocation,
 			loadSnapshotArgs.VegaBinary,
+			loadSnapshotArgs.VegacapsuleBinary,
 			loadSnapshotArgs.VegacapsuleHome); err != nil {
 			loadSnapshotArgs.Logger.Fatal(
 				"failed to prepare for snapshot compatibility pipeline",
@@ -103,9 +108,11 @@ func init() {
 
 	currentUser, _ := tools.WhoAmI()
 	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.VegacapsuleHome, "vegacapsule-home", DefaultVegacapsuleHome, "The custom vegacapsule home")
+		StringVar(&loadSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegaBinary, "vega-binary", "vega", "Path to the vega executable")
+	loadSnapshotCmd.PersistentFlags().
+		StringVar(&loadSnapshotArgs.VegacapsuleBinary, "vegacapsule-binary", "vegacapsule", "Path to the vegacapsule executable")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.SnapshotServerHost, "snapshot-server", "", "The source server for the snapshot")
 	loadSnapshotCmd.PersistentFlags().
@@ -117,19 +124,41 @@ func init() {
 }
 
 // TODO: Check vegacapule nodes and return list of all of the validators
-func localSnapshotPaths(vegacapsuleHome string) []string {
-	return []string{
-		filepath.Join(vegacapsuleHome, "vega", "node0", SnapshotDBSubPath),
+func vegacapsuleValidatorsCoreHomePaths(
+	vegacapsuleBinary, vegacapsuleHome string,
+) ([]string, error) {
+	result := []string{}
+
+	nodes, err := vegacapsule.ListNodes(vegacapsuleBinary, vegacapsuleHome)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list vegacapsule nodes: %w", err)
 	}
+
+	for _, node := range nodes {
+		if node.Mode != vegacapsule.VegaModeValidator {
+			continue
+		}
+		result = append(result, node.Vega.HomeDir)
+	}
+
+	return result, nil
 }
 
 func runLoadSnapshot(
 	logger *zap.Logger,
 	snapshotServerHost, snapshotServerUser, snapshotServerKeyFile, snapshotRemoteLocation string,
-	vegaBinary, vegacapsuleHome string,
+	vegaBinary, vegacapsuleBinary, vegacapsuleHome string,
 ) error {
-	localSnapshotsDbPaths := localSnapshotPaths(vegacapsuleHome)
-	for _, snapshotPath := range localSnapshotsDbPaths {
+	validatorHomePaths, err := vegacapsuleValidatorsCoreHomePaths(
+		vegacapsuleBinary,
+		vegacapsuleHome,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get validator home paths: %w", err)
+	}
+
+	for _, validatorHomePath := range validatorHomePaths {
+		snapshotPath := filepath.Join(validatorHomePath, VegaSnapshotPath)
 		logger.Info(fmt.Sprintf("Creating folder for snapshot DB locally: %s", snapshotPath))
 		if err := os.MkdirAll(snapshotPath, os.ModePerm); err != nil {
 			return fmt.Errorf("failed to create snapshot db(%s): %w", snapshotPath, err)
@@ -167,9 +196,21 @@ func runLoadSnapshot(
 	}
 	logger.Info("Selected height for restart", zap.Int("height", restartHeight))
 
-	// run vega tools snapshot --output json ...
-	// select 2-nd or 3-rd newest snapshot to load
-	// update the config or vega core
+	for _, validatorHomePath := range validatorHomePaths {
+		logger.Info(
+			"Updating core config",
+			zap.String("node_home", validatorHomePath),
+			zap.Int("height", restartHeight),
+		)
+		if err := updateCoreConfig(validatorHomePath, restartHeight); err != nil {
+			return fmt.Errorf(
+				"failed to update core config for node(%s): %w",
+				validatorHomePath,
+				err,
+			)
+		}
+		logger.Info("Config updated")
+	}
 	// convert selected snapshot to json
 	// move the converted snapshot to new location(flag??)
 	return nil
@@ -210,4 +251,20 @@ func selectSnapshotHeight(vegaBinary, snapshotDbLocation string) (int, error) {
 		)
 	}
 	return snapshotList[1].Height, nil
+}
+
+func updateCoreConfig(coreHome string, startHeight int) error {
+	configPath := filepath.Join(coreHome, VegaCoreConfigPath)
+	coreConfigNode, err := dasel.NewFromFile(configPath, "toml")
+	if err != nil {
+		return fmt.Errorf("failed to read core config: %w", err)
+	}
+	if err := coreConfigNode.Put("Snapshot.StartHeight", startHeight); err != nil {
+		return fmt.Errorf("failed to set Snapshot.StartHeight in the vega node config: %w", err)
+	}
+	if err := coreConfigNode.WriteToFile(configPath, "toml", []storage.ReadWriteOption{}); err != nil {
+		return fmt.Errorf("failed to write the %s file: %w", configPath, err)
+	}
+
+	return nil
 }
