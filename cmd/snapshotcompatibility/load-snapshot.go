@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/docker/docker/daemon/graphdriver/copy"
 	"github.com/spf13/cobra"
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
@@ -32,6 +33,7 @@ type LoadSnapshotArgs struct {
 	SnapshotRemoteLocation string
 	SnapshotServerUser     string
 	SnapshotServerKeyFile  string
+	SnapshotJsonOutput     string
 }
 
 func (args LoadSnapshotArgs) Check() error {
@@ -93,7 +95,8 @@ var loadSnapshotCmd = &cobra.Command{
 			loadSnapshotArgs.SnapshotRemoteLocation,
 			loadSnapshotArgs.VegaBinary,
 			loadSnapshotArgs.VegacapsuleBinary,
-			loadSnapshotArgs.VegacapsuleHome); err != nil {
+			loadSnapshotArgs.VegacapsuleHome,
+			loadSnapshotArgs.SnapshotJsonOutput); err != nil {
 			loadSnapshotArgs.Logger.Fatal(
 				"failed to prepare for snapshot compatibility pipeline",
 				zap.Error(err),
@@ -121,6 +124,8 @@ func init() {
 		StringVar(&loadSnapshotArgs.SnapshotRemoteLocation, "snapshot-remote-location", "/home/vega/vega_home/state/node/snapshots", "The location where the snapshot is on the remote server")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.SnapshotServerKeyFile, "snapshot-server-key-file", filepath.Join(tools.CurrentUserHomePath(), ".ssh", "id_rsa"), "The SSH private key used to authenticate user")
+	loadSnapshotCmd.PersistentFlags().
+		StringVar(&loadSnapshotArgs.SnapshotJsonOutput, "snapshot-json-output", filepath.Join(".", "snapshot.json"), "The JSON file, We save the snapshot loaded into network on")
 }
 
 // TODO: Check vegacapule nodes and return list of all of the validators
@@ -148,6 +153,7 @@ func runLoadSnapshot(
 	logger *zap.Logger,
 	snapshotServerHost, snapshotServerUser, snapshotServerKeyFile, snapshotRemoteLocation string,
 	vegaBinary, vegacapsuleBinary, vegacapsuleHome string,
+	snapshotJsonOutputPath string,
 ) error {
 	validatorHomePaths, err := vegacapsuleValidatorsCoreHomePaths(
 		vegacapsuleBinary,
@@ -210,9 +216,51 @@ func runLoadSnapshot(
 			)
 		}
 		logger.Info("Config updated")
+
+		snapshotDestination := filepath.Join(validatorHomePath, VegaSnapshotPath)
+		snapshotSource := filepath.Join(tempDir, "snapshots")
+
+		logger.Info("Calling unsafe reset all for core", zap.String("node", validatorHomePath))
+		if _, err := tools.ExecuteBinary(vegaBinary, []string{"unsafe_reset_all", "--home", validatorHomePath}, nil); err != nil {
+			return fmt.Errorf("failed to unsafe reset all for home %s: %w", validatorHomePath, err)
+		}
+		logger.Info("Unsafe reset all succesfull")
+
+		logger.Info(
+			"Loading snapshot database into the core node",
+			zap.String("source", snapshotSource),
+			zap.String("destination", snapshotDestination),
+		)
+
+		if err := copy.DirCopy(snapshotSource, snapshotDestination, copy.Content, false); err != nil {
+			return fmt.Errorf(
+				"failed to copy snapshot from temporary location to node %s: %w",
+				snapshotDestination,
+				err,
+			)
+		}
+		logger.Info("Snapshot database loaded")
 	}
-	// convert selected snapshot to json
-	// move the converted snapshot to new location(flag??)
+
+	if snapshotJsonOutputPath == "" {
+		logger.Info("--snapshot-json-output flag is empty, skipping the snapshot conversion step")
+		return nil
+	}
+
+	logger.Info(fmt.Sprintf("Saving snapshot in JSON to %s", snapshotJsonOutputPath))
+	snapshotToJSONArgs := []string{
+		"tools",
+		"snapshot",
+		"--output", "json",
+		"--block-height", fmt.Sprint(restartHeight),
+		"--snapshot-contents", snapshotJsonOutputPath,
+		"--db-path", filepath.Join(tempDir, "snapshots"),
+	}
+	if _, err := tools.ExecuteBinary(vegaBinary, snapshotToJSONArgs, nil); err != nil {
+		return fmt.Errorf("failed to convert snapshot to JSON: %w", err)
+	}
+	logger.Info(fmt.Sprintf("JSON snapshot saved in %s", snapshotJsonOutputPath))
+
 	return nil
 }
 
