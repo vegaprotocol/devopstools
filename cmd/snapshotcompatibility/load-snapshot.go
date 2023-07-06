@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -159,10 +160,54 @@ func runLoadSnapshot(
 	}
 	logger.Info("Snapshot database downloaded")
 
+	logger.Info("Selecting block height for the restart")
+	restartHeight, err := selectSnapshotHeight(vegaBinary, filepath.Join(tempDir, "snapshots"))
+	if err != nil {
+		return fmt.Errorf("failed to select height for network start: %w", err)
+	}
+	logger.Info("Selected height for restart", zap.Int("height", restartHeight))
+
 	// run vega tools snapshot --output json ...
 	// select 2-nd or 3-rd newest snapshot to load
 	// update the config or vega core
 	// convert selected snapshot to json
 	// move the converted snapshot to new location(flag??)
 	return nil
+}
+
+// {"snapshots":[{"height":5648600,"version":18830,"size":71,"hash":"80bedacff88b8069f3abfff49d42930c553632ce48ecc6f675339955edd8f24a"},
+type CoreToolsSnapshot struct {
+	Height  int    `json:"height"`
+	Version int    `json:"version"`
+	Size    int    `json:"size"`
+	Hash    string `json:"hash"`
+}
+
+type CoreToolsSnapshots struct {
+	Snapshots []CoreToolsSnapshot `json:"snapshots"`
+}
+
+func selectSnapshotHeight(vegaBinary, snapshotDbLocation string) (int, error) {
+	result := &CoreToolsSnapshots{}
+
+	args := []string{
+		"tools",
+		"snapshot",
+		"--db-path", snapshotDbLocation,
+		"--output", "json",
+	}
+	if _, err := tools.ExecuteBinary(vegaBinary, args, result); err != nil {
+		return 0, fmt.Errorf("failed to execute vega %v: %w", args, err)
+	}
+	snapshotList := result.Snapshots
+	sort.Slice(snapshotList, func(i, j int) bool {
+		return snapshotList[i].Height < snapshotList[j].Height
+	})
+	if len(snapshotList) < 2 {
+		return 0, fmt.Errorf(
+			"not enough snapshots: expected at least 2 snapshots, %d got",
+			len(snapshotList),
+		)
+	}
+	return snapshotList[1].Height, nil
 }
