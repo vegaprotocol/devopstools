@@ -15,6 +15,7 @@ import (
 	"github.com/vegaprotocol/devopstools/ssh"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegacapsule"
+	"github.com/vegaprotocol/devopstools/vegacmd"
 )
 
 var (
@@ -264,33 +265,18 @@ func runLoadSnapshot(
 	return nil
 }
 
-// {"snapshots":[{"height":5648600,"version":18830,"size":71,"hash":"80bedacff88b8069f3abfff49d42930c553632ce48ecc6f675339955edd8f24a"},
-type CoreToolsSnapshot struct {
-	Height  int    `json:"height"`
-	Version int    `json:"version"`
-	Size    int    `json:"size"`
-	Hash    string `json:"hash"`
-}
-
-type CoreToolsSnapshots struct {
-	Snapshots []CoreToolsSnapshot `json:"snapshots"`
-}
-
 func selectSnapshotHeight(vegaBinary, snapshotDbLocation string) (int, error) {
-	result := &CoreToolsSnapshots{}
+	snapshotsResponse, err := vegacmd.ListCoreSnapshots(
+		vegaBinary,
+		vegacmd.CoreSnashotInput{SnapshotDbPath: snapshotDbLocation},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list core snapshots: %w", err)
+	}
 
-	args := []string{
-		"tools",
-		"snapshot",
-		"--db-path", snapshotDbLocation,
-		"--output", "json",
-	}
-	if _, err := tools.ExecuteBinary(vegaBinary, args, result); err != nil {
-		return 0, fmt.Errorf("failed to execute vega %v: %w", args, err)
-	}
-	snapshotList := result.Snapshots
+	snapshotList := snapshotsResponse.Snapshots
 	sort.Slice(snapshotList, func(i, j int) bool {
-		return snapshotList[i].Height < snapshotList[j].Height
+		return snapshotList[i].Height > snapshotList[j].Height
 	})
 	if len(snapshotList) < 2 {
 		return 0, fmt.Errorf(

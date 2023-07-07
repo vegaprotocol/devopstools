@@ -22,4 +22,5 @@ func init() {
 	snapshotCompatibilityArgs.RootArgs = &rootCmd.Args
 
 	SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
+	SnapshotCompatibilityCmd.AddCommand(produceNewSnapshotCmd)
 }
