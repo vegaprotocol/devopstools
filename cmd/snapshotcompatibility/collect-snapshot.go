@@ -2,7 +2,10 @@ package snapshotcompatibility
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/docker/docker/daemon/graphdriver/copy"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -32,7 +35,7 @@ var collectSnapshotCmd = &cobra.Command{
 			collectSnapshotArgs.VegacapsuleHome,
 			collectSnapshotArgs.SnapshotJSONOutput,
 		); err != nil {
-			collectSnapshotArgs.Logger.Fatal("failed to produce new snapshot", zap.Error(err))
+			collectSnapshotArgs.Logger.Fatal("failed to collect snapshot", zap.Error(err))
 		}
 	},
 }
@@ -74,9 +77,29 @@ func runCollectSnapshot(
 	}
 	logger.Info("Found validator node", zap.String("name", validatorNode.Name))
 
+	logger.Info("Creating temporary directory to access the snapshot db")
+	tempDir, err := os.MkdirTemp("", "snapshot-compatibility-collect-snapshot")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary dir: %w", err)
+	}
+	logger.Info("Temporary dir created", zap.String("path", tempDir))
+	defer os.RemoveAll(tempDir)
+
+	snapshotDbSource := filepath.Join(validatorNode.Vega.HomeDir, VegaSnapshotPath)
+	logger.Info(
+		"Copying the snapshot db",
+		zap.String("source", snapshotDbSource),
+		zap.String("destiantion", tempDir),
+	)
+	if err := copy.DirCopy(snapshotDbSource, tempDir, copy.Content, false); err != nil {
+		return fmt.Errorf("failed to copy db snapshot path: %w", err)
+	}
+	logger.Info("The snapshot db copied")
+
+	newSnapshotDbPath := tempDir
 	logger.Info("Looking for latest core snapshot")
 	latestSnapshot, err := vegacmd.LatestCoreSnapshot(vegaBinary, vegacmd.CoreSnashotInput{
-		VegaHome: validatorNode.Vega.HomeDir,
+		SnapshotDbPath: newSnapshotDbPath,
 	})
 	if err != nil {
 		return fmt.Errorf(
@@ -97,7 +120,7 @@ func runCollectSnapshot(
 		"--output", "json",
 		"--block-height", fmt.Sprint(latestSnapshot.Height),
 		"--snapshot-contents", jsonOutputFile,
-		"--home", validatorNode.Vega.HomeDir,
+		"--db-path", tempDir,
 	}
 	if _, err := tools.ExecuteBinary(vegaBinary, snapshotToJSONArgs, nil); err != nil {
 		return fmt.Errorf("failed to convert snapshot to JSON: %w", err)
