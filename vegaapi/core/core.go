@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	e "github.com/vegaprotocol/devopstools/errors"
 	"google.golang.org/grpc/connectivity"
+
+	e "github.com/vegaprotocol/devopstools/errors"
 )
 
 // === CoreService ===
 
 // SubmitTransaction submits a signed v2 transaction.
-func (n *CoreClient) SubmitTransaction(req *vegaapipb.SubmitTransactionRequest) (response *vegaapipb.SubmitTransactionResponse, err error) {
+func (n *CoreClient) SubmitTransaction(
+	req *vegaapipb.SubmitTransactionRequest,
+) (response *vegaapipb.SubmitTransactionResponse, err error) {
 	msg := "gRPC call failed: SubmitTransaction: %w"
 	if n == nil {
 		err = fmt.Errorf(msg, e.ErrNil)
@@ -58,7 +62,9 @@ func (n *CoreClient) LastBlockData() (*vegaapipb.LastBlockHeightResponse, error)
 }
 
 // ObserveEventBus opens a stream.
-func (n *CoreClient) ObserveEventBus(ctx context.Context) (client vegaapipb.CoreService_ObserveEventBusClient, err error) {
+func (n *CoreClient) ObserveEventBus(
+	ctx context.Context,
+) (client vegaapipb.CoreService_ObserveEventBusClient, err error) {
 	msg := "gRPC call failed: ObserveEventBus: %w"
 	if n == nil {
 		err = fmt.Errorf(msg, e.ErrNil)
@@ -101,7 +107,9 @@ func (n *CoreClient) Statistics() (*vegaapipb.StatisticsResponse, error) {
 }
 
 // PropagateChainEvent submits a signed v2 transaction.
-func (n *CoreClient) PropagateChainEvent(req *vegaapipb.PropagateChainEventRequest) (response *vegaapipb.PropagateChainEventResponse, err error) {
+func (n *CoreClient) PropagateChainEvent(
+	req *vegaapipb.PropagateChainEventRequest,
+) (response *vegaapipb.PropagateChainEventResponse, err error) {
 	msg := "gRPC call failed: PropagateChainEvent: %w"
 	if n == nil {
 		err = fmt.Errorf(msg, e.ErrNil)
@@ -122,4 +130,35 @@ func (n *CoreClient) PropagateChainEvent(req *vegaapipb.PropagateChainEventReque
 		err = fmt.Errorf(msg, e.ErrorDetail(err))
 	}
 	return
+}
+
+func (n *CoreClient) CoreNetworkParameters(parameterKey string) ([]*vega.NetworkParameter, error) {
+	if n == nil {
+		return nil, fmt.Errorf("failed to get network parameters from the core api: %w", e.ErrNil)
+	}
+
+	if n.Conn.GetState() != connectivity.Ready {
+		return nil, fmt.Errorf(
+			"failed to get network parameters from the core api: %w",
+			e.ErrConnectionNotReady,
+		)
+	}
+
+	c := vegaapipb.NewCoreStateServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	defer cancel()
+
+	input := &vegaapipb.ListNetworkParametersRequest{}
+	if parameterKey != "" {
+		input.NetworkParameterKey = parameterKey
+	}
+	response, err := c.ListNetworkParameters(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get network parameters from the core api: %w",
+			e.ErrorDetail(err),
+		)
+	}
+
+	return response.NetworkParameters, nil
 }

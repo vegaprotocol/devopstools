@@ -37,6 +37,14 @@ func NewCoreClient(hosts []string, callTimeout time.Duration, logger *zap.Logger
 // MustDialConnection tries to establish a connection to one of the nodes from a list of locations.
 // It is idempotent, while it each call will block the caller until a connection is established.
 func (n *CoreClient) MustDialConnection(ctx context.Context) {
+	n.mustDialConnection(ctx, false)
+}
+
+func (n *CoreClient) MustDialConnectionIgnoreTime(ctx context.Context) {
+	n.mustDialConnection(ctx, true)
+}
+
+func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
 	n.once.Do(func() {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -44,12 +52,14 @@ func (n *CoreClient) MustDialConnection(ctx context.Context) {
 		n.wg.Add(len(n.hosts))
 
 		for _, h := range n.hosts {
-			go func(host string) {
+			go func(host string, ignoreTime bool) {
 				defer n.wg.Done()
-				if err := n.dialNode(ctx, host); err == nil {
+				if err := n.dialNode(ctx, host, ignoreTime); err == nil {
 					cancel()
+				} else {
+					log.Printf("failed to dial node(%s): %s", host, err.Error())
 				}
-			}(h)
+			}(h, ignoreTime)
 		}
 		n.wg.Wait()
 		n.mu.Lock()
@@ -64,7 +74,7 @@ func (n *CoreClient) MustDialConnection(ctx context.Context) {
 	n.once = sync.Once{}
 }
 
-func (n *CoreClient) dialNode(ctx context.Context, host string) error {
+func (n *CoreClient) dialNode(ctx context.Context, host string, ignoreTime bool) error {
 	n.logger.Debug("dialing gRPC node", zap.String("node", host))
 	conn, err := grpc.DialContext(
 		ctx,
@@ -98,8 +108,13 @@ func (n *CoreClient) dialNode(ctx context.Context, host string) error {
 		return fmt.Errorf("failed to parse vega time from statistics response %w", err)
 	}
 
-	if currentTime.Sub(vegaTime) > time.Minute*2 {
-		n.logger.Debug("node time is too far back", zap.String("node", host), zap.Time("vegaTime", vegaTime), zap.Time("currentTime", currentTime))
+	if !ignoreTime && currentTime.Sub(vegaTime) > time.Minute*2 {
+		n.logger.Debug(
+			"node time is too far back",
+			zap.String("node", host),
+			zap.Time("vegaTime", vegaTime),
+			zap.Time("currentTime", currentTime),
+		)
 		return fmt.Errorf("node time is too far back")
 	}
 
