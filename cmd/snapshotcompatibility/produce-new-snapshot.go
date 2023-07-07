@@ -18,18 +18,18 @@ import (
 	"github.com/vegaprotocol/devopstools/vegacapsule"
 )
 
-type ProductNewSnapshotArgs struct {
+type ProduceNewSnapshotArgs struct {
 	*SnapshotCompatibilityArgs
 
 	VegacapsuleHome   string
 	VegacapsuleBinary string
 }
 
-var produceNewSnapshotArgs ProductNewSnapshotArgs
+var produceNewSnapshotArgs ProduceNewSnapshotArgs
 
 var produceNewSnapshotCmd = &cobra.Command{
 	Use:   "produce-new-snapshot",
-	Short: "Produces new snapshot for the snapshot-compatibility network, convert it to JSON and save in given file",
+	Short: "Produces new snapshot for the snapshot-compatibility network",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runProduceNewSnapshot(produceNewSnapshotArgs.Logger,
 			produceNewSnapshotArgs.VegacapsuleBinary,
@@ -45,7 +45,7 @@ func init() {
 	produceNewSnapshotCmd.PersistentFlags().
 		StringVar(&produceNewSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	produceNewSnapshotCmd.PersistentFlags().
-		StringVar(&produceNewSnapshotArgs.VegacapsuleBinary, "vegacapsule-binry", "vegacapsule", "The vegacapsule binary path")
+		StringVar(&produceNewSnapshotArgs.VegacapsuleBinary, "vegacapsule-binary", "vegacapsule", "The vegacapsule binary path")
 }
 
 func runProduceNewSnapshot(
@@ -177,6 +177,7 @@ func moveNullChainNetworkForward(
 		}
 	}(logger, stopChannel, nullchainPort)
 
+	expectedBlock := initialNetworkHeight + snapshotLength*2
 	currentnetworkHeight := 0
 	// wait about 120 secs
 	for i := 0; i < 120; i++ {
@@ -185,11 +186,11 @@ func moveNullChainNetworkForward(
 			return fmt.Errorf("failed to get network height: %w", err)
 		}
 
-		if currentnetworkHeight <= (initialNetworkHeight + snapshotLength) {
+		if currentnetworkHeight <= expectedBlock {
 			logger.Info(
 				"... still waiting",
 				zap.Int("current network block", currentnetworkHeight),
-				zap.Int("expected network block", (initialNetworkHeight+snapshotLength)),
+				zap.Int("expected network block", expectedBlock),
 			)
 			time.Sleep(1 * time.Second)
 			continue
@@ -198,13 +199,13 @@ func moveNullChainNetworkForward(
 		logger.Info(
 			"Snapshot should be produced",
 			zap.Int("current network block", currentnetworkHeight),
-			zap.Int("expected network block", (initialNetworkHeight+snapshotLength)),
+			zap.Int("expected network block", expectedBlock),
 		)
 		break
 	}
 
 	stopChannel <- struct{}{}
-	if currentnetworkHeight <= (initialNetworkHeight + snapshotLength) {
+	if currentnetworkHeight <= expectedBlock {
 		return fmt.Errorf("network did not move enough to produce snapshot")
 	}
 

@@ -23,4 +23,5 @@ func init() {
 
 	SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
 	SnapshotCompatibilityCmd.AddCommand(produceNewSnapshotCmd)
+	SnapshotCompatibilityCmd.AddCommand(collectSnapshotCmd)
 }

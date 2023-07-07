@@ -34,7 +34,6 @@ type LoadSnapshotArgs struct {
 	SnapshotRemoteLocation string
 	SnapshotServerUser     string
 	SnapshotServerKeyFile  string
-	SnapshotJsonOutput     string
 }
 
 func (args LoadSnapshotArgs) Check() error {
@@ -97,7 +96,7 @@ var loadSnapshotCmd = &cobra.Command{
 			loadSnapshotArgs.VegaBinary,
 			loadSnapshotArgs.VegacapsuleBinary,
 			loadSnapshotArgs.VegacapsuleHome,
-			loadSnapshotArgs.SnapshotJsonOutput); err != nil {
+		); err != nil {
 			loadSnapshotArgs.Logger.Fatal(
 				"failed to prepare for snapshot compatibility pipeline",
 				zap.Error(err),
@@ -125,8 +124,6 @@ func init() {
 		StringVar(&loadSnapshotArgs.SnapshotRemoteLocation, "snapshot-remote-location", "/home/vega/vega_home/state/node/snapshots", "The location where the snapshot is on the remote server")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.SnapshotServerKeyFile, "snapshot-server-key-file", filepath.Join(tools.CurrentUserHomePath(), ".ssh", "id_rsa"), "The SSH private key used to authenticate user")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.SnapshotJsonOutput, "snapshot-json-output", filepath.Join(".", "snapshot.json"), "The JSON file, We save the snapshot loaded into network on")
 }
 
 // TODO: Check vegacapule nodes and return list of all of the validators
@@ -154,7 +151,6 @@ func runLoadSnapshot(
 	logger *zap.Logger,
 	snapshotServerHost, snapshotServerUser, snapshotServerKeyFile, snapshotRemoteLocation string,
 	vegaBinary, vegacapsuleBinary, vegacapsuleHome string,
-	snapshotJsonOutputPath string,
 ) error {
 	validatorHomePaths, err := vegacapsuleValidatorsCoreHomePaths(
 		vegacapsuleBinary,
@@ -176,7 +172,7 @@ func runLoadSnapshot(
 	if err != nil {
 		return fmt.Errorf("failed to create temporary dir to download snapshot db: %w", err)
 	}
-	// defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir)
 
 	logger.Info(
 		"Downloading the snapshot db",
@@ -240,28 +236,9 @@ func runLoadSnapshot(
 				err,
 			)
 		}
+
 		logger.Info("Snapshot database loaded")
 	}
-
-	if snapshotJsonOutputPath == "" {
-		logger.Info("--snapshot-json-output flag is empty, skipping the snapshot conversion step")
-		return nil
-	}
-
-	logger.Info(fmt.Sprintf("Saving snapshot in JSON to %s", snapshotJsonOutputPath))
-	snapshotToJSONArgs := []string{
-		"tools",
-		"snapshot",
-		"--output", "json",
-		"--block-height", fmt.Sprint(restartHeight),
-		"--snapshot-contents", snapshotJsonOutputPath,
-		"--db-path", filepath.Join(tempDir, "snapshots"),
-	}
-	if _, err := tools.ExecuteBinary(vegaBinary, snapshotToJSONArgs, nil); err != nil {
-		return fmt.Errorf("failed to convert snapshot to JSON: %w", err)
-	}
-	logger.Info(fmt.Sprintf("JSON snapshot saved in %s", snapshotJsonOutputPath))
-
 	return nil
 }
 
@@ -278,13 +255,13 @@ func selectSnapshotHeight(vegaBinary, snapshotDbLocation string) (int, error) {
 	sort.Slice(snapshotList, func(i, j int) bool {
 		return snapshotList[i].Height > snapshotList[j].Height
 	})
-	if len(snapshotList) < 2 {
+	if len(snapshotList) < 1 {
 		return 0, fmt.Errorf(
-			"not enough snapshots: expected at least 2 snapshots, %d got",
+			"not enough snapshots: expected at least 1 snapshots, %d got",
 			len(snapshotList),
 		)
 	}
-	return snapshotList[1].Height, nil
+	return snapshotList[0].Height, nil
 }
 
 func updateCoreConfig(coreHome string, startHeight int) error {
