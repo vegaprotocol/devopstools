@@ -1,5 +1,10 @@
 package vegacapsule
 
+const (
+	VegaModeValidator = "validator"
+	VegaModeFull      = "full"
+)
+
 type NodeDetails struct {
 	Name string `json:"Name"`
 	Mode string `json:"Mode"`
