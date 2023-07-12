@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/docker/docker/daemon/graphdriver/copy"
 	"github.com/spf13/cobra"
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
@@ -229,7 +228,7 @@ func runLoadSnapshot(
 			zap.String("destination", snapshotDestination),
 		)
 
-		if err := copy.DirCopy(snapshotSource, snapshotDestination, copy.Content, false); err != nil {
+		if err := tools.CopyDir(snapshotSource, snapshotDestination); err != nil {
 			return fmt.Errorf(
 				"failed to copy snapshot from temporary location to node %s: %w",
 				snapshotDestination,

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/daemon/graphdriver/copy"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -91,7 +90,7 @@ func runCollectSnapshot(
 		zap.String("source", snapshotDbSource),
 		zap.String("destiantion", tempDir),
 	)
-	if err := copy.DirCopy(snapshotDbSource, tempDir, copy.Content, false); err != nil {
+	if err := tools.CopyDir(snapshotDbSource, tempDir); err != nil {
 		return fmt.Errorf("failed to copy db snapshot path: %w", err)
 	}
 	logger.Info("The snapshot db copied")
