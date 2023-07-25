@@ -167,6 +167,16 @@ func runLoadSnapshot(
 		}
 	}
 
+	snapshotRemoteTempLocation := "/tmp/snapshots"
+	if err := copySnapshotOnRemote(logger,
+		snapshotServerHost,
+		snapshotServerUser,
+		snapshotServerKeyFile,
+		snapshotRemoteLocation,
+		snapshotRemoteTempLocation); err != nil {
+		return fmt.Errorf("failed to copy snapshot on remote temp location: %w", err)
+	}
+
 	tempDir, err := os.MkdirTemp("", "devopstools-snapshot-compatibility")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary dir to download snapshot db: %w", err)
@@ -176,14 +186,14 @@ func runLoadSnapshot(
 	logger.Info(
 		"Downloading the snapshot db",
 		zap.String("server", fmt.Sprintf("%s@%s", snapshotServerUser, snapshotServerHost)),
-		zap.String("source path", snapshotRemoteLocation),
+		zap.String("source path", snapshotRemoteTempLocation),
 		zap.String("destination", tempDir),
 	)
 	if err := ssh.Download(
 		snapshotServerHost,
 		snapshotServerUser,
 		snapshotServerKeyFile,
-		snapshotRemoteLocation,
+		snapshotRemoteTempLocation,
 		tempDir,
 		logger,
 	); err != nil {
@@ -238,6 +248,41 @@ func runLoadSnapshot(
 
 		logger.Info("Snapshot database loaded")
 	}
+	return nil
+}
+
+func copySnapshotOnRemote(logger *zap.Logger,
+	host, username, privateKeyFile string,
+	source, destination string,
+) error {
+	logger.Info("Creating SSH client",
+		zap.String("host", host),
+		zap.String("user", username),
+		zap.String("keyfile", privateKeyFile))
+
+	sshClient, err := ssh.GetSSHConnection(host, username, privateKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to create ssh connection client: %w", err)
+	}
+
+	cleanupCommand := fmt.Sprintf("rm %s || echo 'OK'", destination)
+	logger.Info("Cleaning the destination up",
+		zap.String("command", cleanupCommand),
+		zap.String("server", fmt.Sprintf("%s@%s", username, host)))
+
+	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
+		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
+	}
+
+	copyCommand := fmt.Sprintf("cp -r %s %s", source, destination)
+
+	logger.Info("Copying snapshot db to temp location",
+		zap.String("command", copyCommand),
+		zap.String("server", fmt.Sprintf("%s@%s", username, host)))
+	if stdout, err := ssh.RunCommandWithClient(sshClient, copyCommand); err != nil {
+		return fmt.Errorf("failed to copy snapshot from %s to %s on remote: output: %s: %s", source, destination, stdout, err)
+	}
+
 	return nil
 }
 
