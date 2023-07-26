@@ -92,8 +92,6 @@ func moveNullChainNetworkForward(
 
 	nodeDetails vegacapsule.NodeDetails,
 ) error {
-	stopChannel := make(chan struct{})
-
 	coreConfigPath := filepath.Join(nodeDetails.Vega.HomeDir, VegaCoreConfigPath)
 
 	nullchainPort, err := tools.ReadStructuredFileValue(
@@ -159,29 +157,19 @@ func moveNullChainNetworkForward(
 		return fmt.Errorf("failed to fetch initial network height: %w", err)
 	}
 
-	go func(logger *zap.Logger, stopChannel <-chan struct{}, port string) {
-		ticker := time.NewTicker(5000 * time.Millisecond)
-		forwardBody := []byte(`{"forward": "30s"}`)
-		for {
-			select {
-			case <-stopChannel:
-				return
-			case <-ticker.C:
-				logger.Info("Moving the chain 30 seconds into the future")
-				if _, err := http.Post(fmt.Sprintf("http://localhost:%s/api/v1/forwardtime", port), "application/json", bytes.NewBuffer(forwardBody)); err != nil {
-					logger.Info(
-						"failed to send post request to move the chain 5 sec into the future",
-						zap.Error(err),
-					)
-				}
-			}
-		}
-	}(logger, stopChannel, nullchainPort)
-
 	expectedBlock := initialNetworkHeight + snapshotLength*2
 	currentnetworkHeight := 0
 	// wait about 120 secs
 	for i := 0; i < 120; i++ {
+		forwardBody := []byte(`{"forward": "30s"}`)
+		logger.Info("Moving the chain 30 seconds into the future")
+		if _, err := http.Post(fmt.Sprintf("http://localhost:%s/api/v1/forwardtime", nullchainPort), "application/json", bytes.NewBuffer(forwardBody)); err != nil {
+			logger.Info(
+				"failed to send post request to move the chain 5 sec into the future",
+				zap.Error(err),
+			)
+		}
+
 		currentnetworkHeight, err = getNetworkHeight(coreClient)
 		if err != nil {
 			return fmt.Errorf("failed to get network height: %w", err)
@@ -205,7 +193,6 @@ func moveNullChainNetworkForward(
 		break
 	}
 
-	stopChannel <- struct{}{}
 	if currentnetworkHeight <= expectedBlock {
 		return fmt.Errorf("network did not move enough to produce snapshot")
 	}
