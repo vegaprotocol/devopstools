@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -119,7 +120,7 @@ func moveNullChainNetworkForward(
 	logger.Info("Crateing Core GRPC client")
 	coreClient := core.NewCoreClient(
 		[]string{fmt.Sprintf("localhost:%s", coreGRPCPort)},
-		15*time.Second,
+		5*time.Second,
 		logger,
 	)
 	dialContext, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -213,7 +214,10 @@ func moveNullChainNetworkForward(
 }
 
 func getNetworkHeight(coreClient vegaapi.VegaCoreClient) (int, error) {
-	statistics, err := coreClient.Statistics()
+	statistics, err := tools.RetryReturn(3, 3*time.Second, func() (*vegaapipb.StatisticsResponse, error) {
+		return coreClient.Statistics()
+	})
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to get output from the statistic core api: %w", err)
 	}
