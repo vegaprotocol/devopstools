@@ -119,7 +119,7 @@ func moveNullChainNetworkForward(
 	logger.Info("Crateing Core GRPC client")
 	coreClient := core.NewCoreClient(
 		[]string{fmt.Sprintf("localhost:%s", coreGRPCPort)},
-		5*time.Second,
+		15*time.Second,
 		logger,
 	)
 	dialContext, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -131,7 +131,7 @@ func moveNullChainNetworkForward(
 	if err != nil {
 		return fmt.Errorf("failed to get network parameters from core api: %w", err)
 	}
-	if len(networkParameters) < 0 {
+	if len(networkParameters) <= 0 {
 		return fmt.Errorf(
 			"failed to get network parameters from core api: empty list returned",
 		)
@@ -159,7 +159,7 @@ func moveNullChainNetworkForward(
 	}
 
 	go func(logger *zap.Logger, stopChannel <-chan struct{}, port string) {
-		ticker := time.NewTicker(500 * time.Millisecond)
+		ticker := time.NewTicker(1000 * time.Millisecond)
 		forwardBody := []byte(`{"forward": "30s"}`)
 		for {
 			select {
