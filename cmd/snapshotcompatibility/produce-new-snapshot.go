@@ -123,7 +123,7 @@ func moveNullChainNetworkForward(
 		5*time.Second,
 		logger,
 	)
-	dialContext, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dialContext, dialCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer dialCancel()
 	coreClient.MustDialConnectionIgnoreTime(dialContext)
 
@@ -160,7 +160,7 @@ func moveNullChainNetworkForward(
 	}
 
 	go func(logger *zap.Logger, stopChannel <-chan struct{}, port string) {
-		ticker := time.NewTicker(1000 * time.Millisecond)
+		ticker := time.NewTicker(5000 * time.Millisecond)
 		forwardBody := []byte(`{"forward": "30s"}`)
 		for {
 			select {
