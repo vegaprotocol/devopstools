@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
@@ -91,8 +92,6 @@ func moveNullChainNetworkForward(
 
 	nodeDetails vegacapsule.NodeDetails,
 ) error {
-	stopChannel := make(chan struct{})
-
 	coreConfigPath := filepath.Join(nodeDetails.Vega.HomeDir, VegaCoreConfigPath)
 
 	nullchainPort, err := tools.ReadStructuredFileValue(
@@ -122,7 +121,7 @@ func moveNullChainNetworkForward(
 		5*time.Second,
 		logger,
 	)
-	dialContext, dialCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dialContext, dialCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer dialCancel()
 	coreClient.MustDialConnectionIgnoreTime(dialContext)
 
@@ -131,7 +130,7 @@ func moveNullChainNetworkForward(
 	if err != nil {
 		return fmt.Errorf("failed to get network parameters from core api: %w", err)
 	}
-	if len(networkParameters) < 0 {
+	if len(networkParameters) <= 0 {
 		return fmt.Errorf(
 			"failed to get network parameters from core api: empty list returned",
 		)
@@ -158,29 +157,19 @@ func moveNullChainNetworkForward(
 		return fmt.Errorf("failed to fetch initial network height: %w", err)
 	}
 
-	go func(logger *zap.Logger, stopChannel <-chan struct{}, port string) {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		forwardBody := []byte(`{"forward": "30s"}`)
-		for {
-			select {
-			case <-stopChannel:
-				return
-			case <-ticker.C:
-				logger.Info("Moving the chain 30 seconds into the future")
-				if _, err := http.Post(fmt.Sprintf("http://localhost:%s/api/v1/forwardtime", port), "application/json", bytes.NewBuffer(forwardBody)); err != nil {
-					logger.Info(
-						"failed to send post request to move the chain 5 sec into the future",
-						zap.Error(err),
-					)
-				}
-			}
-		}
-	}(logger, stopChannel, nullchainPort)
-
 	expectedBlock := initialNetworkHeight + snapshotLength*2
 	currentnetworkHeight := 0
 	// wait about 120 secs
 	for i := 0; i < 120; i++ {
+		forwardBody := []byte(`{"forward": "30s"}`)
+		logger.Info("Moving the chain 30 seconds into the future")
+		if _, err := http.Post(fmt.Sprintf("http://localhost:%s/api/v1/forwardtime", nullchainPort), "application/json", bytes.NewBuffer(forwardBody)); err != nil {
+			logger.Info(
+				"failed to send post request to move the chain 5 sec into the future",
+				zap.Error(err),
+			)
+		}
+
 		currentnetworkHeight, err = getNetworkHeight(coreClient)
 		if err != nil {
 			return fmt.Errorf("failed to get network height: %w", err)
@@ -204,7 +193,6 @@ func moveNullChainNetworkForward(
 		break
 	}
 
-	stopChannel <- struct{}{}
 	if currentnetworkHeight <= expectedBlock {
 		return fmt.Errorf("network did not move enough to produce snapshot")
 	}
@@ -213,7 +201,10 @@ func moveNullChainNetworkForward(
 }
 
 func getNetworkHeight(coreClient vegaapi.VegaCoreClient) (int, error) {
-	statistics, err := coreClient.Statistics()
+	statistics, err := tools.RetryReturn(3, 3*time.Second, func() (*vegaapipb.StatisticsResponse, error) {
+		return coreClient.Statistics()
+	})
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to get output from the statistic core api: %w", err)
 	}

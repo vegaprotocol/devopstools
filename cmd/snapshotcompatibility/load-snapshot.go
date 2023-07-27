@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
 	"go.uber.org/zap"
+	sshlib "golang.org/x/crypto/ssh"
 
 	"github.com/vegaprotocol/devopstools/ssh"
 	"github.com/vegaprotocol/devopstools/tools"
@@ -167,6 +169,30 @@ func runLoadSnapshot(
 		}
 	}
 
+	snapshotRemoteTempLocation := fmt.Sprintf("/tmp/snapshots-db-%d/snapshots", time.Now().UnixMicro())
+
+	logger.Info("Creating SSH client",
+		zap.String("host", snapshotServerHost),
+		zap.String("user", snapshotServerUser),
+		zap.String("keyfile", snapshotServerKeyFile))
+
+	sshClient, err := ssh.GetSSHConnection(snapshotServerHost, snapshotServerUser, snapshotServerKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to create ssh connection client: %w", err)
+	}
+
+	err = tools.RetryRun(3, 5*time.Second, func() error {
+		logger.Info("Trying to copy snapshot.db on remote server into temporary location")
+		return copySnapshotOnRemote(logger,
+			sshClient,
+			snapshotRemoteLocation,
+			snapshotRemoteTempLocation)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to copy snapshot on remote temp location: %w", err)
+	}
+	defer remoteCleanup(logger, sshClient, filepath.Dir(snapshotRemoteTempLocation))
+
 	tempDir, err := os.MkdirTemp("", "devopstools-snapshot-compatibility")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary dir to download snapshot db: %w", err)
@@ -176,17 +202,22 @@ func runLoadSnapshot(
 	logger.Info(
 		"Downloading the snapshot db",
 		zap.String("server", fmt.Sprintf("%s@%s", snapshotServerUser, snapshotServerHost)),
-		zap.String("source path", snapshotRemoteLocation),
+		zap.String("source path", snapshotRemoteTempLocation),
 		zap.String("destination", tempDir),
 	)
-	if err := ssh.Download(
-		snapshotServerHost,
-		snapshotServerUser,
-		snapshotServerKeyFile,
-		snapshotRemoteLocation,
-		tempDir,
-		logger,
-	); err != nil {
+
+	err = tools.RetryRun(3, 5*time.Second, func() error {
+		logger.Info("Trying to download snapshot-db")
+		return ssh.Download(
+			snapshotServerHost,
+			snapshotServerUser,
+			snapshotServerKeyFile,
+			snapshotRemoteTempLocation,
+			tempDir,
+			logger,
+		)
+	})
+	if err != nil {
 		return fmt.Errorf("failed to download snapshot db: %w", err)
 	}
 	logger.Info("Snapshot database downloaded")
@@ -238,6 +269,49 @@ func runLoadSnapshot(
 
 		logger.Info("Snapshot database loaded")
 	}
+	return nil
+}
+
+func remoteCleanup(logger *zap.Logger, sshClient *sshlib.Client, filePath string) error {
+	cleanupCommand := fmt.Sprintf("rm -fr %s || echo 'OK'", filePath)
+	logger.Info("Cleaning the remote server up",
+		zap.String("filepath", filePath))
+
+	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
+		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
+	}
+
+	return nil
+}
+
+func copySnapshotOnRemote(logger *zap.Logger,
+	sshClient *sshlib.Client,
+	source, destination string,
+) error {
+	cleanupCommand := fmt.Sprintf("rm -fr %s || echo 'OK'", destination)
+	logger.Info("Cleaning the destination up",
+		zap.String("filepath", destination))
+
+	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
+		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
+	}
+
+	mkdirCommand := fmt.Sprintf("mkdir -p %s", filepath.Dir(destination))
+	logger.Info("Ensuring destination directory exists",
+		zap.String("command", mkdirCommand))
+
+	if stdout, err := ssh.RunCommandWithClient(sshClient, mkdirCommand); err != nil {
+		return fmt.Errorf("failed to ensure destination directory exists: output: %s: %s", stdout, err)
+	}
+
+	copyCommand := fmt.Sprintf("cp -r %s %s", source, destination)
+
+	logger.Info("Copying snapshot db to temp location",
+		zap.String("command", copyCommand))
+	if stdout, err := ssh.RunCommandWithClient(sshClient, copyCommand); err != nil {
+		return fmt.Errorf("failed to copy snapshot from %s to %s on remote: output: %s: %s", source, destination, stdout, err)
+	}
+
 	return nil
 }
 
