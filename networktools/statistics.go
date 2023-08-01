@@ -37,13 +37,13 @@ func (network *NetworkTools) GetRunningStatistics() (*Statistics, error) {
 
 func (network *NetworkTools) GetRunningStatisticsForAllHosts() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
-		network.GetNetworkNodes(), false,
+		network.GetNetworkNodes(false), false,
 	)
 }
 
 func (network *NetworkTools) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
-		network.GetNetworkDataNodes(), true,
+		network.GetNetworkDataNodes(false), true,
 	)
 }
 

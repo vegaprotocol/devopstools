@@ -7,5 +7,5 @@ func (network *NetworkTools) RunCommandOnEveryNode(
 	sshPrivateKeyfile string,
 	command string,
 ) map[string]ssh.RunResults {
-	return ssh.RunCommandOnEveryHost(network.GetNetworkNodes(), sshUsername, sshPrivateKeyfile, command)
+	return ssh.RunCommandOnEveryHost(network.GetNetworkNodes(false), sshUsername, sshPrivateKeyfile, command)
 }

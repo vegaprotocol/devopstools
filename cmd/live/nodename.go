@@ -50,7 +50,7 @@ func RunNodename(args NodenameArgs) error {
 	}
 	var nodenames []string
 	if args.All {
-		nodenames = network.GetNetworkNodes()
+		nodenames = network.GetNetworkNodes(false)
 	} else {
 		nodenames = network.GetNetworkHealthyNodes()
 	}

@@ -2,6 +2,8 @@ package networktools
 
 import (
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
@@ -11,11 +13,7 @@ import (
 // Vega Core endpoints
 //
 
-func (network *NetworkTools) GetNetworkNodes() []string {
-	switch network.Name {
-	case types.NetworkMainnet:
-		return []string{"mainnet-observer.ops.vega.xyz"}
-	}
+func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
 	for i := 0; i < 100; i++ {
@@ -26,6 +24,23 @@ func (network *NetworkTools) GetNetworkNodes() []string {
 			} else {
 				previousMissing = true
 			}
+			continue
+		}
+
+		// Return all nodes that resolves to IP
+		if !healthyOnly {
+			hosts = append(hosts, host)
+			continue
+		}
+
+		// Check if the node really has statistics available for given DNS.
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+
+			return err
+		}); err != nil {
+			network.logger.Sugar().Debugf("Node %s missing", host)
+			continue
 		} else {
 			hosts = append(hosts, host)
 		}
@@ -46,7 +61,7 @@ func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 // Data-Node endpoints
 //
 
-func (network *NetworkTools) GetNetworkDataNodes() []string {
+func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 	switch network.Name {
 	case types.NetworkMainnet:
 		return []string{"api.vega.xyz"}
@@ -57,10 +72,21 @@ func (network *NetworkTools) GetNetworkDataNodes() []string {
 		host := fmt.Sprintf("api.n%02d.%s", i, network.DNSSuffix)
 		if _, err := tools.GetIP(host); err != nil {
 			if previousMissing {
-				break
+				break // There is no DNS for this and previous nodes, there is no reason to check other nodes
 			} else {
 				previousMissing = true
 			}
+			continue
+		}
+
+		// Check if data-node really has statistics available for given DNS.
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+
+			return err
+		}); err != nil {
+			network.logger.Sugar().Debugf("Node %s missing", host)
+			continue
 		} else {
 			hosts = append(hosts, host)
 		}
@@ -73,7 +99,7 @@ func (network *NetworkTools) GetNetworkDataNodes() []string {
 //
 
 func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
-	nodes := network.GetNetworkNodes()
+	nodes := network.GetNetworkNodes(false)
 	addresses := make([]string, len(nodes))
 	for i, node := range nodes {
 		addresses[i] = fmt.Sprintf("%s:3002", node)
@@ -82,7 +108,7 @@ func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
 }
 
 func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
-	nodes := network.GetNetworkDataNodes()
+	nodes := network.GetNetworkDataNodes(false)
 	addresses := make([]string, len(nodes))
 	for i, node := range nodes {
 		addresses[i] = fmt.Sprintf("%s:3007", node)
