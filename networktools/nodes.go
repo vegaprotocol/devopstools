@@ -9,6 +9,26 @@ import (
 	"github.com/vegaprotocol/devopstools/types"
 )
 
+func (network *NetworkTools) ListNodes() []string {
+	if network.Name == types.NetworkMainnet {
+		result := []string{}
+
+		for i := 0; i < 10; i++ {
+			result = append(result, fmt.Sprintf("be%d.%s", i, network.DNSSuffix))
+			result = append(result, fmt.Sprintf("api%d.%s", i, network.DNSSuffix))
+		}
+
+		return result
+	}
+
+	result := []string{}
+	for i := 0; i < 100; i++ {
+		result = append(result, fmt.Sprintf("n%02d.%s", i, network.DNSSuffix))
+	}
+
+	return result
+}
+
 //
 // Vega Core endpoints
 //
@@ -16,10 +36,10 @@ import (
 func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
-	for i := 0; i < 100; i++ {
-		host := fmt.Sprintf("n%02d.%s", i, network.DNSSuffix)
+	for _, host := range network.ListNodes() {
 		if _, err := tools.GetIP(host); err != nil {
-			if previousMissing {
+			// We want to check all of the servers for mainnet
+			if previousMissing && network.Name != types.NetworkMainnet {
 				break
 			} else {
 				previousMissing = true
@@ -62,16 +82,12 @@ func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 //
 
 func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
-	switch network.Name {
-	case types.NetworkMainnet:
-		return []string{"api.vega.xyz"}
-	}
+
 	hosts := []string{}
 	previousMissing := false
-	for i := 0; i < 100; i++ {
-		host := fmt.Sprintf("api.n%02d.%s", i, network.DNSSuffix)
+	for _, host := range network.ListNodes() {
 		if _, err := tools.GetIP(host); err != nil {
-			if previousMissing {
+			if previousMissing && network.Name != types.NetworkMainnet {
 				break // There is no DNS for this and previous nodes, there is no reason to check other nodes
 			} else {
 				previousMissing = true
@@ -125,10 +141,21 @@ func (network *NetworkTools) GetNodeURL(nodeId string) string {
 //
 
 func (network *NetworkTools) GetNetworkTendermintRESTEndpoints() []string {
-	switch network.Name {
-	case types.NetworkMainnet:
-		return []string{"http://api2.vega.xyz:26657", "http://api3.vega.xyz:26657"}
+	if network.Name == types.NetworkMainnet {
+		result := []string{}
+		for _, host := range network.ListNodes() {
+			url := fmt.Sprintf("http://%s:26657", host)
+
+			if _, err := http.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
+				continue
+			}
+
+			result = append(result, url)
+		}
+
+		return result
 	}
+
 	hosts := []string{}
 	previousMissing := false
 	for i := 0; i < 100; i++ {

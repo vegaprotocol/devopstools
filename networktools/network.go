@@ -30,7 +30,7 @@ func NewNetworkTools(
 	case types.NetworkFairground:
 		network.DNSSuffix = "testnet.vega.xyz"
 	case types.NetworkMainnet:
-		network.DNSSuffix = ""
+		network.DNSSuffix = "vega.community"
 	case types.NetworkDevnet1:
 		network.DNSSuffix = fmt.Sprintf("%s.vega.rocks", name)
 	default:
