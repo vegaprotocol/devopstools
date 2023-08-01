@@ -41,10 +41,11 @@ func init() {
 }
 
 type output struct {
-	Validators []string `json:"validators"`
-	Explorers  []string `json:"explorers"`
-	DataNodes  []string `json:"data_nodes"`
-	All        []string `json:"all"`
+	Validators          []string `json:"validators"`
+	Explorers           []string `json:"explorers"`
+	DataNodes           []string `json:"data_nodes"`
+	TendermintEndpoints []string `json:"tendermint_endpoints"`
+	All                 []string `json:"all"`
 }
 
 func RunHealthyNodes(args HealthyNodesArgs) error {
@@ -59,6 +60,7 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 	allNodes := tools.GetNetworkNodes(true)
 	blockExplorers := tools.GetBlockExplorers(true)
 	dataNodes := tools.GetNetworkDataNodes(true)
+	tendermintEndpoints := tools.GetNetworkTendermintRESTEndpoints(true)
 	validators := []string{}
 
 	for _, nodeHost := range allNodes {
@@ -128,10 +130,11 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 	}
 
 	result := output{
-		Validators: healthyValidators,
-		Explorers:  healthyExplorers,
-		DataNodes:  healthyDataNodes,
-		All:        append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...),
+		Validators:          healthyValidators,
+		Explorers:           healthyExplorers,
+		DataNodes:           healthyDataNodes,
+		TendermintEndpoints: tendermintEndpoints,
+		All:                 append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...),
 	}
 
 	resp, err := json.MarshalIndent(result, "", "    ")
@@ -168,8 +171,6 @@ func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
 		logger.Sugar().Debugf("Failed to read response body for node %s: %s", host, err.Error())
 		return false
 	}
-
-	logger.Sugar().Debugf("Response for host %s: %s", host, string(responseBytes))
 
 	statsResponse := statisticsResponse{}
 	if err := json.Unmarshal(responseBytes, &statsResponse); err != nil {

@@ -12,7 +12,7 @@ func (network *NetworkTools) GetNetworkGraph() (*NetworkGraph, error) {
 	result := &NetworkGraph{Nodes: map[string]*NetworkGraphNode{}}
 
 	tmClient := tools.NewTendermintRESTClient()
-	endpoints := network.GetNetworkTendermintRESTEndpoints()
+	endpoints := network.GetNetworkTendermintRESTEndpoints(false)
 	knownEndpoints := map[string]bool{}
 	for _, e := range endpoints {
 		knownEndpoints[e] = true

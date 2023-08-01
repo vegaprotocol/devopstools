@@ -173,10 +173,10 @@ func (network *NetworkTools) GetNodeURL(nodeId string) string {
 // Tendermint endpoints
 //
 
-func (network *NetworkTools) GetNetworkTendermintRESTEndpoints() []string {
+func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool) []string {
 	if network.Name == types.NetworkMainnet {
 		result := []string{}
-		for _, host := range network.ListNodes(AllKinds) {
+		for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 			url := fmt.Sprintf("http://%s:26657", host)
 
 			if _, err := http.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
@@ -191,17 +191,27 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints() []string {
 
 	hosts := []string{}
 	previousMissing := false
-	for i := 0; i < 100; i++ {
-		host := fmt.Sprintf("tm.n%02d.%s", i, network.DNSSuffix)
+	for _, host := range network.ListNodes([]NodeType{TypeValidator}) {
+		host := fmt.Sprintf("tm.%s", host)
 		if _, err := tools.GetIP(host); err != nil {
 			if previousMissing {
 				break
 			} else {
 				previousMissing = true
 			}
-		} else {
+
+			continue
+		} else if !healthyOnly {
 			hosts = append(hosts, fmt.Sprintf("https://%s", host))
+			continue
 		}
+
+		network.logger.Sugar().Debugf("Checking /abci_info for %s", host)
+		if _, err := http.Get(fmt.Sprintf("https://%s/abci_info", host)); err != nil {
+			continue
+		}
+
+		hosts = append(hosts, host)
 	}
 	return hosts
 }
