@@ -7,23 +7,48 @@ import (
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+	"golang.org/x/exp/slices"
 )
 
-func (network *NetworkTools) ListNodes() []string {
+type NodeType string
+
+const (
+	TypeValidator NodeType = "validator"
+	TypeDataNode  NodeType = "data-node"
+	TypeExplorer  NodeType = "block-explorer"
+)
+
+var AllKinds = []NodeType{TypeValidator, TypeDataNode, TypeExplorer}
+
+func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 	if network.Name == types.NetworkMainnet {
 		result := []string{}
 
 		for i := 0; i < 10; i++ {
-			result = append(result, fmt.Sprintf("be%d.%s", i, network.DNSSuffix))
-			result = append(result, fmt.Sprintf("api%d.%s", i, network.DNSSuffix))
+			if slices.Contains(kind, TypeExplorer) {
+				result = append(result, fmt.Sprintf("be%d.%s", i, network.DNSSuffix))
+			}
+			if slices.Contains(kind, TypeDataNode) {
+				result = append(result, fmt.Sprintf("api%d.%s", i, network.DNSSuffix))
+			}
 		}
 
 		return result
 	}
 
 	result := []string{}
+	if slices.Contains(kind, TypeExplorer) {
+		result = append(result, fmt.Sprintf("be.%s", network.DNSSuffix))
+	}
+
 	for i := 0; i < 100; i++ {
-		result = append(result, fmt.Sprintf("n%02d.%s", i, network.DNSSuffix))
+		if slices.Contains(kind, TypeValidator) {
+			result = append(result, fmt.Sprintf("n%02d.%s", i, network.DNSSuffix))
+		}
+
+		if slices.Contains(kind, TypeDataNode) {
+			result = append(result, fmt.Sprintf("api.n%02d.%s", i, network.DNSSuffix))
+		}
 	}
 
 	return result
@@ -33,10 +58,10 @@ func (network *NetworkTools) ListNodes() []string {
 // Vega Core endpoints
 //
 
-func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
+func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
-	for _, host := range network.ListNodes() {
+	for _, host := range nodes {
 		if _, err := tools.GetIP(host); err != nil {
 			// We want to check all of the servers for mainnet
 			if previousMissing && network.Name != types.NetworkMainnet {
@@ -68,6 +93,14 @@ func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
 	return hosts
 }
 
+func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
+	return network.checkNodes(network.ListNodes([]NodeType{TypeValidator}), false)
+}
+
+func (network *NetworkTools) GetBlockExplorers(healthyOnly bool) []string {
+	return network.checkNodes(network.ListNodes([]NodeType{TypeExplorer}), false)
+}
+
 func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 	hostStats := network.GetRunningStatisticsForAllHosts()
 	nodenames := make([]string, 0, len(hostStats))
@@ -85,8 +118,7 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 
 	hosts := []string{}
 	previousMissing := false
-	for _, host := range network.ListNodes() {
-		host := fmt.Sprintf("api.%s", host)
+	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 		if _, err := tools.GetIP(host); err != nil {
 			if previousMissing && network.Name != types.NetworkMainnet {
 				break // There is no DNS for this and previous nodes, there is no reason to check other nodes
@@ -144,7 +176,7 @@ func (network *NetworkTools) GetNodeURL(nodeId string) string {
 func (network *NetworkTools) GetNetworkTendermintRESTEndpoints() []string {
 	if network.Name == types.NetworkMainnet {
 		result := []string{}
-		for _, host := range network.ListNodes() {
+		for _, host := range network.ListNodes(AllKinds) {
 			url := fmt.Sprintf("http://%s:26657", host)
 
 			if _, err := http.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {

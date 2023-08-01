@@ -42,6 +42,7 @@ func init() {
 
 type output struct {
 	Validators []string `json:"validators"`
+	Explorers  []string `json:"explorers"`
 	DataNodes  []string `json:"data_nodes"`
 	All        []string `json:"all"`
 }
@@ -56,11 +57,15 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 	}
 
 	allNodes := tools.GetNetworkNodes(true)
+	blockExplorers := tools.GetBlockExplorers(true)
 	dataNodes := tools.GetNetworkDataNodes(true)
 	validators := []string{}
 
 	for _, nodeHost := range allNodes {
-		var isDataNode bool
+		var (
+			isDataNode bool
+			isExplorer bool
+		)
 		for _, dataNodeHost := range dataNodes {
 			// assuming data node host has the `api.` prefix
 			if strings.Contains(dataNodeHost, nodeHost) {
@@ -68,13 +73,35 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 				break
 			}
 		}
-		if !isDataNode {
+
+		for _, explorerHost := range blockExplorers {
+			// assuming data node host has the `api.` prefix
+			if strings.Contains(explorerHost, nodeHost) {
+				isExplorer = true
+				break
+			}
+		}
+
+		if !isDataNode && !isExplorer {
 			validators = append(validators, nodeHost)
 		}
 	}
 
 	healthyValidators := []string{}
+	healthyExplorers := []string{}
 	healthyDataNodes := []string{}
+
+	for _, host := range blockExplorers {
+		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {
+			if !isNodeHealthy(logger, host, false) {
+				return fmt.Errorf("node is not healthy")
+			}
+
+			return nil
+		}); err == nil {
+			healthyExplorers = append(healthyExplorers, host)
+		}
+	}
 
 	for _, host := range validators {
 		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {
@@ -102,8 +129,9 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 
 	result := output{
 		Validators: healthyValidators,
+		Explorers:  healthyExplorers,
 		DataNodes:  healthyDataNodes,
-		All:        append(healthyValidators, healthyDataNodes...),
+		All:        append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...),
 	}
 
 	resp, err := json.MarshalIndent(result, "", "    ")
