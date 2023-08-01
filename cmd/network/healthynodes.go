@@ -41,8 +41,9 @@ func init() {
 }
 
 type output struct {
-	Validators []string `json: "validators"`
+	Validators []string `json:"validators"`
 	DataNodes  []string `json:"data_nodes"`
+	All        []string `json:"all"`
 }
 
 func RunHealthyNodes(args HealthyNodesArgs) error {
@@ -102,6 +103,7 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 	result := output{
 		Validators: healthyValidators,
 		DataNodes:  healthyDataNodes,
+		All:        append(healthyValidators, healthyDataNodes...),
 	}
 
 	resp, err := json.MarshalIndent(result, "", "    ")
