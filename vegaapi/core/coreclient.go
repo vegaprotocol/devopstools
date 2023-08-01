@@ -57,7 +57,7 @@ func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
 				if err := n.dialNode(ctx, host, ignoreTime); err == nil {
 					cancel()
 				} else {
-					log.Printf("failed to dial node(%s): %s", host, err.Error())
+					n.logger.Sugar().Debugf("failed to dial node(%s): %s", host, err.Error())
 				}
 			}(h, ignoreTime)
 		}

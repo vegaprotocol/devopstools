@@ -43,7 +43,7 @@ func (network *NetworkTools) GetRunningStatisticsForAllHosts() map[string]Statis
 
 func (network *NetworkTools) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
-		network.GetNetworkDataNodes(), true,
+		network.GetNetworkDataNodes(false), true,
 	)
 }
 
