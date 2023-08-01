@@ -3,6 +3,7 @@ package networktools
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
@@ -12,11 +13,7 @@ import (
 // Vega Core endpoints
 //
 
-func (network *NetworkTools) GetNetworkNodes() []string {
-	switch network.Name {
-	case types.NetworkMainnet:
-		return []string{"mainnet-observer.ops.vega.xyz"}
-	}
+func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
 	for i := 0; i < 100; i++ {
@@ -27,6 +24,23 @@ func (network *NetworkTools) GetNetworkNodes() []string {
 			} else {
 				previousMissing = true
 			}
+			continue
+		}
+
+		// Return all nodes that resolves to IP
+		if !healthyOnly {
+			hosts = append(hosts, host)
+			continue
+		}
+
+		// Check if the node really has statistics available for given DNS.
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+
+			return err
+		}); err != nil {
+			network.logger.Sugar().Debugf("Node %s missing", host)
+			continue
 		} else {
 			hosts = append(hosts, host)
 		}
@@ -66,7 +80,11 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 		}
 
 		// Check if data-node really has statistics available for given DNS.
-		if _, err := http.Get(fmt.Sprintf("https://%s/statistics", host)); err != nil {
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+
+			return err
+		}); err != nil {
 			network.logger.Sugar().Debugf("Node %s missing", host)
 			continue
 		} else {
@@ -81,7 +99,7 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 //
 
 func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
-	nodes := network.GetNetworkNodes()
+	nodes := network.GetNetworkNodes(false)
 	addresses := make([]string, len(nodes))
 	for i, node := range nodes {
 		addresses[i] = fmt.Sprintf("%s:3002", node)
