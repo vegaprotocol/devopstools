@@ -86,6 +86,7 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
 	for _, host := range network.ListNodes() {
+		host := fmt.Sprintf("api.%s", host)
 		if _, err := tools.GetIP(host); err != nil {
 			if previousMissing && network.Name != types.NetworkMainnet {
 				break // There is no DNS for this and previous nodes, there is no reason to check other nodes
