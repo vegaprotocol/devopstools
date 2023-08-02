@@ -19,6 +19,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
 	"github.com/vegaprotocol/devopstools/cmd/vegacapsule"
+	"github.com/vegaprotocol/devopstools/cmd/version"
 )
 
 func main() {
@@ -43,4 +44,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(backup.BackupCmd)
 	rootCmd.RootCmd.AddCommand(benchmark.BenchmarkCmd)
 	rootCmd.RootCmd.AddCommand(snapshotcompatibility.SnapshotCompatibilityCmd)
+	rootCmd.RootCmd.AddCommand(version.VersionCmd)
 }
