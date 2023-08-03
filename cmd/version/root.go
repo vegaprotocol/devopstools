@@ -11,6 +11,6 @@ var VersionCmd = &cobra.Command{
 	Short: "Print software version",
 	Long:  `Print software version`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("vega-monitoring CLI %s (%s)\n", cliVersion, cliVersionHash)
+		fmt.Printf("devopstools %s (%s)\n", cliVersion, cliVersionHash)
 	},
 }
