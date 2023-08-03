@@ -1,5 +1,5 @@
 ---
-name: Release vega-monitoring binary
+name: Release devopstools binary
 
 "on":
   push:
@@ -44,7 +44,7 @@ jobs:
   #
   release-linux:
     if: ${{ contains(fromJson(inputs.os || '["linux"]'), 'linux') }}
-    name: Release vega-monitoring on Linux ${{ matrix.arch }}
+    name: Release devopstools on Linux ${{ matrix.arch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -64,35 +64,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          path: 'vega-monitoring'
+          path: 'devopstools'
           ref: ${{ inputs.tag }}
 
       - name: Sanity check
-        working-directory: 'vega-monitoring'
+        working-directory: 'devopstools'
         run: |
           git rev-parse --verify HEAD
           git status
 
       - name: Build binary
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static"' -o ../build/vega-monitoring .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static"' -o ../build/devopstools .
 
       - name: Build binary with version override
         if: ${{ inputs.tag || startsWith(github.ref, 'refs/tags/') }}
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/vega-monitoring/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/vega-monitoring .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/devopstools/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/devopstools .
 
       - name: Check version
         if: ${{ env.GOARCH == 'amd64' }}
         working-directory: build
-        run: ./vega-monitoring version
+        run: ./devopstools version
 
       - name: Bundle binary in archive
         uses: thedoctor0/zip-release@master
         with:
           type: zip
           directory: build
-          filename: vega-monitoring-${{ env.GOOS }}-${{ env.GOARCH }}.zip
+          filename: devopstools-${{ env.GOOS }}-${{ env.GOARCH }}.zip
 
       - name: Release
         if: ${{ inputs.publish || startsWith(github.ref, 'refs/tags/') }}
@@ -110,7 +110,7 @@ jobs:
   #
   release-macos:
     if: ${{ contains(fromJson(inputs.os || '["macos"]'), 'macos') }}
-    name: Release vega-monitoring on MacOS ${{ matrix.arch }}
+    name: Release devopstools on MacOS ${{ matrix.arch }}
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -131,35 +131,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          path: 'vega-monitoring'
+          path: 'devopstools'
           ref: ${{ inputs.tag }}
 
       - name: Sanity check
-        working-directory: 'vega-monitoring'
+        working-directory: 'devopstools'
         run: |
           git rev-parse --verify HEAD
           git status
 
       - name: Build binary
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static"' -o ../build/vega-monitoring .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static"' -o ../build/devopstools .
 
       - name: Build binary with version override
         if: ${{ inputs.tag || startsWith(github.ref, 'refs/tags/') }}
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/vega-monitoring/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/vega-monitoring .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/devopstools/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/devopstools .
 
       - name: Check version
         if: ${{ env.GOARCH == 'amd64' }}
         working-directory: build
-        run: ./vega-monitoring version
+        run: ./devopstools version
 
       - name: Bundle binary in archive
         uses: thedoctor0/zip-release@master
         with:
           type: zip
           directory: build
-          filename: vega-monitoring-${{ env.GOOS }}-${{ env.GOARCH }}.zip
+          filename: devopstools-${{ env.GOOS }}-${{ env.GOARCH }}.zip
 
       - name: Release
         if: ${{ inputs.publish || startsWith(github.ref, 'refs/tags/') }}
@@ -177,7 +177,7 @@ jobs:
   #
   release-windows:
     if: ${{ contains(fromJson(inputs.os), 'windows') }}
-    name: Release vega-monitoring on Windows ${{ matrix.arch }}
+    name: Release devopstools on Windows ${{ matrix.arch }}
     runs-on: windows-2019
     strategy:
       fail-fast: false
@@ -199,35 +199,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          path: 'vega-monitoring'
+          path: 'devopstools'
           ref: ${{ inputs.tag }}
 
       - name: Sanity check
-        working-directory: 'vega-monitoring'
+        working-directory: 'devopstools'
         run: |
           git rev-parse --verify HEAD
           git status
 
       - name: Build binary
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static"' -o ../build/vega-monitoring.exe .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static"' -o ../build/devopstools.exe .
 
       - name: Build binary with version override
         if: ${{ inputs.tag || startsWith(github.ref, 'refs/tags/') }}
-        working-directory: 'vega-monitoring'
-        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/vega-monitoring/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/vega-monitoring .
+        working-directory: 'devopstools'
+        run: go build -ldflags '-extldflags "-static" -X github.com/vegaprotocol/devopstools/cmd/version.cliVersion=${{ inputs.tag || github.ref_name }}' -o ../build/devopstools .
 
       - name: Check version
         if: ${{ env.GOARCH == 'amd64' }}
         working-directory: build
-        run: .\vega-monitoring.exe version
+        run: .\devopstools.exe version
 
       - name: Bundle binary in archive
         uses: thedoctor0/zip-release@master
         with:
           type: zip
           directory: build
-          filename: vega-monitoring-${{ env.GOOS }}-${{ env.GOARCH }}.zip
+          filename: devopstools-${{ env.GOOS }}-${{ env.GOARCH }}.zip
 
       - name: Release
         if: ${{ inputs.publish || startsWith(github.ref, 'refs/tags/') }}
