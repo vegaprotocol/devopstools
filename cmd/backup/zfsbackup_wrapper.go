@@ -54,7 +54,7 @@ func zfsBackupSendBackup(bin string, pool backup.Pool, s3Destination string, ful
 
 	cores := runtime.NumCPU()
 
-	// The command is: zfsbackup-go send --full vega_pool  s3://vega-internal-tm-postgres-backups/n00.devnet1.vega.xyz
+	// The command is: zfsbackup-go send --full vega_pool  s3://vega-internal-tm-postgres-backups/n00.devnet1.vega.rocks
 	args := []string{"send", "--jsonOutput", "--numCores", fmt.Sprintf("%d", cores)}
 	if full {
 		args = append(args, "--full")

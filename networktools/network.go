@@ -28,13 +28,11 @@ func NewNetworkTools(
 
 	switch name {
 	case types.NetworkFairground:
-		network.DNSSuffix = "testnet.vega.xyz"
+		network.DNSSuffix = "testnet.vega.rocks"
 	case types.NetworkMainnet:
 		network.DNSSuffix = "vega.community"
-	case types.NetworkDevnet1:
-		network.DNSSuffix = fmt.Sprintf("%s.vega.rocks", name)
 	default:
-		network.DNSSuffix = fmt.Sprintf("%s.vega.xyz", name)
+		network.DNSSuffix = fmt.Sprintf("%s.vega.rocks", name)
 	}
 	return &network, nil
 }
