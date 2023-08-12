@@ -61,6 +61,9 @@ func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []string {
 	hosts := []string{}
 	previousMissing := false
+	httpClient := http.Client{
+		Timeout: network.restTimeout,
+	}
 	for _, host := range nodes {
 		if _, err := tools.GetIP(host); err != nil {
 			// We want to check all of the servers for mainnet
@@ -80,7 +83,7 @@ func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []stri
 
 		// Check if the node really has statistics available for given DNS.
 		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
-			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+			_, err := httpClient.Get(fmt.Sprintf("https://%s/statistics", host))
 
 			return err
 		}); err != nil {
@@ -118,6 +121,9 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 
 	hosts := []string{}
 	previousMissing := false
+	httpClient := http.Client{
+		Timeout: network.restTimeout,
+	}
 	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 		if _, err := tools.GetIP(host); err != nil {
 			if previousMissing && network.Name != types.NetworkMainnet {
@@ -130,7 +136,7 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 
 		// Check if data-node really has statistics available for given DNS.
 		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
-			_, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+			_, err := httpClient.Get(fmt.Sprintf("https://%s/statistics", host))
 
 			return err
 		}); err != nil {
@@ -174,12 +180,15 @@ func (network *NetworkTools) GetNodeURL(nodeId string) string {
 //
 
 func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool) []string {
+	httpClient := http.Client{
+		Timeout: network.restTimeout,
+	}
 	if network.Name == types.NetworkMainnet {
 		result := []string{}
 		for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 			url := fmt.Sprintf("http://%s:26657", host)
 
-			if _, err := http.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
+			if _, err := httpClient.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
 				continue
 			}
 
@@ -207,7 +216,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 		}
 
 		network.logger.Sugar().Debugf("Checking /abci_info for %s", host)
-		if _, err := http.Get(fmt.Sprintf("https://%s/abci_info", host)); err != nil {
+		if _, err := httpClient.Get(fmt.Sprintf("https://%s/abci_info", host)); err != nil {
 			continue
 		}
 

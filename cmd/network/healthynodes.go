@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -160,9 +159,13 @@ func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
 	const timeThresholds = 10 * time.Second
 	const blocksThresholds = 10
 
-	resp, err := http.Get(fmt.Sprintf("https://%s/statistics", host))
+	httpClient := http.Client{
+		Timeout: time.Second,
+	}
+	resp, err := httpClient.Get(fmt.Sprintf("https://%s/statistics", host))
 	if err != nil {
-		log.Fatal(err)
+		logger.Sugar().Debugf("Failed to GET for node %s: %s", host, err.Error())
+		return false
 	}
 	defer resp.Body.Close()
 
