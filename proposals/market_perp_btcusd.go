@@ -54,8 +54,15 @@ func NewBTCUSDPerpetualMarketProposal(
 											External: &vega.DataSourceDefinitionExternal{
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
-														Address:               "0x5fb1616F78dA7aFC9FF79e0371741a747D2a7F22", // chainlin BTC/USD
-														Abi:                   contractABI,
+														Address: "0x5fb1616F78dA7aFC9FF79e0371741a747D2a7F22", // chainlin BTC/USD
+														Abi:     contractABI,
+														Method:  "latestAnswer",
+														Normalisers: []*vega.Normaliser{
+															{
+																Name:       "btc.price",
+																Expression: "$[0]",
+															},
+														},
 														RequiredConfirmations: 1,
 														Trigger: &vega.EthCallTrigger{
 															Trigger: &vega.EthCallTrigger_TimeTrigger{
@@ -67,7 +74,7 @@ func NewBTCUSDPerpetualMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.BTC.value",
+																	Name: "btc.price",
 																	Type: datav1.PropertyKey_TYPE_INTEGER,
 																},
 																Conditions: []*datav1.Condition{
@@ -105,7 +112,7 @@ func NewBTCUSDPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "prices.BTC.value",
+										SettlementDataProperty:     "btc.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
