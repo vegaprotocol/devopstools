@@ -24,7 +24,7 @@ func NewBTCUSDPerpetualMarketProposal(
 		Name      = fmt.Sprintf("BTCUSD Perpetual")
 	)
 
-	contractABI := "{\"inputs\":[],\"name\":\"latestAnswer\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}"
+	contractABI := "[{\"inputs\":[],\"name\":\"latestAnswer\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
