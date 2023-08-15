@@ -54,7 +54,7 @@ func NewBTCUSDPerpetualMarketProposal(
 											External: &vega.DataSourceDefinitionExternal{
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
-														Address: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43", // chainlin BTC/USD
+														Address: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43", // chainlink BTC/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
 														Normalisers: []*vega.Normaliser{
