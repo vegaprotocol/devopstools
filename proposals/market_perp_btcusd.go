@@ -11,6 +11,7 @@ import (
 )
 
 const PerpetualBTCUSD = "auto:perpetual_btc_usd"
+const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
 
 func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
@@ -48,15 +49,19 @@ func NewBTCUSDPerpetualMarketProposal(
 							Code: "BTCUSD.MF21",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
-									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "USD",
+									ClampLowerBound:     "0",
+									ClampUpperBound:     "0",
+									InterestRate:        "0",
+									MarginFundingFactor: "0.1",
+									SettlementAsset:     settlementVegaAssetId,
+									QuoteName:           "USD",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
 														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
-														Address: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43", // chainlink BTC/USD
+														Address: oraclePubKey, // chainlink BTC/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
 														Normalisers: []*vega.Normaliser{
@@ -76,8 +81,9 @@ func NewBTCUSDPerpetualMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "btc.price",
-																	Type: datav1.PropertyKey_TYPE_INTEGER,
+																	Name:                "btc.price",
+																	Type:                datav1.PropertyKey_TYPE_INTEGER,
+																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
 																Conditions: []*datav1.Condition{
 																	{

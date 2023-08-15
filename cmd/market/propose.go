@@ -354,7 +354,7 @@ func RunPropose(args ProposeArgs) error {
 			defer wg.Done()
 			sub := proposals.NewBTCUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				CoinBaseOraclePubKey,
+				proposals.PerpetualBTCUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{proposals.PerpetualBTCUSD},
 			)
@@ -364,7 +364,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
 			)
 		}()
 	}
