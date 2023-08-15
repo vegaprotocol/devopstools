@@ -1,7 +1,6 @@
 package proposals
 
 import (
-	"fmt"
 	"time"
 
 	"code.vegaprotocol.io/vega/libs/ptr"
@@ -21,10 +20,10 @@ func NewBTCUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlpaNumericString(40)
-		Name      = fmt.Sprintf("BTCUSD Perpetual")
+		name      = "BTCUSD Perpetual"
 	)
 
-	contractABI := "[{\"inputs\":[],\"name\":\"latestAnswer\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
@@ -43,7 +42,7 @@ func NewBTCUSDPerpetualMarketProposal(
 						LinearSlippageFactor:    "0.1",
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
-							Name: Name,
+							Name: name,
 							Code: "BTCUSD.MF21",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
@@ -54,6 +53,7 @@ func NewBTCUSDPerpetualMarketProposal(
 											External: &vega.DataSourceDefinitionExternal{
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
+														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
 														Address: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43", // chainlink BTC/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
@@ -119,7 +119,7 @@ func NewBTCUSDPerpetualMarketProposal(
 							},
 						},
 						Metadata: append([]string{
-							"formerly:076BB86A5AA41E3E",
+							"formerly:50657270657475616c",
 							"base:BTC",
 							"quote:USD",
 							"class:fx/crypto",
