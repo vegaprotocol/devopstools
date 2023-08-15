@@ -24,13 +24,14 @@ import (
 
 type ProposeArgs struct {
 	*MarketArgs
-	ProposeAAPL    bool
-	ProposeAAVEDAI bool
-	ProposeBTCUSD  bool
-	ProposeETHBTC  bool
-	ProposeTSLA    bool
-	ProposeUNIDAI  bool
-	ProposeETHDAI  bool
+	ProposeAAPL            bool
+	ProposeAAVEDAI         bool
+	ProposeBTCUSD          bool
+	ProposeETHBTC          bool
+	ProposeTSLA            bool
+	ProposeUNIDAI          bool
+	ProposeETHDAI          bool
+	ProposePerpetualBTCUSD bool
 
 	ProposeAll       bool
 	ProposeCommunity bool
@@ -67,10 +68,46 @@ func init() {
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeTSLA, "tsla", false, "Propose TSLA market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeUNIDAI, "unidai", false, "Propose UNIDAI market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeETHDAI, "ethdai", false, "Propose ETHDI market")
+	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposePerpetualBTCUSD, "perp-btcusd", false, "Propose perpetual BTCUSD market")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeAll, "all", false, "Propose all markets")
 	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.ProposeCommunity, "community", false, "Propose community markets(only to devnet1)")
 
 	proposeCmd.PersistentFlags().StringVar(&proposeArgs.OraclePubKey, "oracle-pubkey", "", "Oracle PubKey. Optional, by default proposer")
+}
+
+type MarketFlags struct {
+	AAPL             bool
+	AAVEDAI          bool
+	BTCUSD           bool
+	ETHBTC           bool
+	TSLA             bool
+	UNIDAI           bool
+	ETHDAI           bool
+	CommunityLinkUSD bool
+	CommunityETHUSD  bool
+	CommunityBTCUSD  bool
+	PerpetualBTCUSD  bool
+}
+
+func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
+	result := MarketFlags{
+		AAPL:    args.ProposeAAPL || args.ProposeAll,
+		AAVEDAI: args.ProposeAAVEDAI || args.ProposeAll,
+		BTCUSD:  args.ProposeBTCUSD || args.ProposeAll,
+		ETHBTC:  args.ProposeETHBTC || args.ProposeAll,
+		TSLA:    args.ProposeTSLA || args.ProposeAll,
+		UNIDAI:  args.ProposeUNIDAI || args.ProposeAll,
+		ETHDAI:  args.ProposeETHDAI || args.ProposeAll,
+	}
+
+	if env == types.NetworkDevnet1 {
+		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
+		result.CommunityETHUSD = args.ProposeCommunity || args.ProposeAll
+		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
+		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
+	}
+
+	return result
 }
 
 func RunPropose(args ProposeArgs) error {
@@ -112,6 +149,8 @@ func RunPropose(args ProposeArgs) error {
 		return fmt.Errorf("failed to get assets id's for network %s", err)
 	}
 
+	marketsFlags := dispatchMarkets(network.Network, args)
+
 	// Propose
 	resultsChannel := make(chan error, 10)
 	var wg sync.WaitGroup
@@ -119,7 +158,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// AAPL
 	//
-	if args.ProposeAAPL || args.ProposeAll {
+	if marketsFlags.AAPL {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -134,10 +173,11 @@ func RunPropose(args ProposeArgs) error {
 			)
 		}()
 	}
+
 	//
 	// AAVEDAI
 	//
-	if args.ProposeAAVEDAI || args.ProposeAll {
+	if marketsFlags.AAVEDAI {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -155,7 +195,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// BTCUSD
 	//
-	if args.ProposeBTCUSD || args.ProposeAll {
+	if marketsFlags.BTCUSD {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -174,7 +214,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// ETHBTC
 	//
-	if args.ProposeETHBTC || args.ProposeAll {
+	if marketsFlags.ETHBTC {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -192,7 +232,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// TSLA
 	//
-	if args.ProposeTSLA || args.ProposeAll {
+	if marketsFlags.TSLA {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -210,7 +250,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// UNIDAI
 	//
-	if args.ProposeUNIDAI || args.ProposeAll {
+	if marketsFlags.UNIDAI {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -229,7 +269,7 @@ func RunPropose(args ProposeArgs) error {
 	//
 	// ETHDAI
 	//
-	if args.ProposeETHDAI || args.ProposeAll {
+	if marketsFlags.ETHDAI {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -245,7 +285,7 @@ func RunPropose(args ProposeArgs) error {
 		}()
 	}
 
-	if network.Network == types.NetworkDevnet1 && (args.ProposeCommunity || args.ProposeAll) {
+	if marketsFlags.CommunityBTCUSD {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -264,7 +304,9 @@ func RunPropose(args ProposeArgs) error {
 				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityBTCUSD230630MetadataID, sub, logger,
 			)
 		}()
+	}
 
+	if marketsFlags.CommunityETHUSD {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -283,7 +325,9 @@ func RunPropose(args ProposeArgs) error {
 				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityETHUSD230630MetadataID, sub, logger,
 			)
 		}()
+	}
 
+	if marketsFlags.CommunityLinkUSD {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -300,6 +344,27 @@ func RunPropose(args ProposeArgs) error {
 			resultsChannel <- proposeVoteProvideLP(
 				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityLinkUSD230630MetadataID, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualBTCUSD {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewBTCUSDPerpetualMarketProposal(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{proposals.PerpetualBTCUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
 			)
 		}()
 	}

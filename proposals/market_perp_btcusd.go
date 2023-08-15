@@ -10,6 +10,8 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
+const PerpetualBTCUSD = "auto:perpetual_btc_usd"
+
 func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
