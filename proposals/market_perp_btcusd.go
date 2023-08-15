@@ -29,8 +29,8 @@ func NewBTCUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New BTCUSD market",
-			Description: "New BTCUSD Market",
+			Title:       "New BTCUSD perpetual market",
+			Description: "New BTCUSD perpetual Market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
