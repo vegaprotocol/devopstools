@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"code.vegaprotocol.io/vega/core/types"
+	dstypes "code.vegaprotocol.io/vega/core/datasource/common"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
@@ -22,7 +22,7 @@ func NewBTCUSDMarketProposal(
 	var (
 		reference = tools.RandAlpaNumericString(40)
 		Name      = fmt.Sprintf("BTCUSD Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 months
-		pubKey    = types.CreateSignerFromString(oraclePubKey, types.DataSignerTypePubKey)
+		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
