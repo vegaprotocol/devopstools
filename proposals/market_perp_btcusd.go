@@ -103,7 +103,7 @@ func NewBTCUSDPerpetualMarketProposal(
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 900, // 15 mins in seconds
+																Every: 300, // 5 mins in seconds
 															},
 														},
 													},
