@@ -56,7 +56,7 @@ func NewBTCUSDPerpetualMarketProposal(
 													EthOracle: &vega.EthCallSpec{
 														Address:               "0x5fb1616F78dA7aFC9FF79e0371741a747D2a7F22", // chainlin BTC/USD
 														Abi:                   contractABI,
-														RequiredConfirmations: 5,
+														RequiredConfirmations: 1,
 														Trigger: &vega.EthCallTrigger{
 															Trigger: &vega.EthCallTrigger_TimeTrigger{
 																TimeTrigger: &vega.EthTimeTrigger{
