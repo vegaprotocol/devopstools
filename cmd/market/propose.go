@@ -383,23 +383,54 @@ func RunPropose(args ProposeArgs) error {
 
 func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) *vega.Market {
 	for _, market := range markets {
-		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil ||
-			market.TradableInstrument.Instrument.GetFuture() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal() == nil ||
-			market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle() == nil {
+		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil {
 			continue
 		}
 
-		signers := market.TradableInstrument.Instrument.GetFuture().DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle().Signers
+		future := market.TradableInstrument.Instrument.GetFuture()
+		perpetual := market.TradableInstrument.Instrument.GetPerpetual()
+
+		if future == nil && perpetual == nil {
+			// TODO: Log the unsupported market here?
+			continue
+		}
+
 		stringSigners := []string{}
-		for _, signer := range signers {
-			if signer.GetPubKey() != nil {
-				stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+		if perpetual != nil &&
+			perpetual.DataSourceSpecForSettlementData != nil &&
+			perpetual.DataSourceSpecForSettlementData.GetData() != nil &&
+			perpetual.DataSourceSpecForSettlementData.GetData().GetExternal() != nil {
+			external := perpetual.DataSourceSpecForSettlementData.GetData().GetExternal()
+
+			if external.GetOracle() != nil {
+				for _, signer := range external.GetOracle().Signers {
+					if signer.GetPubKey() != nil {
+						stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+					}
+					if signer.GetEthAddress() != nil {
+						stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+					}
+				}
 			}
-			if signer.GetEthAddress() != nil {
-				stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+
+			if external.GetEthOracle() != nil {
+				stringSigners = append(stringSigners, external.GetEthOracle().Address)
+			}
+		}
+
+		if future != nil &&
+			future.DataSourceSpecForSettlementData != nil &&
+			future.DataSourceSpecForSettlementData.GetData() != nil &&
+			future.DataSourceSpecForSettlementData.GetData().GetExternal() != nil &&
+			future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle() != nil {
+			signers := future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle().Signers
+			for _, signer := range signers {
+				if signer.GetPubKey() != nil {
+					stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+				}
+				if signer.GetEthAddress() != nil {
+					stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+				}
 			}
 		}
 
