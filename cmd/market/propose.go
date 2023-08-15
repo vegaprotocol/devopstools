@@ -22,6 +22,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const OracleAll = "*"
+
 type ProposeArgs struct {
 	*MarketArgs
 	ProposeAAPL            bool
@@ -395,7 +397,7 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 			continue
 		}
 
-		stringSigners := []string{}
+		stringSigners := []string{OracleAll}
 		if perpetual != nil &&
 			perpetual.DataSourceSpecForSettlementData != nil &&
 			perpetual.DataSourceSpecForSettlementData.GetData() != nil &&

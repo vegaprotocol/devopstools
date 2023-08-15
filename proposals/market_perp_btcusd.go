@@ -70,11 +70,11 @@ func NewBTCUSDPerpetualMarketProposal(
 																Expression: "$[0]",
 															},
 														},
-														RequiredConfirmations: 1,
+														RequiredConfirmations: 3,
 														Trigger: &vega.EthCallTrigger{
 															Trigger: &vega.EthCallTrigger_TimeTrigger{
 																TimeTrigger: &vega.EthTimeTrigger{
-																	Every: ptr.From(uint64(5)),
+																	Every: ptr.From(uint64(30)),
 																},
 															},
 														},
