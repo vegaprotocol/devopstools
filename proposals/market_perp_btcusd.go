@@ -1,17 +1,19 @@
 package proposals
 
 import (
-	"fmt"
 	"time"
 
-	dstypes "code.vegaprotocol.io/vega/core/datasource/common"
+	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewUNIDAIMarketProposal(
+const PerpetualBTCUSD = "auto:perpetual_btc_usd"
+const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+
+func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -21,15 +23,16 @@ func NewUNIDAIMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlpaNumericString(40)
-		Name      = fmt.Sprintf("UNIDAI Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 month
-		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
+		name      = "BTCUSD Perpetual"
 	)
+
+	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New DAI market",
-			Description: "New DAI market",
+			Title:       "New BTCUSD perpetual market",
+			Description: "New BTCUSD perpetual Market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -42,28 +45,50 @@ func NewUNIDAIMarketProposal(
 						LinearSlippageFactor:    "0.1",
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
-							Name: Name,
-							Code: "UNIDAI.MF21",
-							Product: &vega.InstrumentConfiguration_Future{
-								Future: &vega.FutureProduct{
-									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "DAI",
+							Name: name,
+							Code: "BTCUSD.MF21",
+							Product: &vega.InstrumentConfiguration_Perpetual{
+								Perpetual: &vega.PerpetualProduct{
+									ClampLowerBound:     "0",
+									ClampUpperBound:     "0",
+									InterestRate:        "0",
+									MarginFundingFactor: "0.1",
+									SettlementAsset:     settlementVegaAssetId,
+									QuoteName:           "USD",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
-												SourceType: &vega.DataSourceDefinitionExternal_Oracle{
-													Oracle: &vega.DataSourceSpecConfiguration{
-														Signers: []*datav1.Signer{pubKey.IntoProto()},
+												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
+													EthOracle: &vega.EthCallSpec{
+														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
+														Address: oraclePubKey, // chainlink BTC/USD
+														Abi:     contractABI,
+														Method:  "latestAnswer",
+														Normalisers: []*vega.Normaliser{
+															{
+																Name:       "btc.price",
+																Expression: "$[0]",
+															},
+														},
+														RequiredConfirmations: 3,
+														Trigger: &vega.EthCallTrigger{
+															Trigger: &vega.EthCallTrigger_TimeTrigger{
+																TimeTrigger: &vega.EthTimeTrigger{
+																	Every: ptr.From(uint64(30)),
+																},
+															},
+														},
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.UNI.value",
-																	Type: datav1.PropertyKey_TYPE_INTEGER,
+																	Name:                "btc.price",
+																	Type:                datav1.PropertyKey_TYPE_INTEGER,
+																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
 																Conditions: []*datav1.Condition{
 																	{
-																		Operator: datav1.Condition_OPERATOR_EQUALS,
-																		Value:    "1",
+																		Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
+																		Value:    "0",
 																	},
 																},
 															},
@@ -73,24 +98,20 @@ func NewUNIDAIMarketProposal(
 											},
 										},
 									},
-									DataSourceSpecForTradingTermination: &vega.DataSourceDefinition{
-										SourceType: &vega.DataSourceDefinition_External{
-											External: &vega.DataSourceDefinitionExternal{
-												SourceType: &vega.DataSourceDefinitionExternal_Oracle{
-													Oracle: &vega.DataSourceSpecConfiguration{
-														Signers: []*datav1.Signer{pubKey.IntoProto()},
-														Filters: []*datav1.Filter{
+									DataSourceSpecForSettlementSchedule: &vega.DataSourceDefinition{
+										SourceType: &vega.DataSourceDefinition_Internal{
+											Internal: &vega.DataSourceDefinitionInternal{
+												SourceType: &vega.DataSourceDefinitionInternal_TimeTrigger{
+													TimeTrigger: &vega.DataSourceSpecConfigurationTimeTrigger{
+														Conditions: []*datav1.Condition{
 															{
-																Key: &datav1.PropertyKey{
-																	Name: "termination.UNI.value",
-																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
-																},
-																Conditions: []*datav1.Condition{
-																	{
-																		Operator: datav1.Condition_OPERATOR_EQUALS,
-																		Value:    "1",
-																	},
-																},
+																Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
+																Value:    "0",
+															},
+														},
+														Triggers: []*datav1.InternalTimeTrigger{
+															{
+																Every: 300, // 5 mins in seconds
 															},
 														},
 													},
@@ -98,20 +119,20 @@ func NewUNIDAIMarketProposal(
 											},
 										},
 									},
-									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
-										SettlementDataProperty:     "prices.UNI.value",
-										TradingTerminationProperty: "termination.UNI.value",
+									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
+										SettlementDataProperty:     "btc.price",
+										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:3C58ED2A4A6C5D7E",
-							"base:UNI",
-							"quote:DAI",
+							"formerly:50657270657475616c",
+							"base:BTC",
+							"quote:USD",
 							"class:fx/crypto",
 							"monthly",
-							"sector:defi",
+							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
@@ -119,6 +140,11 @@ func NewUNIDAIMarketProposal(
 									Horizon:          43200,
 									Probability:      "0.9999999",
 									AuctionExtension: 600,
+								},
+								{
+									Horizon:          300,
+									Probability:      "0.9999",
+									AuctionExtension: 60,
 								},
 							},
 						},
@@ -133,12 +159,12 @@ func NewUNIDAIMarketProposal(
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
-								RiskAversionParameter: 0.01,
-								Tau:                   0.0001140771161,
+								RiskAversionParameter: 0.0001,
+								Tau:                   0.0000190129,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
 									R:     0.016,
-									Sigma: 0.5,
+									Sigma: 1.25,
 								},
 							},
 						},

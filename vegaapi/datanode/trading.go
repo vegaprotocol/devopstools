@@ -84,7 +84,7 @@ func (n *DataNode) GetMarketById(marketId string) (*vega.Market, error) {
 		return nil, fmt.Errorf("failed to get market: %w", err)
 	}
 
-	return marketResponse.GetMarket().DeepClone(), nil
+	return marketResponse.GetMarket(), nil
 }
 
 // ListMarkets returns all markets.
