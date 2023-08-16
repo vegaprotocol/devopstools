@@ -26,14 +26,18 @@ const OracleAll = "*"
 
 type ProposeArgs struct {
 	*MarketArgs
-	ProposeAAPL            bool
-	ProposeAAVEDAI         bool
-	ProposeBTCUSD          bool
-	ProposeETHBTC          bool
-	ProposeTSLA            bool
-	ProposeUNIDAI          bool
-	ProposeETHDAI          bool
-	ProposePerpetualBTCUSD bool
+	ProposeAAPL             bool
+	ProposeAAVEDAI          bool
+	ProposeBTCUSD           bool
+	ProposeETHBTC           bool
+	ProposeTSLA             bool
+	ProposeUNIDAI           bool
+	ProposeETHDAI           bool
+	ProposePerpetualBTCUSD  bool
+	ProposePerpetualLINKUSD bool
+	ProposePerpetualDAIUSD  bool
+	ProposePerpetualEURUSD  bool
+	ProposePerpetualETHUSD  bool
 
 	ProposeAll       bool
 	ProposeCommunity bool
@@ -89,6 +93,10 @@ type MarketFlags struct {
 	CommunityETHUSD  bool
 	CommunityBTCUSD  bool
 	PerpetualBTCUSD  bool
+	PerpetualDAIUSD  bool
+	PerpetualEURUSD  bool
+	PerpetualLINKUSD bool
+	PerpetualETHUSD  bool
 }
 
 func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
@@ -107,6 +115,10 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityETHUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
+		result.PerpetualEURUSD = args.ProposePerpetualEURUSD || args.ProposeAll
+		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
+		result.PerpetualETHUSD = args.ProposePerpetualETHUSD || args.ProposeAll
+		result.PerpetualLINKUSD = args.ProposePerpetualLINKUSD || args.ProposeAll
 	}
 
 	return result
@@ -359,6 +371,90 @@ func RunPropose(args ProposeArgs) error {
 				proposals.PerpetualBTCUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{proposals.PerpetualBTCUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualLINKUSD {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewLINKUSDPerpetualMarketProposal(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				proposals.PerpetualLINKUSDOracleAddress,
+				closingTime, enactmentTime,
+				[]string{proposals.PerpetualLINKUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualDAIUSD {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewDAIUSDPerpetualMarketProposal(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				proposals.PerpetualDAIUSDOracleAddress,
+				closingTime, enactmentTime,
+				[]string{proposals.PerpetualDAIUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualETHUSD {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewETHUSDPerpetualMarketProposal(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				proposals.PerpetualETHUSDOracleAddress,
+				closingTime, enactmentTime,
+				[]string{proposals.PerpetualETHUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			resultsChannel <- proposeVoteProvideLP(
+				sub.Reference, network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualEURUSD {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := proposals.NewEURUSDPerpetualMarketProposal(
+				settlementAssetId.SettlementAsset_USDC, 6,
+				proposals.PerpetualEURUSDOracleAddress,
+				closingTime, enactmentTime,
+				[]string{proposals.PerpetualEURUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
