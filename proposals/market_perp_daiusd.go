@@ -10,7 +10,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualDAIUSD = "auto:perpetual_btc_usd"
+const PerpetualDAIUSD = "auto:perpetual_dai_usd"
 const PerpetualDAIUSDOracleAddress = "0x14866185B1962B63C3Ea9E03Bc1da838bab34C19"
 
 func NewDAIUSDPerpetualMarketProposal(
