@@ -127,7 +127,7 @@ func NewLINKUSDPerpetualMarketProposal(
 							},
 						},
 						Metadata: append([]string{
-							"formerly:50657270657475616c",
+							"formerly:706572706c696e6b757364",
 							"base:LINK",
 							"quote:USD",
 							"class:fx/crypto",

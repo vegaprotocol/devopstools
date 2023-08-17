@@ -127,7 +127,7 @@ func NewEURUSDPerpetualMarketProposal(
 							},
 						},
 						Metadata: append([]string{
-							"formerly:50657270657475616c",
+							"formerly:70657270657572757364",
 							"base:EUR",
 							"quote:USD",
 							"class:fx/crypto",

@@ -77,7 +77,7 @@ func RunProvideLP(args ProvideLPArgs) error {
 			); err != nil {
 				return fmt.Errorf("failed to deposit assets to provider account, %w", err)
 			}
-			time.Sleep(5)
+			time.Sleep(5 * time.Second)
 			if err := provideLiquidity(marketName, network.DataNodeClient, proposerVegawallet, args.Logger, market.Id); err != nil {
 				failed = true
 			}

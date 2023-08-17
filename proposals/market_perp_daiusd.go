@@ -127,7 +127,7 @@ func NewDAIUSDPerpetualMarketProposal(
 							},
 						},
 						Metadata: append([]string{
-							"formerly:50657270657475616c",
+							"formerly:70657270646169757364",
 							"base:DAI",
 							"quote:USD",
 							"class:fx/crypto",

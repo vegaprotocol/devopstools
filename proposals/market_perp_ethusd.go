@@ -127,7 +127,7 @@ func NewETHUSDPerpetualMarketProposal(
 							},
 						},
 						Metadata: append([]string{
-							"formerly:50657270657475616c",
+							"formerly:70657270657468757364",
 							"base:ETH",
 							"quote:USD",
 							"class:fx/crypto",
