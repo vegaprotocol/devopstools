@@ -122,7 +122,6 @@ func NewETHBTCMarketProposal(
 								},
 							},
 						},
-						LpPriceRange: "0.5",
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
@@ -141,6 +140,13 @@ func NewETHBTCMarketProposal(
 									Sigma: 0.3,
 								},
 							},
+						},
+						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
+							PriceRange:                      "0.95",
+							SlaCompetitionFactor:            "0.5",
+							CommitmentMinTimeFraction:       "0.5",
+							ProvidersFeeCalculationTimeStep: int64(time.Second * 5),
+							PerformanceHysteresisEpochs:     4,
 						},
 					},
 				},
