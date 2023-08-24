@@ -122,6 +122,7 @@ func NewAAVEDAIMarketProposal(
 								},
 							},
 						},
+						LpPriceRange: "0.5",
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
@@ -140,13 +141,6 @@ func NewAAVEDAIMarketProposal(
 									Sigma: 0.5,
 								},
 							},
-						},
-						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
-							PriceRange:                      "0.95",
-							SlaCompetitionFactor:            "0.5",
-							CommitmentMinTimeFraction:       "0.5",
-							ProvidersFeeCalculationTimeStep: int64(time.Second * 5),
-							PerformanceHysteresisEpochs:     4,
 						},
 					},
 				},
