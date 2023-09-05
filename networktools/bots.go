@@ -45,11 +45,15 @@ type TraderbotResponse struct {
 	} `json:"traders"`
 }
 
-func (network *NetworkTools) GetTraderbotTraders(traderbotId string) (*Traders, error) {
+func (network *NetworkTools) GetTraderbotTraders(traderbotId string, traderbotsURL string) (*Traders, error) {
 	errMsg := fmt.Sprintf("failed to get traderbot traders for %s", network.Name)
-	baseURL, err := network.GetTraderbotBaseURL(traderbotId)
-	if err != nil {
-		return nil, fmt.Errorf("%s, %w", errMsg, err)
+	baseURL := traderbotsURL
+	if baseURL == "" {
+		var err error
+		baseURL, err = network.GetTraderbotBaseURL(traderbotId)
+		if err != nil {
+			return nil, fmt.Errorf("%s, %w", errMsg, err)
+		}
 	}
 	url := fmt.Sprintf("%s/traders", baseURL)
 
