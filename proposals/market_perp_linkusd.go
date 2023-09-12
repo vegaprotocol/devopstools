@@ -32,7 +32,7 @@ func NewLINKUSDPerpetualMarketProposal(
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
 			Title:       "New LINKUSD perpetual market",
-			Description: "New LINKUSD perpetual Market",
+			Description: "New LINKUSD perpetual market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -41,12 +41,12 @@ func NewLINKUSDPerpetualMarketProposal(
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						DecimalPlaces:           decimalPlaces,
-						PositionDecimalPlaces:   3,
-						LinearSlippageFactor:    "0.1",
-						QuadraticSlippageFactor: "0.1",
+						PositionDecimalPlaces:   1,
+						LinearSlippageFactor:    "0.01",
+						QuadraticSlippageFactor: "0.0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "LINKUSD.MF21",
+							Code: "LINKUSD.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
@@ -137,34 +137,39 @@ func NewLINKUSDPerpetualMarketProposal(
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
 								{
-									Horizon:          43200,
-									Probability:      "0.9999999",
-									AuctionExtension: 600,
+									Horizon:          4320,
+									Probability:      "0.99",
+									AuctionExtension: 300,
 								},
 								{
-									Horizon:          300,
-									Probability:      "0.9999",
-									AuctionExtension: 60,
+									Horizon:          1440,
+									Probability:      "0.99",
+									AuctionExtension: 180,
+								},
+								{
+									Horizon:          360,
+									Probability:      "0.99",
+									AuctionExtension: 120,
 								},
 							},
 						},
-						LpPriceRange: "0.5",
+						LpPriceRange: "0.05",
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
 								ScalingFactor: 10,
 							},
-							TriggeringRatio:  "0.0",
+							TriggeringRatio:  "0.9",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
 								RiskAversionParameter: 0.0001,
-								Tau:                   0.0000190129,
+								Tau:                   0.00000380258,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
-									R:     0.016,
-									Sigma: 1.25,
+									R:     0,
+									Sigma: 1.5,
 								},
 							},
 						},
