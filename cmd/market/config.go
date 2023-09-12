@@ -57,6 +57,8 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		TSLA:    "177e8f6c25a955bd18475084b99b2b1d37f28f3dec393fab7755a7e69c3d8c3b", // "tEURO"
 		UNIDAI:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 		ETHDAI:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
+
+		SettlementAsset_USDC: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 	},
 	types.NetworkStagnet3: {
 		AAPL:    "ede4076aef07fd79502d14326c54ab3911558371baaf697a19d077f4f89de399", // "tUSDC"
