@@ -122,7 +122,12 @@ func NewUNIDAIMarketProposal(
 								},
 							},
 						},
-						LpPriceRange: "0.5",
+						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
+							PriceRange:                  "0.05",
+							CommitmentMinTimeFraction:   "0.95",
+							PerformanceHysteresisEpochs: 1,
+							SlaCompetitionFactor:        "0.90",
+						},
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
