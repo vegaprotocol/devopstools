@@ -203,6 +203,10 @@ func RunPropose(args ProposeArgs) error {
 		}
 	}
 
+	if len(networkParametersProposals) > 0 {
+		time.Sleep(30 * time.Second)
+	}
+
 	//
 	// AAPL
 	//
