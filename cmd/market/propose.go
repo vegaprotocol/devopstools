@@ -13,6 +13,7 @@ import (
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/proposals"
 	"github.com/vegaprotocol/devopstools/tools"
@@ -132,6 +133,19 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	return result
 }
 
+func updateNetworkParameters(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
+	result := []*commandspb.ProposalSubmission{}
+
+	perpetualEnabled, perpetualEnabledParamExist := networkParams[netparams.PerpsMarketTradingEnabled]
+	prePerpsVersion := semver.New(0, 72, 99, "", "")
+
+	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 && (!perpetualEnabledParamExist || perpetualEnabled != "1") {
+		result = append(result, proposals.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
+	}
+
+	return result
+}
+
 func RunPropose(args ProposeArgs) error {
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
@@ -161,6 +175,10 @@ func RunPropose(args ProposeArgs) error {
 	if err != nil {
 		return err
 	}
+	statistics, err := network.DataNodeClient.Statistics()
+	if err != nil {
+		return err
+	}
 	markets, err := network.DataNodeClient.GetAllMarkets()
 	if err != nil {
 		return err
@@ -176,6 +194,18 @@ func RunPropose(args ProposeArgs) error {
 	// Propose
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
+
+	networkParametersProposals := updateNetworkParameters(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
+
+	for _, proposal := range networkParametersProposals {
+		if err := proposeAndVote(logger, proposerVegawallet, network.DataNodeClient, proposal); err != nil {
+			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
+		}
+	}
+
+	if len(networkParametersProposals) > 0 {
+		time.Sleep(30 * time.Second)
+	}
 
 	//
 	// AAPL
@@ -551,6 +581,80 @@ func getMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 			return market
 		}
 	}
+	return nil
+}
+
+func proposeAndVote(
+	logger *zap.Logger,
+	proposerVegawallet *wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	proposal *commandspb.ProposalSubmission) error {
+
+	reference := proposal.Reference
+
+	//
+	// PROPOSE
+	//
+	// Prepare vegawallet Transaction Request
+	walletTxReq := walletpb.SubmitTransactionRequest{
+		PubKey: proposerVegawallet.PublicKey,
+		Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
+			ProposalSubmission: proposal,
+		},
+	}
+	if err := submitTx("submit transaction", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	//
+	// Find proposal
+	//
+	proposalId, err := tools.RetryReturn[string](10, 6*time.Second, func() (string, error) {
+		logger.Info("Looking for proposal", zap.String("reference", reference))
+
+		res, err := dataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
+			ProposalReference: &reference,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to list governance proposals: %w", err)
+		}
+		var proposalId string
+		for _, edge := range res.Connection.Edges {
+			if edge.Node.Proposal.Reference == reference {
+				logger.Info("Found proposal", zap.String("reference", reference),
+					zap.String("status", edge.Node.Proposal.State.String()),
+					zap.Any("proposal", edge.Node.Proposal))
+				proposalId = edge.Node.Proposal.Id
+			}
+		}
+
+		if len(proposalId) < 1 {
+			return "", fmt.Errorf("proposal not found")
+		}
+
+		return proposalId, nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get proposal ID for reference: %s: %w", reference, err)
+	}
+
+	//
+	// VOTE
+	//
+	voteWalletTxReq := walletpb.SubmitTransactionRequest{
+		PubKey: proposerVegawallet.PublicKey,
+		Command: &walletpb.SubmitTransactionRequest_VoteSubmission{
+			VoteSubmission: &commandspb.VoteSubmission{
+				ProposalId: proposalId,
+				Value:      vega.Vote_VALUE_YES,
+			},
+		},
+	}
+	if err := submitTx("vote on proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
+		return fmt.Errorf("failed to vote on proposal %s: %w")
+	}
+
 	return nil
 }
 
