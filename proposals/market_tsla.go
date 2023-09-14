@@ -20,7 +20,7 @@ func NewTSLAMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
+		reference = tools.RandAlphaNumericString(40)
 		Name      = fmt.Sprintf("Tesla Quarterly (%s)", time.Now().AddDate(0, 3, 0).Format("Jan 2006")) // Now + 3 months
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)

@@ -22,7 +22,7 @@ func NewDAIUSDPerpetualMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
+		reference = tools.RandAlphaNumericString(40)
 		name      = "DAIUSD Perpetual"
 	)
 

@@ -20,7 +20,7 @@ func NewBTCUSDMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
+		reference = tools.RandAlphaNumericString(40)
 		Name      = fmt.Sprintf("BTCUSD Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 months
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)

@@ -198,6 +198,9 @@ func RunPropose(args ProposeArgs) error {
 	networkParametersProposals := updateNetworkParameters(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
 
 	for _, proposal := range networkParametersProposals {
+		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
+		enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
+
 		if err := proposeAndVote(logger, proposerVegawallet, network.DataNodeClient, proposal); err != nil {
 			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
 		}
@@ -207,6 +210,8 @@ func RunPropose(args ProposeArgs) error {
 		time.Sleep(30 * time.Second)
 	}
 
+	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
+	enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 	//
 	// AAPL
 	//
@@ -624,6 +629,10 @@ func proposeAndVote(
 				logger.Info("Found proposal", zap.String("reference", reference),
 					zap.String("status", edge.Node.Proposal.State.String()),
 					zap.Any("proposal", edge.Node.Proposal))
+
+				if edge.Node.Proposal.ErrorDetails != nil && len(*edge.Node.Proposal.ErrorDetails) > 0 {
+					return "", fmt.Errorf("proposal failed: %s", *edge.Node.Proposal.ErrorDetails)
+				}
 				proposalId = edge.Node.Proposal.Id
 			}
 		}
