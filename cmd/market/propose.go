@@ -662,7 +662,7 @@ func proposeAndVote(
 		},
 	}
 	if err := submitTx("vote on proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
-		return fmt.Errorf("failed to vote on proposal %s: %w")
+		return fmt.Errorf("failed to vote on proposal %s: %w", proposalId, err)
 	}
 
 	return nil
