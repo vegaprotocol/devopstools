@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewBTCUSDMarketProposal(
+func NewETHBTCMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -20,16 +20,16 @@ func NewBTCUSDMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
-		Name      = fmt.Sprintf("BTCUSD Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 months
+		reference = tools.RandAlphaNumericString(40)
+		Name      = fmt.Sprintf("ETHBTC Quarterly (%s)", time.Now().AddDate(0, 3, 0).Format("Jan 2006")) // Now + 3 months
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New BTCUSD market",
-			Description: "New BTCUSD Market",
+			Title:       "New BTC market",
+			Description: "New BTC market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -43,11 +43,11 @@ func NewBTCUSDMarketProposal(
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
-							Code: "BTCUSD.MF21",
+							Code: "ETHBTC.QM21",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "USD",
+									QuoteName:       "BTC",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
@@ -57,7 +57,7 @@ func NewBTCUSDMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.BTC.value",
+																	Name: "prices.ETH.value",
 																	Type: datav1.PropertyKey_TYPE_INTEGER,
 																},
 																Conditions: []*datav1.Condition{
@@ -82,7 +82,7 @@ func NewBTCUSDMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "termination.BTC.value",
+																	Name: "termination.ETH.value",
 																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
 																},
 																Conditions: []*datav1.Condition{
@@ -99,18 +99,18 @@ func NewBTCUSDMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
-										SettlementDataProperty:     "prices.BTC.value",
-										TradingTerminationProperty: "termination.BTC.value",
+										SettlementDataProperty:     "prices.ETH.value",
+										TradingTerminationProperty: "termination.ETH.value",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:076BB86A5AA41E3E",
-							"base:BTC",
-							"quote:USD",
+							"formerly:1F0BB6EB5703B099",
+							"base:ETH",
+							"quote:BTC",
 							"class:fx/crypto",
-							"monthly",
+							"quarterly",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
@@ -119,11 +119,6 @@ func NewBTCUSDMarketProposal(
 									Horizon:          43200,
 									Probability:      "0.9999999",
 									AuctionExtension: 600,
-								},
-								{
-									Horizon:          300,
-									Probability:      "0.9999",
-									AuctionExtension: 60,
 								},
 							},
 						},
@@ -138,17 +133,17 @@ func NewBTCUSDMarketProposal(
 								TimeWindow:    3600,
 								ScalingFactor: 10,
 							},
-							TriggeringRatio:  "0.0",
+							TriggeringRatio:  "0.7",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
-								RiskAversionParameter: 0.0001,
-								Tau:                   0.0000190129,
+								RiskAversionParameter: 0.01,
+								Tau:                   0.0001140771161,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
 									R:     0.016,
-									Sigma: 1.25,
+									Sigma: 0.3,
 								},
 							},
 						},

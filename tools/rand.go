@@ -6,7 +6,7 @@ import (
 	"math/big"
 )
 
-func RandAlpaNumericString(l int) string {
+func RandAlphaNumericString(l int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	lettersLen := big.NewInt(int64(len(letters)))
 	ret := make([]byte, l)

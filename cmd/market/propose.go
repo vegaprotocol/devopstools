@@ -15,7 +15,8 @@ import (
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/proposals"
+	"github.com/vegaprotocol/devopstools/proposal/market"
+	"github.com/vegaprotocol/devopstools/proposal/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
@@ -140,7 +141,7 @@ func updateNetworkParameters(closingTime, enactmentTime time.Time, networkParams
 	prePerpsVersion := semver.New(0, 72, 99, "", "")
 
 	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 && (!perpetualEnabledParamExist || perpetualEnabled != "1") {
-		result = append(result, proposals.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
+		result = append(result, networkparameters.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
 	}
 
 	return result
@@ -198,6 +199,9 @@ func RunPropose(args ProposeArgs) error {
 	networkParametersProposals := updateNetworkParameters(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
 
 	for _, proposal := range networkParametersProposals {
+		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
+		enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
+
 		if err := proposeAndVote(logger, proposerVegawallet, network.DataNodeClient, proposal); err != nil {
 			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
 		}
@@ -207,6 +211,8 @@ func RunPropose(args ProposeArgs) error {
 		time.Sleep(30 * time.Second)
 	}
 
+	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
+	enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 	//
 	// AAPL
 	//
@@ -214,7 +220,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewAAPLMarketProposal(
+			sub := market.NewAAPLMarketProposal(
 				settlementAssetId.AAPL, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_AAPL_MARKER},
@@ -233,7 +239,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewAAVEDAIMarketProposal(
+			sub := market.NewAAVEDAIMarketProposal(
 				settlementAssetId.AAVEDAI, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_AAVEDAI_MARKER},
@@ -251,7 +257,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewBTCUSDMarketProposal(
+			sub := market.NewBTCUSDMarketProposal(
 				settlementAssetId.BTCUSD, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_BTCUSD_MARKER},
@@ -270,7 +276,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewETHBTCMarketProposal(
+			sub := market.NewETHBTCMarketProposal(
 				settlementAssetId.ETHBTC, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_ETHBTC_MARKER},
@@ -288,7 +294,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewTSLAMarketProposal(
+			sub := market.NewTSLAMarketProposal(
 				settlementAssetId.TSLA, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_TSLA_MARKER},
@@ -306,7 +312,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewUNIDAIMarketProposal(
+			sub := market.NewUNIDAIMarketProposal(
 				settlementAssetId.UNIDAI, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_UNIDAI_MARKER},
@@ -325,7 +331,7 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewETHDAIMarketProposal(
+			sub := market.NewETHDAIMarketProposal(
 				settlementAssetId.ETHDAI, 5, oraclePubKey,
 				closingTime, enactmentTime,
 				[]string{MARKET_ETHDAI_MARKER},
@@ -341,11 +347,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub, err := proposals.NewCommunityBTCUSD230630(
+			sub, err := market.NewCommunityBTCUSD230630(
 				settlementAssetId.SettlementAsset_USDC, 6,
 				CoinBaseOraclePubKey,
 				closingTime, enactmentTime,
-				[]string{proposals.CommunityBTCUSD230630MetadataID},
+				[]string{market.CommunityBTCUSD230630MetadataID},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -353,7 +359,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Community BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityBTCUSD230630MetadataID, sub, logger,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityBTCUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -362,11 +368,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub, err := proposals.NewCommunityETHUSD230630(
+			sub, err := market.NewCommunityETHUSD230630(
 				settlementAssetId.SettlementAsset_USDC, 6,
 				CoinBaseOraclePubKey,
 				closingTime, enactmentTime,
-				[]string{proposals.CommunityETHUSD230630MetadataID},
+				[]string{market.CommunityETHUSD230630MetadataID},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -374,7 +380,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Community ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityETHUSD230630MetadataID, sub, logger,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityETHUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -383,11 +389,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub, err := proposals.NewCommunityLinkUSD230630(
+			sub, err := market.NewCommunityLinkUSD230630(
 				settlementAssetId.SettlementAsset_USDC, 6,
 				CoinBaseOraclePubKey,
 				closingTime, enactmentTime,
-				[]string{proposals.CommunityLinkUSD230630MetadataID},
+				[]string{market.CommunityLinkUSD230630MetadataID},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -395,7 +401,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Community LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, proposals.CommunityLinkUSD230630MetadataID, sub, logger,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityLinkUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -404,11 +410,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewBTCUSDPerpetualMarketProposal(
+			sub := market.NewBTCUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				proposals.PerpetualBTCUSDOracleAddress,
+				market.PerpetualBTCUSDOracleAddress,
 				closingTime, enactmentTime,
-				[]string{proposals.PerpetualBTCUSD},
+				[]string{market.PerpetualBTCUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -416,7 +422,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Perpetual BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				proposals.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualBTCUSD, sub, logger,
+				market.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, market.PerpetualBTCUSD, sub, logger,
 			)
 		}()
 	}
@@ -425,11 +431,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewLINKUSDPerpetualMarketProposal(
+			sub := market.NewLINKUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				proposals.PerpetualLINKUSDOracleAddress,
+				market.PerpetualLINKUSDOracleAddress,
 				closingTime, enactmentTime,
-				[]string{proposals.PerpetualLINKUSD},
+				[]string{market.PerpetualLINKUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -437,7 +443,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Perpetual LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				proposals.PerpetualLINKUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualLINKUSD, sub, logger,
+				market.PerpetualLINKUSDOracleAddress, closingTime, enactmentTime, market.PerpetualLINKUSD, sub, logger,
 			)
 		}()
 	}
@@ -446,11 +452,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewDAIUSDPerpetualMarketProposal(
+			sub := market.NewDAIUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				proposals.PerpetualDAIUSDOracleAddress,
+				market.PerpetualDAIUSDOracleAddress,
 				closingTime, enactmentTime,
-				[]string{proposals.PerpetualDAIUSD},
+				[]string{market.PerpetualDAIUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -458,7 +464,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Perpetual DAI USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				proposals.PerpetualDAIUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualDAIUSD, sub, logger,
+				market.PerpetualDAIUSDOracleAddress, closingTime, enactmentTime, market.PerpetualDAIUSD, sub, logger,
 			)
 		}()
 	}
@@ -467,11 +473,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewETHUSDPerpetualMarketProposal(
+			sub := market.NewETHUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				proposals.PerpetualETHUSDOracleAddress,
+				market.PerpetualETHUSDOracleAddress,
 				closingTime, enactmentTime,
-				[]string{proposals.PerpetualETHUSD},
+				[]string{market.PerpetualETHUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -479,7 +485,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Perpetual ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				proposals.PerpetualETHUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualETHUSD, sub, logger,
+				market.PerpetualETHUSDOracleAddress, closingTime, enactmentTime, market.PerpetualETHUSD, sub, logger,
 			)
 		}()
 	}
@@ -488,11 +494,11 @@ func RunPropose(args ProposeArgs) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := proposals.NewEURUSDPerpetualMarketProposal(
+			sub := market.NewEURUSDPerpetualMarketProposal(
 				settlementAssetId.SettlementAsset_USDC, 6,
-				proposals.PerpetualEURUSDOracleAddress,
+				market.PerpetualEURUSDOracleAddress,
 				closingTime, enactmentTime,
-				[]string{proposals.PerpetualEURUSD},
+				[]string{market.PerpetualEURUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -500,7 +506,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- proposeVoteProvideLP(
 				"Perpetual EUR USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				proposals.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, proposals.PerpetualEURUSD, sub, logger,
+				market.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
 			)
 		}()
 	}
@@ -624,6 +630,10 @@ func proposeAndVote(
 				logger.Info("Found proposal", zap.String("reference", reference),
 					zap.String("status", edge.Node.Proposal.State.String()),
 					zap.Any("proposal", edge.Node.Proposal))
+
+				if edge.Node.Proposal.ErrorDetails != nil && len(*edge.Node.Proposal.ErrorDetails) > 0 {
+					return "", fmt.Errorf("proposal failed: %s", *edge.Node.Proposal.ErrorDetails)
+				}
 				proposalId = edge.Node.Proposal.Id
 			}
 		}
@@ -652,7 +662,7 @@ func proposeAndVote(
 		},
 	}
 	if err := submitTx("vote on proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
-		return fmt.Errorf("failed to vote on proposal %s: %w")
+		return fmt.Errorf("failed to vote on proposal %s: %w", proposalId, err)
 	}
 
 	return nil

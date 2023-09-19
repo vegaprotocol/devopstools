@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewUNIDAIMarketProposal(
+func NewETHDAIMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -20,16 +20,16 @@ func NewUNIDAIMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
-		Name      = fmt.Sprintf("UNIDAI Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 month
+		reference = tools.RandAlphaNumericString(40)
+		Name      = fmt.Sprintf("ETHDAI Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 month
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New DAI market",
-			Description: "New DAI market",
+			Title:       "New ETHDAI market",
+			Description: "New ETHDAI market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -43,7 +43,7 @@ func NewUNIDAIMarketProposal(
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
-							Code: "UNIDAI.MF21",
+							Code: "ETHDAI.MF21",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
@@ -57,7 +57,7 @@ func NewUNIDAIMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.UNI.value",
+																	Name: "prices.ETH.value",
 																	Type: datav1.PropertyKey_TYPE_INTEGER,
 																},
 																Conditions: []*datav1.Condition{
@@ -82,7 +82,7 @@ func NewUNIDAIMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "termination.UNI.value",
+																	Name: "termination.ETH.value",
 																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
 																},
 																Conditions: []*datav1.Condition{
@@ -99,15 +99,15 @@ func NewUNIDAIMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
-										SettlementDataProperty:     "prices.UNI.value",
-										TradingTerminationProperty: "termination.UNI.value",
+										SettlementDataProperty:     "prices.ETH.value",
+										TradingTerminationProperty: "termination.ETH.value",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:3C58ED2A4A6C5D7E",
-							"base:UNI",
+							"formerly:4BC6D2154BE74E1F",
+							"base:ETH",
 							"quote:DAI",
 							"class:fx/crypto",
 							"monthly",
@@ -133,7 +133,7 @@ func NewUNIDAIMarketProposal(
 								TimeWindow:    3600,
 								ScalingFactor: 10,
 							},
-							TriggeringRatio:  "0.0",
+							TriggeringRatio:  "0.7",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
@@ -143,7 +143,7 @@ func NewUNIDAIMarketProposal(
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
 									R:     0.016,
-									Sigma: 0.5,
+									Sigma: 0.3,
 								},
 							},
 						},

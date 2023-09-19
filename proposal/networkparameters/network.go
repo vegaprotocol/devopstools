@@ -1,4 +1,4 @@
-package proposals
+package networkparameters
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 func NewUpdateParametersProposal(key string, newValue string, closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {
 	return &commandspb.ProposalSubmission{
-		Reference: tools.RandAlpaNumericString(40),
+		Reference: tools.RandAlphaNumericString(40),
 		Rationale: &vega.ProposalRationale{
 			Title:       fmt.Sprintf("Update %s", key),
 			Description: fmt.Sprintf("## Summary\n\nChange value of %s to %s from the previous value", key, newValue),

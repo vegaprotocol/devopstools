@@ -11,6 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
 	"github.com/vegaprotocol/devopstools/cmd/party"
+	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
@@ -45,4 +46,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(benchmark.BenchmarkCmd)
 	rootCmd.RootCmd.AddCommand(snapshotcompatibility.SnapshotCompatibilityCmd)
 	rootCmd.RootCmd.AddCommand(version.VersionCmd)
+	rootCmd.RootCmd.AddCommand(propose.ProposeCmd)
 }

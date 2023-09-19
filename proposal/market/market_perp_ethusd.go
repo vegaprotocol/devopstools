@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"time"
@@ -10,10 +10,10 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualBTCUSD = "auto:perpetual_btc_usd"
-const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+const PerpetualETHUSD = "auto:perpetual_eth_usd"
+const PerpetualETHUSDOracleAddress = "0x694AA1769357215DE4FAC081bf1f309aDC325306"
 
-func NewBTCUSDPerpetualMarketProposal(
+func NewETHUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -22,8 +22,8 @@ func NewBTCUSDPerpetualMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
-		name      = "BTCUSD Perpetual Futures"
+		reference = tools.RandAlphaNumericString(40)
+		name      = "ETHUSD Perpetual"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +31,8 @@ func NewBTCUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New BTCUSD perpetual futures market",
-			Description: "New BTCUSD perpetual futures market",
+			Title:       "New ETHUSD perpetual market",
+			Description: "New ETHUSD perpetual market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -41,12 +41,12 @@ func NewBTCUSDPerpetualMarketProposal(
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						DecimalPlaces:           decimalPlaces,
-						PositionDecimalPlaces:   4,
+						PositionDecimalPlaces:   3,
 						LinearSlippageFactor:    "0.01",
-						QuadraticSlippageFactor: "0.0",
+						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "BTCUSD.PERP",
+							Code: "ETHUSD.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
@@ -61,12 +61,12 @@ func NewBTCUSDPerpetualMarketProposal(
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
 														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
-														Address: oraclePubKey, // chainlink BTC/USD
+														Address: oraclePubKey, // chainlink ETH/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "btc.price",
+																Name:       "eth.price",
 																Expression: "$[0]",
 															},
 														},
@@ -81,13 +81,13 @@ func NewBTCUSDPerpetualMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "btc.price",
+																	Name:                "eth.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
 																Conditions: []*datav1.Condition{
 																	{
-																		Operator: datav1.Condition_OPERATOR_GREATER_THAN,
+																		Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
 																		Value:    "0",
 																	},
 																},
@@ -105,13 +105,13 @@ func NewBTCUSDPerpetualMarketProposal(
 													TimeTrigger: &vega.DataSourceSpecConfigurationTimeTrigger{
 														Conditions: []*datav1.Condition{
 															{
-																Operator: datav1.Condition_OPERATOR_GREATER_THAN,
+																Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
 																Value:    "0",
 															},
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 300, // 5 mins in seconds
+																Every: 1800, // 30 mins in seconds
 															},
 														},
 													},
@@ -120,18 +120,18 @@ func NewBTCUSDPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "btc.price",
+										SettlementDataProperty:     "eth.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:50657270657475616c",
-							"base:BTC",
+							"formerly:70657270657468757364",
+							"base:ETH",
 							"quote:USD",
 							"class:fx/crypto",
-							"perpetual",
+							"monthly",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{

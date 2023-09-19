@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"time"
@@ -10,10 +10,10 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualEURUSD = "auto:perpetual_eur_usd"
-const PerpetualEURUSDOracleAddress = "0x1a81afB8146aeFfCFc5E50e8479e826E7D55b910"
+const PerpetualBTCUSD = "auto:perpetual_btc_usd"
+const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
 
-func NewEURUSDPerpetualMarketProposal(
+func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -22,8 +22,8 @@ func NewEURUSDPerpetualMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
-		name      = "EURUSD Perpetual"
+		reference = tools.RandAlphaNumericString(40)
+		name      = "BTCUSD Perpetual Futures"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +31,8 @@ func NewEURUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New EURUSD perpetual market",
-			Description: "New EURUSD perpetual market",
+			Title:       "New BTCUSD perpetual futures market",
+			Description: "New BTCUSD perpetual futures market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -41,12 +41,12 @@ func NewEURUSDPerpetualMarketProposal(
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						DecimalPlaces:           decimalPlaces,
-						PositionDecimalPlaces:   1,
+						PositionDecimalPlaces:   4,
 						LinearSlippageFactor:    "0.01",
 						QuadraticSlippageFactor: "0.0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "EURUSD.PERP",
+							Code: "BTCUSD.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
@@ -61,12 +61,12 @@ func NewEURUSDPerpetualMarketProposal(
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
 														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
-														Address: oraclePubKey, // chainlink EUR/USD
+														Address: oraclePubKey, // chainlink BTC/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "eur.price",
+																Name:       "btc.price",
 																Expression: "$[0]",
 															},
 														},
@@ -74,20 +74,20 @@ func NewEURUSDPerpetualMarketProposal(
 														Trigger: &vega.EthCallTrigger{
 															Trigger: &vega.EthCallTrigger_TimeTrigger{
 																TimeTrigger: &vega.EthTimeTrigger{
-																	Every: ptr.From(uint64(300)), // get price every 5 minutes
+																	Every: ptr.From(uint64(30)),
 																},
 															},
 														},
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "eur.price",
+																	Name:                "btc.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
 																Conditions: []*datav1.Condition{
 																	{
-																		Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
+																		Operator: datav1.Condition_OPERATOR_GREATER_THAN,
 																		Value:    "0",
 																	},
 																},
@@ -105,13 +105,13 @@ func NewEURUSDPerpetualMarketProposal(
 													TimeTrigger: &vega.DataSourceSpecConfigurationTimeTrigger{
 														Conditions: []*datav1.Condition{
 															{
-																Operator: datav1.Condition_OPERATOR_GREATER_THAN_OR_EQUAL,
+																Operator: datav1.Condition_OPERATOR_GREATER_THAN,
 																Value:    "0",
 															},
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 28800, // 8hrs in seconds
+																Every: 300, // 5 mins in seconds
 															},
 														},
 													},
@@ -120,34 +120,34 @@ func NewEURUSDPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "eur.price",
+										SettlementDataProperty:     "btc.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:70657270657572757364",
-							"base:EUR",
+							"formerly:50657270657475616c",
+							"base:BTC",
 							"quote:USD",
 							"class:fx/crypto",
-							"monthly",
+							"perpetual",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
 								{
-									Horizon:          2160,
+									Horizon:          4320,
 									Probability:      "0.99",
 									AuctionExtension: 300,
 								},
 								{
-									Horizon:          720,
+									Horizon:          1440,
 									Probability:      "0.99",
 									AuctionExtension: 180,
 								},
 								{
-									Horizon:          180,
+									Horizon:          360,
 									Probability:      "0.99",
 									AuctionExtension: 120,
 								},
@@ -169,12 +169,12 @@ func NewEURUSDPerpetualMarketProposal(
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
-								RiskAversionParameter: 0.0001,
+								RiskAversionParameter: 0.000001,
 								Tau:                   0.00000380258,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
-									R:     0.016,
-									Sigma: 0.7,
+									R:     0,
+									Sigma: 1.5,
 								},
 							},
 						},

@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewETHBTCMarketProposal(
+func NewTSLAMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -20,16 +20,16 @@ func NewETHBTCMarketProposal(
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
 	var (
-		reference = tools.RandAlpaNumericString(40)
-		Name      = fmt.Sprintf("ETHBTC Quarterly (%s)", time.Now().AddDate(0, 3, 0).Format("Jan 2006")) // Now + 3 months
+		reference = tools.RandAlphaNumericString(40)
+		Name      = fmt.Sprintf("Tesla Quarterly (%s)", time.Now().AddDate(0, 3, 0).Format("Jan 2006")) // Now + 3 months
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New BTC market",
-			Description: "New BTC market",
+			Title:       "New EURO market",
+			Description: "New EURO market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -43,11 +43,11 @@ func NewETHBTCMarketProposal(
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
-							Code: "ETHBTC.QM21",
+							Code: "TSLA.QM21",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "BTC",
+									QuoteName:       "EURO",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
@@ -57,7 +57,7 @@ func NewETHBTCMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.ETH.value",
+																	Name: "prices.TSLA.value",
 																	Type: datav1.PropertyKey_TYPE_INTEGER,
 																},
 																Conditions: []*datav1.Condition{
@@ -82,7 +82,7 @@ func NewETHBTCMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "termination.ETH.value",
+																	Name: "termination.TSLA.value",
 																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
 																},
 																Conditions: []*datav1.Condition{
@@ -99,19 +99,20 @@ func NewETHBTCMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
-										SettlementDataProperty:     "prices.ETH.value",
-										TradingTerminationProperty: "termination.ETH.value",
+										SettlementDataProperty:     "prices.TSLA.value",
+										TradingTerminationProperty: "termination.TSLA.value",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:1F0BB6EB5703B099",
-							"base:ETH",
-							"quote:BTC",
-							"class:fx/crypto",
-							"quarterly",
-							"sector:crypto",
+							"formerly:5A86B190C384997F",
+							"quote:EURO",
+							"ticker:TSLA",
+							"class:equities/single-stock-futures",
+							"sector:tech",
+							"listing_venue:NASDAQ",
+							"country:US",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
@@ -143,7 +144,7 @@ func NewETHBTCMarketProposal(
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
 									R:     0.016,
-									Sigma: 0.3,
+									Sigma: 0.8,
 								},
 							},
 						},
