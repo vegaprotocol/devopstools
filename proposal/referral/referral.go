@@ -80,7 +80,7 @@ func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime tim
 						BenefitTiers: []*vega.BenefitTier{
 							{
 								MinimumRunningNotionalTakerVolume: "10000",
-								MinimumEpochs:                     "0",
+								MinimumEpochs:                     "1",
 								ReferralRewardFactor:              "0.001",
 								ReferralDiscountFactor:            "0.001",
 							},
