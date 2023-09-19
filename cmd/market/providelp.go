@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/proposal"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
@@ -67,7 +68,7 @@ func RunProvideLP(args ProvideLPArgs) error {
 
 	failed := false
 	for _, marketName := range []string{"AAPL", "AAVEDAI", "BTCUSD", "ETHBTC", "TSLA", "UNIDAI", "ETHDAI"} {
-		market := getMarket(markets, proposerVegawallet.PublicKey, fmt.Sprintf("auto:%s", strings.ToLower(marketName)))
+		market := proposal.GetMarket(markets, proposerVegawallet.PublicKey, fmt.Sprintf("auto:%s", strings.ToLower(marketName)))
 		if market == nil {
 			logger.Info("market does not exists", zap.String("market", marketName))
 		} else {
