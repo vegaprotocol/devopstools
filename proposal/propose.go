@@ -5,11 +5,13 @@ import (
 	"time"
 
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
 func SubmitProposal(
@@ -44,16 +46,24 @@ func SubmitProposal(
 	if err != nil {
 		return "", err
 	}
-	var proposalId string
+
+	var prop *vega.Proposal
 	for _, edge := range res.Connection.Edges {
 		if edge.Node.Proposal.Reference == reference {
-			proposalId = edge.Node.Proposal.Id
+			prop = edge.Node.Proposal
 			break
 		}
 	}
 
-	if len(proposalId) < 1 {
+	if prop == nil {
 		return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", proposalDescription, reference)
 	}
-	return proposalId, nil
+	if slices.Contains(
+		[]vega.Proposal_State{vega.Proposal_STATE_FAILED, vega.Proposal_STATE_REJECTED, vega.Proposal_STATE_DECLINED},
+		prop.State,
+	) {
+		return prop.Id, fmt.Errorf("proposal is in wrong state %s: %+v", prop.State.String(), prop)
+	}
+
+	return prop.Id, nil
 }

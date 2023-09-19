@@ -23,8 +23,8 @@ var referralArgs ReferralArgs
 // referralCmd represents the referral command
 var referralCmd = &cobra.Command{
 	Use:   "referral",
-	Short: "Get Vega Network /statistics",
-	Long:  `Get Vega Network /statistics`,
+	Short: "Referral Program",
+	Long:  `Referral Program`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := RunReferral(referralArgs); err != nil {
 			referralArgs.Logger.Error("Error", zap.Error(err))
@@ -52,11 +52,11 @@ func RunReferral(args ReferralArgs) error {
 		logger             = args.Logger
 	)
 
-	minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinClose])
+	minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinClose])
 	if err != nil {
 		return err
 	}
-	minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinEnact])
+	minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinEnact])
 	if err != nil {
 		return err
 	}
