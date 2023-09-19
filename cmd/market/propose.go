@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/proposals"
+	"github.com/vegaprotocol/devopstools/proposals/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
@@ -140,7 +141,7 @@ func updateNetworkParameters(closingTime, enactmentTime time.Time, networkParams
 	prePerpsVersion := semver.New(0, 72, 99, "", "")
 
 	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 && (!perpetualEnabledParamExist || perpetualEnabled != "1") {
-		result = append(result, proposals.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
+		result = append(result, networkparameters.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
 	}
 
 	return result
