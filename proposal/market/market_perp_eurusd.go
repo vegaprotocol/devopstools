@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"time"
@@ -10,10 +10,10 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualETHUSD = "auto:perpetual_eth_usd"
-const PerpetualETHUSDOracleAddress = "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+const PerpetualEURUSD = "auto:perpetual_eur_usd"
+const PerpetualEURUSDOracleAddress = "0x1a81afB8146aeFfCFc5E50e8479e826E7D55b910"
 
-func NewETHUSDPerpetualMarketProposal(
+func NewEURUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -23,7 +23,7 @@ func NewETHUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "ETHUSD Perpetual"
+		name      = "EURUSD Perpetual"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +31,8 @@ func NewETHUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New ETHUSD perpetual market",
-			Description: "New ETHUSD perpetual market",
+			Title:       "New EURUSD perpetual market",
+			Description: "New EURUSD perpetual market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -41,12 +41,12 @@ func NewETHUSDPerpetualMarketProposal(
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						DecimalPlaces:           decimalPlaces,
-						PositionDecimalPlaces:   3,
+						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.01",
-						QuadraticSlippageFactor: "0",
+						QuadraticSlippageFactor: "0.0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "ETHUSD.PERP",
+							Code: "EURUSD.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
@@ -61,12 +61,12 @@ func NewETHUSDPerpetualMarketProposal(
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
 														// https://docs.chain.link/data-feeds/price-feeds/addresses#Sepolia%20Testnet
-														Address: oraclePubKey, // chainlink ETH/USD
+														Address: oraclePubKey, // chainlink EUR/USD
 														Abi:     contractABI,
 														Method:  "latestAnswer",
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "eth.price",
+																Name:       "eur.price",
 																Expression: "$[0]",
 															},
 														},
@@ -74,14 +74,14 @@ func NewETHUSDPerpetualMarketProposal(
 														Trigger: &vega.EthCallTrigger{
 															Trigger: &vega.EthCallTrigger_TimeTrigger{
 																TimeTrigger: &vega.EthTimeTrigger{
-																	Every: ptr.From(uint64(30)),
+																	Every: ptr.From(uint64(300)), // get price every 5 minutes
 																},
 															},
 														},
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "eth.price",
+																	Name:                "eur.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
@@ -111,7 +111,7 @@ func NewETHUSDPerpetualMarketProposal(
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 1800, // 30 mins in seconds
+																Every: 28800, // 8hrs in seconds
 															},
 														},
 													},
@@ -120,15 +120,15 @@ func NewETHUSDPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "eth.price",
+										SettlementDataProperty:     "eur.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:70657270657468757364",
-							"base:ETH",
+							"formerly:70657270657572757364",
+							"base:EUR",
 							"quote:USD",
 							"class:fx/crypto",
 							"monthly",
@@ -137,17 +137,17 @@ func NewETHUSDPerpetualMarketProposal(
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
 								{
-									Horizon:          4320,
+									Horizon:          2160,
 									Probability:      "0.99",
 									AuctionExtension: 300,
 								},
 								{
-									Horizon:          1440,
+									Horizon:          720,
 									Probability:      "0.99",
 									AuctionExtension: 180,
 								},
 								{
-									Horizon:          360,
+									Horizon:          180,
 									Probability:      "0.99",
 									AuctionExtension: 120,
 								},
@@ -169,12 +169,12 @@ func NewETHUSDPerpetualMarketProposal(
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
-								RiskAversionParameter: 0.000001,
+								RiskAversionParameter: 0.0001,
 								Tau:                   0.00000380258,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
-									R:     0,
-									Sigma: 1.5,
+									R:     0.016,
+									Sigma: 0.7,
 								},
 							},
 						},

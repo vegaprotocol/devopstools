@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewTSLAMarketProposal(
+func NewAAPLMarketProposal(
 	settlementVegaAssetId string,
 	decimalPlaces uint64,
 	oraclePubKey string,
@@ -21,15 +21,15 @@ func NewTSLAMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		Name      = fmt.Sprintf("Tesla Quarterly (%s)", time.Now().AddDate(0, 3, 0).Format("Jan 2006")) // Now + 3 months
+		Name      = fmt.Sprintf("Apple Monthly (%s)", time.Now().AddDate(0, 1, 0).Format("Jan 2006")) // Now + 1 months
 		pubKey    = dstypes.CreateSignerFromString(oraclePubKey, dstypes.SignerTypePubKey)
 	)
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New EURO market",
-			Description: "New EURO market",
+			Title:       "New USD market",
+			Description: "New USD market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -43,11 +43,11 @@ func NewTSLAMarketProposal(
 						QuadraticSlippageFactor: "0.1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
-							Code: "TSLA.QM21",
+							Code: "AAPL.MF21",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "EURO",
+									QuoteName:       "USD",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
@@ -57,7 +57,7 @@ func NewTSLAMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "prices.TSLA.value",
+																	Name: "prices.AAPL.value",
 																	Type: datav1.PropertyKey_TYPE_INTEGER,
 																},
 																Conditions: []*datav1.Condition{
@@ -82,7 +82,7 @@ func NewTSLAMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name: "termination.TSLA.value",
+																	Name: "termination.AAPL.value",
 																	Type: datav1.PropertyKey_TYPE_BOOLEAN,
 																},
 																Conditions: []*datav1.Condition{
@@ -98,17 +98,18 @@ func NewTSLAMarketProposal(
 											},
 										},
 									},
+
 									DataSourceSpecBinding: &vega.DataSourceSpecToFutureBinding{
-										SettlementDataProperty:     "prices.TSLA.value",
-										TradingTerminationProperty: "termination.TSLA.value",
+										SettlementDataProperty:     "prices.AAPL.value",
+										TradingTerminationProperty: "termination.AAPL.value",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"formerly:5A86B190C384997F",
-							"quote:EURO",
-							"ticker:TSLA",
+							"formerly:4899E01009F1A721",
+							"quote:USD",
+							"ticker:AAPL",
 							"class:equities/single-stock-futures",
 							"sector:tech",
 							"listing_venue:NASDAQ",
@@ -139,12 +140,12 @@ func NewTSLAMarketProposal(
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
-								RiskAversionParameter: 0.01,
+								RiskAversionParameter: 0.1,
 								Tau:                   0.0001140771161,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
 									R:     0.016,
-									Sigma: 0.8,
+									Sigma: 0.3,
 								},
 							},
 						},

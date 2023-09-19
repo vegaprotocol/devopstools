@@ -1,4 +1,4 @@
-package proposals
+package market
 
 import (
 	"time"
