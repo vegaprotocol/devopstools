@@ -10,7 +10,6 @@ import (
 
 type ListArgs struct {
 	*ProposeArgs
-	SetupListProgram bool
 }
 
 var listArgs ListArgs
