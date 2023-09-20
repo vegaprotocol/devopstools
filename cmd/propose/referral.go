@@ -53,16 +53,6 @@ func RunReferral(args ReferralArgs) error {
 		logger             = args.Logger
 	)
 
-	minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinClose])
-	if err != nil {
-		return err
-	}
-	minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinEnact])
-	if err != nil {
-		return err
-	}
-	// At this point we know Vega Network is running, and Data Nodes are working
-
 	//
 	// Get current referral program
 	//
@@ -90,34 +80,29 @@ func RunReferral(args ReferralArgs) error {
 			return err
 		}
 		//
-		// Propose
+		// Prepare Proposal
 		//
+		minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinClose])
+		if err != nil {
+			return err
+		}
+		minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalReferralProgramMinEnact])
+		if err != nil {
+			return err
+		}
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 		proposalConfig := referral.NewCreateSimpleReferralSetProposal(closingTime, enactmentTime)
 
-		logger.Info("Submitting Referral Program proposal", zap.Any("proposal", proposalConfig))
-
-		proposalId, err := proposal.SubmitProposal(
-			"Setup Referral Program", proposerVegawallet, proposalConfig, network.DataNodeClient, logger,
-		)
-
-		if err != nil {
-			return fmt.Errorf("failed to propose Referral Program %w", err)
-		}
-
-		logger.Info("Proposed Referral Program.", zap.String("proposalId", proposalId))
 		//
-		// Vote
+		// Propose & Vote & Wait
 		//
-		logger.Info("Voting on Referral Program", zap.String("proposalId", proposalId))
-		err = proposal.VoteOnProposal(
-			"Whale vote on Referral Program proposal", proposalId, proposerVegawallet, network.DataNodeClient, logger,
+		err = proposal.ProposeVoteAndWait(
+			"Referall Program proposal", proposalConfig, proposerVegawallet, network.DataNodeClient, logger,
 		)
 		if err != nil {
-			return fmt.Errorf("voting on Referral Program failed %w", err)
+			return err
 		}
-		logger.Info("Successfully voted on Referral Program", zap.String("proposalId", proposalId))
 	}
 	return nil
 }
@@ -126,14 +111,15 @@ func setupNetworkParametersToSetupReferralProgram(
 	network *veganetwork.VegaNetwork,
 	logger *zap.Logger,
 ) error {
-	updateCount, err := ProposeAndVoteOnNetworkParamtersAndWait(
-		map[string]string{
-			"governance.proposal.referralProgram.minEnact": "5s",
-			"governance.proposal.referralProgram.minClose": "5s",
-			"referralProgram.maxReferralTiers":             "3",
-			"referralProgram.maxReferralDiscountFactor":    "0.02",
-			"referralProgram.maxReferralRewardFactor":      "0.02",
-		}, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
+	updateParams := map[string]string{
+		"governance.proposal.referralProgram.minEnact": "5s",
+		"governance.proposal.referralProgram.minClose": "5s",
+		"referralProgram.maxReferralTiers":             "3",
+		"referralProgram.maxReferralDiscountFactor":    "0.02",
+		"referralProgram.maxReferralRewardFactor":      "0.02",
+	}
+	updateCount, err := ProposeAndVoteOnNetworkParamters(
+		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
 	if err != nil {
 		return err
@@ -141,6 +127,13 @@ func setupNetworkParametersToSetupReferralProgram(
 	if updateCount > 0 {
 		if err := network.RefreshNetworkParams(); err != nil {
 			return err
+		}
+	}
+	for name, expectedValue := range updateParams {
+		if network.NetworkParams.Params[name] != expectedValue {
+			return fmt.Errorf("failed to update Network Paramter '%s', current value: '%s', expected value: '%s'",
+				name, network.NetworkParams.Params[name], expectedValue,
+			)
 		}
 	}
 	return nil

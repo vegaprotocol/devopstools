@@ -122,7 +122,7 @@ func fetchProposalByReferenceAndProposer(
 		ProposerPartyId:   &proposerPartyId,
 	})
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	if len(proposalEdges.Connection.Edges) > 1 {
 		// This is Vega Network issue

@@ -165,7 +165,7 @@ func ProposeAndVoteOnNetworkParamters(
 	//
 	// Propose & Vote
 	//
-	err = proposal.ProposeAndVoteList(
+	err = proposal.ProposeVoteAndWaitList(
 		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
 	)
 	if err != nil {
@@ -173,24 +173,4 @@ func ProposeAndVoteOnNetworkParamters(
 	}
 
 	return int64(len(descriptionToProposalConfig)), nil
-}
-
-func ProposeAndVoteOnNetworkParamtersAndWait(
-	nameToValue map[string]string,
-	proposerVegawallet *wallet.VegaWallet,
-	networkParams *types.NetworkParams,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (int64, error) {
-	updateCount, err := ProposeAndVoteOnNetworkParamters(
-		nameToValue, proposerVegawallet, networkParams, dataNodeClient, logger,
-	)
-	if err != nil {
-		return 0, err
-	}
-	// TODO wait
-	if updateCount > 0 {
-		time.Sleep(time.Minute)
-	}
-	return updateCount, nil
 }

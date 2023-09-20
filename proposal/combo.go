@@ -14,12 +14,64 @@ import (
 	"go.uber.org/zap"
 )
 
+func ProposeVoteAndWait(
+	description string,
+	proposal *commandspb.ProposalSubmission,
+	proposerVegawallet *wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	logger *zap.Logger,
+) error {
+	return ProposeVoteAndWaitList(
+		map[string]*commandspb.ProposalSubmission{
+			description: proposal,
+		},
+		proposerVegawallet, dataNodeClient, logger,
+	)
+}
+
 func ProposeAndVoteList(
 	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
 	proposerVegawallet *wallet.VegaWallet,
 	dataNodeClient vegaapi.DataNodeClient,
 	logger *zap.Logger,
 ) error {
+	return comboList(
+		descriptionToProposalConfig,
+		proposerVegawallet,
+		dataNodeClient,
+		logger,
+		true,
+		false,
+	)
+}
+
+func ProposeVoteAndWaitList(
+	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
+	proposerVegawallet *wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	logger *zap.Logger,
+) error {
+	return comboList(
+		descriptionToProposalConfig,
+		proposerVegawallet,
+		dataNodeClient,
+		logger,
+		true,
+		true,
+	)
+}
+
+func comboList(
+	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
+	proposerVegawallet *wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	logger *zap.Logger,
+	vote bool,
+	wait bool,
+) error {
+	//
+	// Propose
+	//
 	logger.Info("Submitting proposals", zap.Int("count", len(descriptionToProposalConfig)))
 	descriptionToProposalId, err := SubmitProposalList(
 		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
@@ -28,17 +80,32 @@ func ProposeAndVoteList(
 		return fmt.Errorf("failed to submit proposal list, %w", err)
 	}
 	logger.Info("Successfully submitted proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
-	//
-	// Vote
-	//
-	logger.Info("Voting on proposals", zap.Int("count", len(descriptionToProposalConfig)))
-	err = VoteOnProposalList(
-		descriptionToProposalId, proposerVegawallet, dataNodeClient, logger,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to vote on proposal list, %w", err)
+	if vote {
+		//
+		// Vote
+		//
+		logger.Info("Voting on proposals", zap.Int("count", len(descriptionToProposalConfig)))
+		err = VoteOnProposalList(
+			descriptionToProposalId, proposerVegawallet, dataNodeClient, logger,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to vote on proposal list, %w", err)
+		}
+		logger.Info("Successfully voted on proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
 	}
-	logger.Info("Successfully voted on proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
+	if vote && wait {
+		//
+		// Wait
+		//
+		logger.Info("Waiting for Enactment of proposals", zap.Int("count", len(descriptionToProposalConfig)))
+		err = WaitForEnactList(
+			descriptionToProposalId, dataNodeClient, logger,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to vote on proposal list, %w", err)
+		}
+		logger.Info("Successfully Enacted all proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
+	}
 	return nil
 }
 

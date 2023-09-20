@@ -124,7 +124,7 @@ func fetchVoteByProposalIdAndVoter(
 		PartyId:    &voterPartyId,
 	})
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	if len(voteEdges.Votes.Edges) > 1 {
 		// This is Vega Network issue
