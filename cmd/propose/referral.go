@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/proposal"
 	"github.com/vegaprotocol/devopstools/proposal/referral"
+	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
@@ -84,6 +85,10 @@ func RunReferral(args ReferralArgs) error {
 	// Setup Referral Program
 	//
 	if args.SetupReferralProgram {
+		err = setupNetworkParametersToSetupReferralProgram(network, logger)
+		if err != nil {
+			return err
+		}
 		//
 		// Propose
 		//
@@ -113,6 +118,30 @@ func RunReferral(args ReferralArgs) error {
 			return fmt.Errorf("voting on Referral Program failed %w", err)
 		}
 		logger.Info("Successfully voted on Referral Program", zap.String("proposalId", proposalId))
+	}
+	return nil
+}
+
+func setupNetworkParametersToSetupReferralProgram(
+	network *veganetwork.VegaNetwork,
+	logger *zap.Logger,
+) error {
+	updateCount, err := ProposeAndVoteOnNetworkParamtersAndWait(
+		map[string]string{
+			"governance.proposal.referralProgram.minEnact": "5s",
+			"governance.proposal.referralProgram.minClose": "5s",
+			"referralProgram.maxReferralTiers":             "3",
+			"referralProgram.maxReferralDiscountFactor":    "0.02",
+			"referralProgram.maxReferralRewardFactor":      "0.02",
+		}, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
+	)
+	if err != nil {
+		return err
+	}
+	if updateCount > 0 {
+		if err := network.RefreshNetworkParams(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

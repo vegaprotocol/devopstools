@@ -15,6 +15,34 @@ import (
 	"go.uber.org/zap"
 )
 
+func ProposeAndVoteList(
+	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
+	proposerVegawallet *wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	logger *zap.Logger,
+) error {
+	logger.Info("Submitting proposals", zap.Int("count", len(descriptionToProposalConfig)))
+	descriptionToProposalId, err := SubmitProposalList(
+		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to submit proposal list, %w", err)
+	}
+	logger.Info("Successfully submitted proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
+	//
+	// Vote
+	//
+	logger.Info("Voting on proposals", zap.Int("count", len(descriptionToProposalConfig)))
+	err = VoteOnProposalList(
+		descriptionToProposalId, proposerVegawallet, dataNodeClient, logger,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to vote on proposal list, %w", err)
+	}
+	logger.Info("Successfully voted on proposals", zap.Int("count", len(descriptionToProposalId)), zap.Any("details", descriptionToProposalId))
+	return nil
+}
+
 func ProposeAndVote(
 	logger *zap.Logger,
 	proposerVegawallet *wallet.VegaWallet,

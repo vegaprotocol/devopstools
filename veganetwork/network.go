@@ -41,6 +41,8 @@ type VegaNetwork struct {
 	WalletManager         *wallet.WalletManager
 	EthClient             *ethclient.Client
 	NodeSecretStore       secrets.NodeSecretStore
+
+	logger *zap.Logger
 }
 
 func NewVegaNetwork(
@@ -60,42 +62,13 @@ func NewVegaNetwork(
 			SmartContractsManager: smartContractsManager,
 			WalletManager:         walletManager,
 			NodeSecretStore:       nodeSecretStore,
+			logger:                logger,
 		}
 		errMsg = "failed to create VegaNetwork for: %w"
 		err    error
 	)
 
-	// Read and parse some Network Parameters
-	networkParams, err := n.DataNodeClient.GetAllNetworkParameters()
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
-	n.NetworkParams = types.NewNetworkParams(networkParams)
-	n.EthereumConfig, err = n.NetworkParams.GetEthereumConfig()
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
-	n.EthNetwork, err = types.GetEthNetworkForId(n.EthereumConfig.ChainId)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
-
-	n.EthClient, err = n.EthClientManager.GetEthClient(n.EthNetwork)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
-
-	// Setup Smart Contracts
-	n.SmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
-		n.EthClient,
-		"", // will be taken from Staking Bridge
-		"", // will be taken from ERC20 Bridge
-		n.EthereumConfig.CollateralBridgeContract.Address,
-		n.EthereumConfig.MultisigControlContract.Address,
-		n.EthereumConfig.StakingBridgeContract.Address,
-		logger,
-	)
-	if err != nil {
+	if err = n.RefreshNetworkParams(); err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
 
@@ -133,4 +106,41 @@ func NewVegaNetwork(
 }
 
 func (n *VegaNetwork) Disconnect() {
+}
+
+func (n *VegaNetwork) RefreshNetworkParams() error {
+	// Read and parse some Network Parameters
+	networkParams, err := n.DataNodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return err
+	}
+	n.NetworkParams = types.NewNetworkParams(networkParams)
+	n.EthereumConfig, err = n.NetworkParams.GetEthereumConfig()
+	if err != nil {
+		return err
+	}
+	n.EthNetwork, err = types.GetEthNetworkForId(n.EthereumConfig.ChainId)
+	if err != nil {
+		return err
+	}
+
+	n.EthClient, err = n.EthClientManager.GetEthClient(n.EthNetwork)
+	if err != nil {
+		return err
+	}
+
+	// Setup Smart Contracts
+	n.SmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
+		n.EthClient,
+		"", // will be taken from Staking Bridge
+		"", // will be taken from ERC20 Bridge
+		n.EthereumConfig.CollateralBridgeContract.Address,
+		n.EthereumConfig.MultisigControlContract.Address,
+		n.EthereumConfig.StakingBridgeContract.Address,
+		n.logger,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
