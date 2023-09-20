@@ -8,8 +8,8 @@ import (
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/proposal"
-	"github.com/vegaprotocol/devopstools/proposal/referral"
+	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/governance/referral"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -97,7 +97,7 @@ func RunReferral(args ReferralArgs) error {
 		//
 		// Propose & Vote & Wait
 		//
-		err = proposal.ProposeVoteAndWait(
+		err = governance.ProposeVoteAndWait(
 			"Referall Program proposal", proposalConfig, proposerVegawallet, network.DataNodeClient, logger,
 		)
 		if err != nil {
