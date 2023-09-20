@@ -39,6 +39,7 @@ type VegaCoreClient interface {
 type DataNodeClient interface {
 	VegaCoreClient
 	GetAllNetworkParameters() (map[string]string, error)
+	ListNetworkParameters(req *dataapipb.ListNetworkParametersRequest) (response *dataapipb.ListNetworkParametersResponse, err error)
 	GetCurrentEpoch() (*vega.Epoch, error)
 	GetAssets() (map[string]*vega.AssetDetails, error)
 	GetAllMarkets() ([]*vega.Market, error)
@@ -55,4 +56,6 @@ type DataNodeClient interface {
 	ListGovernanceData(
 		req *dataapipb.ListGovernanceDataRequest,
 	) (response *dataapipb.ListGovernanceDataResponse, err error)
+	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
+	GetCurrentReferralProgram() (*dataapipb.ReferralProgram, error)
 }
