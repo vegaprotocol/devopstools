@@ -40,7 +40,7 @@ func VoteOnProposal(
 	//
 	// Find Vote
 	//
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		time.Sleep(time.Second * 3)
 		vote, err := fetchVoteByProposalIdAndVoter(
 			proposalId, voterVegawallet.PublicKey, dataNodeClient,
@@ -83,7 +83,7 @@ func VoteOnProposalList(
 	// Find Votes
 	//
 	proposalIdToVote := map[string]string{}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		time.Sleep(time.Second * 3)
 		for _, proposalId := range descriptionToProposalId {
 			// skip already fetched proposals

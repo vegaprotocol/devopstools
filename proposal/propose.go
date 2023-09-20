@@ -39,7 +39,7 @@ func SubmitProposal(
 	//
 	// Find Proposal
 	//
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		time.Sleep(time.Second * 3)
 		proposal, err := fetchProposalByReferenceAndProposer(
 			reference, proposerVegawallet.PublicKey, dataNodeClient,
@@ -80,7 +80,7 @@ func SubmitProposalList(
 	// Find ProposalIds
 	//
 	descriptionToProposalId := map[string]string{}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		time.Sleep(time.Second * 3)
 		for description, proposalConfig := range descriptionToProposalConfig {
 			// skip already fetched proposals
