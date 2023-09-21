@@ -1,4 +1,4 @@
-package proposal
+package governance
 
 import (
 	"fmt"
@@ -117,20 +117,14 @@ func fetchProposalByReferenceAndProposer(
 	proposerPartyId string,
 	dataNodeClient vegaapi.DataNodeClient,
 ) (*vega.Proposal, error) {
-	proposalEdges, err := dataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
-		ProposalReference: &reference,
-		ProposerPartyId:   &proposerPartyId,
+	res, err := dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
+		Reference: &reference,
 	})
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	if len(proposalEdges.Connection.Edges) > 1 {
-		// This is Vega Network issue
-		return nil, fmt.Errorf("found more than 1 proposal for reference %s: %+v",
-			reference, proposalEdges.Connection.Edges,
-		)
-	} else if len(proposalEdges.Connection.Edges) == 1 {
-		proposal := proposalEdges.Connection.Edges[0].Node.Proposal
+	if res != nil {
+		proposal := res.Data.Proposal
 		if slices.Contains(
 			[]vega.Proposal_State{vega.Proposal_STATE_FAILED, vega.Proposal_STATE_REJECTED, vega.Proposal_STATE_DECLINED},
 			proposal.State,
@@ -138,6 +132,7 @@ func fetchProposalByReferenceAndProposer(
 			return nil, fmt.Errorf("proposal '%s' is in wrong state %s: %+v", proposal.Rationale.Title, proposal.State.String(), proposal)
 		}
 		return proposal, nil
+
 	}
 	return nil, nil
 }

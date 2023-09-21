@@ -56,6 +56,7 @@ type DataNodeClient interface {
 	ListGovernanceData(
 		req *dataapipb.ListGovernanceDataRequest,
 	) (response *dataapipb.ListGovernanceDataResponse, err error)
+	GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error)
 	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
 	GetCurrentReferralProgram() (*dataapipb.ReferralProgram, error)
 }

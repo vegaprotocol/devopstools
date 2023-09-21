@@ -10,9 +10,9 @@ import (
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/proposal"
-	"github.com/vegaprotocol/devopstools/proposal/market"
-	"github.com/vegaprotocol/devopstools/proposal/networkparameters"
+	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/governance/market"
+	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"go.uber.org/zap"
@@ -195,7 +195,7 @@ func RunPropose(args ProposeArgs) error {
 		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 
-		if err := proposal.ProposeAndVote(logger, proposerVegawallet, network.DataNodeClient, p); err != nil {
+		if err := governance.ProposeAndVote(logger, proposerVegawallet, network.DataNodeClient, p); err != nil {
 			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
 		}
 	}
@@ -218,7 +218,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_AAPL_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"AAPL", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_AAPL_MARKER, sub, logger,
 			)
@@ -237,7 +237,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_AAVEDAI_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"AAVEDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_AAVEDAI_MARKER, sub, logger,
 			)
@@ -255,7 +255,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_BTCUSD_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"BTCUSD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_BTCUSD_MARKER, sub, logger,
 			)
@@ -274,7 +274,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_ETHBTC_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"ETHBTC", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_ETHBTC_MARKER, sub, logger,
 			)
@@ -292,7 +292,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_TSLA_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"TSLA", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_TSLA_MARKER, sub, logger,
 			)
@@ -310,7 +310,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_UNIDAI_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"UNIDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_UNIDAI_MARKER, sub, logger,
 			)
@@ -329,7 +329,7 @@ func RunPropose(args ProposeArgs) error {
 				closingTime, enactmentTime,
 				[]string{MARKET_ETHDAI_MARKER},
 			)
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"ETHDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				oraclePubKey, closingTime, enactmentTime, MARKET_ETHDAI_MARKER, sub, logger,
 			)
@@ -350,7 +350,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityBTCUSD230630MetadataID, sub, logger,
 			)
@@ -371,7 +371,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityETHUSD230630MetadataID, sub, logger,
 			)
@@ -392,7 +392,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityLinkUSD230630MetadataID, sub, logger,
 			)
@@ -413,7 +413,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, market.PerpetualBTCUSD, sub, logger,
 			)
@@ -434,7 +434,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualLINKUSDOracleAddress, closingTime, enactmentTime, market.PerpetualLINKUSD, sub, logger,
 			)
@@ -455,7 +455,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual DAI USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualDAIUSDOracleAddress, closingTime, enactmentTime, market.PerpetualDAIUSD, sub, logger,
 			)
@@ -476,7 +476,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualETHUSDOracleAddress, closingTime, enactmentTime, market.PerpetualETHUSD, sub, logger,
 			)
@@ -497,7 +497,7 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			resultsChannel <- proposal.ProposeVoteProvideLP(
+			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual EUR USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
 			)

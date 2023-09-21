@@ -54,3 +54,26 @@ func (n *DataNode) ListVotes(req *dataapipb.ListVotesRequest) (response *dataapi
 	}
 	return
 }
+
+func (n *DataNode) GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error) {
+	msg := "gRPC call failed (data-node): GetGovernanceData: %w"
+	if n == nil {
+		err = fmt.Errorf(msg, e.ErrNil)
+		return
+	}
+
+	if n.Conn.GetState() != connectivity.Ready {
+		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
+		return
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	defer cancel()
+
+	response, err = c.GetGovernanceData(ctx, req)
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return
+}

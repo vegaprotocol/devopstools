@@ -1,4 +1,4 @@
-package proposal
+package governance
 
 import (
 	"fmt"
@@ -53,7 +53,7 @@ func submitTx(
 			zap.Any("txReq", submitReq.String()), zap.String("response", fmt.Sprintf("%#v", submitResponse)))
 		return err
 	}
-	logger.Info("Successful Submision of Market Proposal", zap.String("description", description),
+	logger.Info("Successful Submision of Transaction", zap.String("description", description),
 		zap.String("proposer", proposerVegawallet.PublicKey), zap.String("txHash", submitResponse.TxHash),
 		zap.Any("response", submitResponse))
 

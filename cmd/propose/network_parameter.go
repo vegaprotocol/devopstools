@@ -10,8 +10,8 @@ import (
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/proposal"
-	"github.com/vegaprotocol/devopstools/proposal/networkparameters"
+	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/wallet"
@@ -99,7 +99,7 @@ func RunNetworkParameter(args NetworkParameterArgs) error {
 
 		logger.Info("Submitting Update Network Paramter proposal", zap.Any("proposal", proposalConfig))
 
-		proposalId, err := proposal.SubmitProposal(
+		proposalId, err := governance.SubmitProposal(
 			"Update Network Parameter", proposerVegawallet, proposalConfig, network.DataNodeClient, logger,
 		)
 
@@ -112,7 +112,7 @@ func RunNetworkParameter(args NetworkParameterArgs) error {
 		// Vote
 		//
 		logger.Info("Voting on Update Network Paramter", zap.String("proposalId", proposalId))
-		err = proposal.VoteOnProposal(
+		err = governance.VoteOnProposal(
 			"Whale vote on Update Network Paramter proposal", proposalId, proposerVegawallet, network.DataNodeClient, logger,
 		)
 		if err != nil {
@@ -165,7 +165,7 @@ func ProposeAndVoteOnNetworkParamters(
 	//
 	// Propose & Vote
 	//
-	err = proposal.ProposeAndVoteList(
+	err = governance.ProposeVoteAndWaitList(
 		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
 	)
 	if err != nil {
@@ -173,24 +173,4 @@ func ProposeAndVoteOnNetworkParamters(
 	}
 
 	return int64(len(descriptionToProposalConfig)), nil
-}
-
-func ProposeAndVoteOnNetworkParamtersAndWait(
-	nameToValue map[string]string,
-	proposerVegawallet *wallet.VegaWallet,
-	networkParams *types.NetworkParams,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (int64, error) {
-	updateCount, err := ProposeAndVoteOnNetworkParamters(
-		nameToValue, proposerVegawallet, networkParams, dataNodeClient, logger,
-	)
-	if err != nil {
-		return 0, err
-	}
-	// TODO wait
-	if updateCount > 0 {
-		time.Sleep(time.Minute)
-	}
-	return updateCount, nil
 }
