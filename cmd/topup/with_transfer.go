@@ -1,17 +1,15 @@
 package topup
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
-	"net/http"
 	"os"
 	"time"
 
 	"code.vegaprotocol.io/vega/protos/vega"
 	"github.com/spf13/cobra"
+	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"go.uber.org/zap"
@@ -49,29 +47,11 @@ func init() {
 
 	TopUpCmd.AddCommand(topUpWithTransferCmd)
 	topUpWithTransferCmd.PersistentFlags().StringVar(&topUpWithTransferArgs.VegaNetworkName, "network", "", "Vega Network name")
-	topUpWithTransferCmd.PersistentFlags().StringVar(&topUpWithTransferArgs.TradersURL, "traders-url", "", "Traders URL")
 	if err := topUpWithTransferCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	if err := topUpWithTransferCmd.MarkPersistentFlagRequired("traders-url"); err != nil {
-		log.Fatalf("%v\n", err)
-	}
+	topUpWithTransferCmd.PersistentFlags().StringVar(&topUpWithTransferArgs.TradersURL, "traders-url", "", "Traders URL")
 }
-
-type Trader struct {
-	Name       string `json:"name"`
-	PublicKey  string `json:"pubKey"`
-	Parameters struct {
-		Base                      string  `json:"marketBase"`
-		Quote                     string  `json:"marketQuote"`
-		SettlementContractAddress string  `json:"marketSettlementEthereumContractAddress"`
-		SettlementVegaAssetID     string  `json:"marketSettlementVegaAssetID"`
-		WantedTokens              float64 `json:"wanted_tokens"`
-		CurrentBalance            float64 `json:"balance"`
-	} `json:"parameters"`
-}
-
-type TraderList map[string]Trader
 
 type AssetTopUp struct {
 	Symbol          string
@@ -92,14 +72,14 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		return fmt.Errorf("failed to get assets from datanode: %w", err)
 	}
 
-	traders, err := tools.RetryReturn(10, 5*time.Second, func() (*TraderList, error) {
-		return readTraders(args.TradersURL)
+	traders, err := tools.RetryReturn(10, 5*time.Second, func() (map[string]bots.BotTraders, error) {
+		return bots.GetBotTradersWithURL(args.VegaNetworkName, args.TradersURL)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to read traders: %w", err)
 	}
 
-	topUpRegistry, err := determineTradersTopUpAmount(networkAssets, *traders)
+	topUpRegistry, err := determineTradersTopUpAmount(networkAssets, traders)
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the assets: %w", err)
 	}
@@ -178,7 +158,7 @@ func determineWhaleTopUpAmount(
 	return result, nil
 }
 
-func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders TraderList) (map[string]AssetTopUp, error) {
+func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders map[string]bots.BotTraders) (map[string]AssetTopUp, error) {
 	topUpRegistry := map[string]AssetTopUp{}
 
 	for _, traderDetails := range traders {
@@ -193,7 +173,7 @@ func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders T
 		if _, registryExists := topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID]; !registryExists {
 			topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID] = AssetTopUp{
 				Symbol:          assetDetails.Symbol,
-				ContractAddress: traderDetails.Parameters.SettlementContractAddress,
+				ContractAddress: traderDetails.Parameters.SettlementEthereumContractAddress,
 				VegaAssetId:     traderDetails.Parameters.SettlementVegaAssetID,
 				TotalAmount:     big.NewFloat(0),
 				Parties:         map[string]*big.Float{},
@@ -212,7 +192,7 @@ func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders T
 			continue
 		}
 
-		currentEntry.Parties[traderDetails.PublicKey] = big.NewFloat(requiredTopUp)
+		currentEntry.Parties[traderDetails.PubKey] = big.NewFloat(requiredTopUp)
 		currentEntry.TotalAmount = big.NewFloat(0.0).Add(currentEntry.TotalAmount, big.NewFloat(requiredTopUp))
 
 		// topUpAmountWithZeros := big.NewInt(0).
@@ -239,41 +219,4 @@ func necessaryTopUp(currentBalance, wantedBalance, factor float64) float64 {
 
 	// top up not required
 	return 0
-}
-
-func readTraders(tradersURL string) (*TraderList, error) {
-	tr := &http.Transport{
-		IdleConnTimeout:       30 * time.Second,
-		DisableCompression:    true,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-	}
-
-	client := &http.Client{
-		Transport: tr,
-	}
-	resp, err := client.Get(tradersURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send get request to %s: %w", tradersURL, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received invalid http code from the %s: got %d, expected 200", tradersURL, resp.StatusCode)
-	}
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	response := struct {
-		Traders TraderList `json:"traders"`
-	}{}
-
-	if err := json.Unmarshal(bodyBytes, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal traders response: %w", err)
-	}
-
-	return &response.Traders, nil
 }
