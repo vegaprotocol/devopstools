@@ -13,6 +13,7 @@ import (
 type ResearchBotsArgs struct {
 	*BotsArgs
 	BotsAPIToken string
+	WithSecrets  bool
 }
 
 var researchBotsArgs ResearchBotsArgs
@@ -35,10 +36,22 @@ func init() {
 
 	BotsCmd.AddCommand(researchBotsCmd)
 	researchBotsCmd.PersistentFlags().StringVar(&researchBotsArgs.BotsAPIToken, "bots-api-token", "", "API Token for bots endpoint to get private keys")
+	researchBotsCmd.PersistentFlags().BoolVar(&researchBotsArgs.WithSecrets, "with-secrets", false, "Get the API Token from vault")
 }
 
 func RunResearchBots(args ResearchBotsArgs) error {
-	traders, err := bots.GetResearchBots(args.VegaNetworkName, args.BotsAPIToken)
+	botsAPIToken := args.BotsAPIToken
+	if len(botsAPIToken) == 0 && args.WithSecrets {
+		network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
+		if err != nil {
+			return err
+		}
+		defer network.Disconnect()
+
+		botsAPIToken = network.BotsApiToken
+	}
+
+	traders, err := bots.GetResearchBots(args.VegaNetworkName, botsAPIToken)
 	if err != nil {
 		return err
 	}
