@@ -25,6 +25,7 @@ type VegaNetwork struct {
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *wallet.EthWallet
 	AssetMainWallet   *wallet.EthWallet
+	BotsApiToken      string
 
 	MarketsCreator *secrets.VegaWalletPrivate
 	VegaTokenWhale *wallet.VegaWallet
@@ -41,6 +42,7 @@ type VegaNetwork struct {
 	WalletManager         *wallet.WalletManager
 	EthClient             *ethclient.Client
 	NodeSecretStore       secrets.NodeSecretStore
+	ServiceSecretStore    secrets.ServiceSecretStore
 
 	logger *zap.Logger
 }
@@ -49,6 +51,7 @@ func NewVegaNetwork(
 	network string,
 	dataNodeClient vegaapi.DataNodeClient,
 	nodeSecretStore secrets.NodeSecretStore,
+	serviceSecretStore secrets.ServiceSecretStore,
 	ethClientManager *ethutils.EthereumClientManager,
 	smartContractsManager *smartcontracts.SmartContractsManager,
 	walletManager *wallet.WalletManager,
@@ -62,6 +65,7 @@ func NewVegaNetwork(
 			SmartContractsManager: smartContractsManager,
 			WalletManager:         walletManager,
 			NodeSecretStore:       nodeSecretStore,
+			ServiceSecretStore:    serviceSecretStore,
 			logger:                logger,
 		}
 		errMsg = "failed to create VegaNetwork for: %w"
@@ -98,6 +102,10 @@ func NewVegaNetwork(
 		return nil, fmt.Errorf(errMsg, err)
 	}
 	n.VegaTokenWhale, err = n.WalletManager.GetVegaTokenWhaleVegaWallet()
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, err)
+	}
+	n.BotsApiToken, err = n.ServiceSecretStore.GetBotsApiToken()
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

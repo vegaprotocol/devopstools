@@ -48,3 +48,11 @@ func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
 	}
 	return secret["api_token"].(string), nil
 }
+
+func (c *HCVaultSecretStore) GetBotsApiToken() (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, "bots")
+	if err != nil {
+		return "", err
+	}
+	return secret["api_token"].(string), nil
+}
