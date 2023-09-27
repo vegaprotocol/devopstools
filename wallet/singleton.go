@@ -12,6 +12,8 @@ var (
 		HDWallet *wallet.HDWallet
 		KeyPair  map[uint32]*VegaWallet
 	}{}
+
+	walletByPubKey = map[string]*VegaWallet{}
 )
 
 func GetVegaWalletSingleton(
@@ -33,6 +35,7 @@ func GetVegaWalletSingleton(
 			KeyPair  map[uint32]*VegaWallet
 		}{
 			HDWallet: hdWallet,
+			KeyPair:  map[uint32]*VegaWallet{},
 		}
 	}
 	wallet := walletSingletons[recoveryPhrase]
@@ -52,7 +55,7 @@ func GetVegaWalletSingleton(
 			if _, keyPairForNewIndexAlreadyExists := wallet.KeyPair[index]; keyPairForNewIndexAlreadyExists {
 				return nil, fmt.Errorf("%s, double generated key pair for index %d", errMsg, newIndex)
 			}
-			walletSingletons[recoveryPhrase].KeyPair[newIndex] = &VegaWallet{
+			newWallet := &VegaWallet{
 				VegaWalletPrivate: &secrets.VegaWalletPrivate{
 					Id:             wallet.HDWallet.ID(),
 					PublicKey:      nextKeyPair.PublicKey(),
@@ -62,10 +65,19 @@ func GetVegaWalletSingleton(
 				hdWallet: wallet.HDWallet,
 				keyPair:  nextKeyPair,
 			}
+			walletSingletons[recoveryPhrase].KeyPair[newIndex] = newWallet
+			walletByPubKey[newWallet.PublicKey] = newWallet
 			if newIndex == index {
 				break
 			}
 		}
 	}
 	return walletSingletons[recoveryPhrase].KeyPair[index], nil
+}
+
+func GetWalletForPubKey(pubKey string) *VegaWallet {
+	if wallet, ok := walletByPubKey[pubKey]; ok {
+		return wallet
+	}
+	return nil
 }

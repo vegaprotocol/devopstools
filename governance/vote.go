@@ -33,7 +33,7 @@ func VoteOnProposal(
 			},
 		},
 	}
-	if err := submitTx(voteDescription, dataNodeClient, voterVegawallet, logger, &voteWalletTxReq); err != nil {
+	if err := SubmitTx(voteDescription, dataNodeClient, voterVegawallet, logger, &voteWalletTxReq); err != nil {
 		return err
 	}
 
@@ -75,7 +75,7 @@ func VoteOnProposalList(
 				},
 			},
 		}
-		if err := submitTx(description, dataNodeClient, voterVegawallet, logger, &voteWalletTxReq); err != nil {
+		if err := SubmitTx(description, dataNodeClient, voterVegawallet, logger, &voteWalletTxReq); err != nil {
 			return err
 		}
 	}
