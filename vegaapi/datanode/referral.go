@@ -56,7 +56,9 @@ func (n *DataNode) ListReferralSets() ([]vegaTypes.ReferralSet, error) {
 	}
 	referralSets := make([]vegaTypes.ReferralSet, len(res.ReferralSets.Edges))
 	for i, edge := range res.ReferralSets.Edges {
-		referralSets[i] = *edge.Node
+		referralSets[i] = vegaTypes.ReferralSet{
+			ID: vegaTypes.ReferralSetID(edge.Node.Id),
+		}
 	}
 	return referralSets, nil
 }
