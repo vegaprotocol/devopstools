@@ -43,15 +43,15 @@ func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime tim
 						},
 						StakingTiers: []*vega.StakingTier{
 							{
-								MinimumStakedTokens:      "100",
+								MinimumStakedTokens:      "1",
 								ReferralRewardMultiplier: "1",
 							},
 							{
-								MinimumStakedTokens:      "1000",
+								MinimumStakedTokens:      "2",
 								ReferralRewardMultiplier: "2",
 							},
 							{
-								MinimumStakedTokens:      "10000",
+								MinimumStakedTokens:      "3",
 								ReferralRewardMultiplier: "3",
 							},
 						},
