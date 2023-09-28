@@ -114,7 +114,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 	}
 
-	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
+	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 || env == types.NetworkFairground {
 		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
 		result.PerpetualEURUSD = args.ProposePerpetualEURUSD || args.ProposeAll
 		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
