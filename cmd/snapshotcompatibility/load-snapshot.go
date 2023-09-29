@@ -22,7 +22,6 @@ import (
 var (
 	VegaSnapshotPath   = filepath.Join("state", "node", "snapshots")
 	VegaCoreConfigPath = filepath.Join("config", "node", "config.toml")
-	RemoteVegaPath     = "/home/vega/vegavisor_home/current/vega"
 )
 
 type LoadSnapshotArgs struct {
@@ -31,7 +30,6 @@ type LoadSnapshotArgs struct {
 	VegacapsuleHome   string
 	VegacapsuleBinary string
 	VegaBinary        string
-	RemoteVegaBinary  string
 
 	SnapshotServerHost     string
 	SnapshotRemoteLocation string
@@ -97,7 +95,6 @@ var loadSnapshotCmd = &cobra.Command{
 			loadSnapshotArgs.SnapshotServerKeyFile,
 			loadSnapshotArgs.SnapshotRemoteLocation,
 			loadSnapshotArgs.VegaBinary,
-			loadSnapshotArgs.RemoteVegaBinary,
 			loadSnapshotArgs.VegacapsuleBinary,
 			loadSnapshotArgs.VegacapsuleHome,
 		); err != nil {
@@ -117,9 +114,7 @@ func init() {
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.VegaBinary, "vega-binary", "vega", "Path to the vega executable on local machine")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.RemoteVegaBinary, "remote-vega-binary", RemoteVegaPath, "Path to the vega executable on remote machine")
+		StringVar(&loadSnapshotArgs.VegaBinary, "vega-binary", "vega", "Path to the vega executable")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegacapsuleBinary, "vegacapsule-binary", "vegacapsule", "Path to the vegacapsule executable")
 	loadSnapshotCmd.PersistentFlags().
@@ -156,7 +151,7 @@ func vegacapsuleValidatorsCoreHomePaths(
 func runLoadSnapshot(
 	logger *zap.Logger,
 	snapshotServerHost, snapshotServerUser, snapshotServerKeyFile, snapshotRemoteLocation string,
-	vegaBinary, RemoteVegaBinary, vegacapsuleBinary, vegacapsuleHome string,
+	vegaBinary, vegacapsuleBinary, vegacapsuleHome string,
 ) error {
 	validatorHomePaths, err := vegacapsuleValidatorsCoreHomePaths(
 		vegacapsuleBinary,
@@ -189,7 +184,6 @@ func runLoadSnapshot(
 	err = tools.RetryRun(3, 5*time.Second, func() error {
 		logger.Info("Trying to copy snapshot.db on remote server into temporary location")
 		return copySnapshotOnRemote(logger,
-			RemoteVegaBinary,
 			sshClient,
 			snapshotRemoteLocation,
 			snapshotRemoteTempLocation)
@@ -229,9 +223,7 @@ func runLoadSnapshot(
 	logger.Info("Snapshot database downloaded")
 
 	logger.Info("Selecting block height for the restart")
-	restartHeight, err := tools.RetryReturn(3, 5*time.Second, func() (int, error) {
-		return selectSnapshotHeight(vegaBinary, filepath.Join(tempDir, "snapshots"))
-	})
+	restartHeight, err := selectSnapshotHeight(vegaBinary, filepath.Join(tempDir, "snapshots"))
 	if err != nil {
 		return fmt.Errorf("failed to select height for network start: %w", err)
 	}
@@ -259,7 +251,7 @@ func runLoadSnapshot(
 		if _, err := tools.ExecuteBinary(vegaBinary, []string{"unsafe_reset_all", "--home", validatorHomePath}, nil); err != nil {
 			return fmt.Errorf("failed to unsafe reset all for home %s: %w", validatorHomePath, err)
 		}
-		logger.Info("Unsafe reset all successful")
+		logger.Info("Unsafe reset all succesfull")
 
 		logger.Info(
 			"Loading snapshot database into the core node",
@@ -293,7 +285,6 @@ func remoteCleanup(logger *zap.Logger, sshClient *sshlib.Client, filePath string
 }
 
 func copySnapshotOnRemote(logger *zap.Logger,
-	RemoteVegaBinary string,
 	sshClient *sshlib.Client,
 	source, destination string,
 ) error {
@@ -302,11 +293,6 @@ func copySnapshotOnRemote(logger *zap.Logger,
 		zap.String("filepath", destination))
 
 	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
-		logger.Error(
-			"failed to cleanup on remote",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
 		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
 	}
 
@@ -315,11 +301,6 @@ func copySnapshotOnRemote(logger *zap.Logger,
 		zap.String("command", mkdirCommand))
 
 	if stdout, err := ssh.RunCommandWithClient(sshClient, mkdirCommand); err != nil {
-		logger.Error(
-			"failed to ensure destination directory exists",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
 		return fmt.Errorf("failed to ensure destination directory exists: output: %s: %s", stdout, err)
 	}
 
@@ -328,24 +309,7 @@ func copySnapshotOnRemote(logger *zap.Logger,
 	logger.Info("Copying snapshot db to temp location",
 		zap.String("command", copyCommand))
 	if stdout, err := ssh.RunCommandWithClient(sshClient, copyCommand); err != nil {
-		logger.Error(
-			fmt.Sprintf("failed to copy snapshot from %s to %s on remote: output", source, destination),
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
 		return fmt.Errorf("failed to copy snapshot from %s to %s on remote: output: %s: %s", source, destination, stdout, err)
-	}
-
-	checkCommand := fmt.Sprintf("%s tools snapshot --db-path '%s'", RemoteVegaBinary, destination)
-	logger.Info("Checking if copied snapshot was copied correctly",
-		zap.String("command", checkCommand))
-	if stdout, err := ssh.RunCommandWithClient(sshClient, checkCommand); err != nil {
-		logger.Error(
-			"failed to check if snapshot was correctly copied on remote",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to check if snapshot was correctly copied on remote: output: %s: %w", stdout, err)
 	}
 
 	return nil
