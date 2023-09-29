@@ -117,6 +117,29 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		}
 	}
 
+	args.Logger.Info("waiting for money to appear on the whale wallet")
+
+	// wait for money
+	for assetId, amount := range whaleTopUpRegistry {
+		assetDetails := networkAssets[assetId]
+		if err := tools.RetryRun(15, 6*time.Second, func() error {
+			return waitForMoney(
+				network.DataNodeClient,
+				network.VegaTokenWhale.PublicKey,
+				assetId,
+				assetDetails,
+				amount,
+			)
+		}); err != nil {
+			return fmt.Errorf(
+				"failed to wait for money on whale wallet: waiting for money to appear on whale account for token %s timed out",
+				assetDetails.Name,
+			)
+		}
+
+		args.Logger.Info("Whale has enough tokens", zap.String("asset", assetDetails.Name))
+	}
+
 	stats, err := transferMoneyFromWhaleToBots(
 		args.Logger,
 		network,
@@ -135,6 +158,35 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to transfer money from whale to bots for one or more parties: %w", err)
+	}
+
+	return nil
+}
+
+func waitForMoney(
+	dataNodeClient vegaapi.DataNodeClient,
+	partyId, vegaAssetId string,
+	assetDetails *vega.AssetDetails,
+	requiredMoney *big.Float,
+) error {
+	whaleFund, err := dataNodeClient.GetFunds(partyId, vega.AccountType_ACCOUNT_TYPE_GENERAL, &vegaAssetId)
+	if err != nil {
+		return fmt.Errorf("failed to get funds for whale(%s): %w", partyId, err)
+	}
+
+	requiredFunds, _ := requiredMoney.Int64()
+	requiredFundsWithZeros := big.NewInt(0).
+		Mul(
+			big.NewInt(requiredFunds),
+			big.NewInt(0).Exp(big.NewInt(10), big.NewInt(int64(assetDetails.Decimals)), nil),
+		)
+	whaleFundsWithZeros := big.NewInt(0)
+	if len(whaleFund) > 0 {
+		whaleFundsWithZeros = whaleFund[0].Balance
+	}
+
+	if whaleFundsWithZeros.Cmp(requiredFundsWithZeros) < 0 {
+		return fmt.Errorf("whale wallet does not have enough tokens")
 	}
 
 	return nil
