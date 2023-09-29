@@ -12,6 +12,7 @@ import (
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
@@ -79,7 +80,7 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		return fmt.Errorf("failed to read traders: %w", err)
 	}
 
-	tradersTopUpRegistry, err := determineTradersTopUpAmount(networkAssets, traders)
+	tradersTopUpRegistry, err := determineTradersTopUpAmount(args.Logger, networkAssets, traders)
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the assets: %w", err)
 	}
@@ -90,7 +91,7 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		network.DataNodeClient,
 		networkAssets,
 		tradersTopUpRegistry,
-		"654ba5bbe6fdf20df104b7d8009ca5e0a3cdc69693a47f62bb24adb2f9158313",
+		network.VegaTokenWhale.PublicKey,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to compute top up amount for whale: %w", err)
@@ -99,17 +100,45 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 	for assetId, amount := range whaleTopUpRegistry {
 		fmt.Printf("whale top up %s: %s", assetId, amount.String())
 
-		if err := depositToParty(); err != nil {
-			return fmt.Errorf("Failed to deposit %s: %w", assetId, err)
+		if err := depositToWhale(
+			args.Logger,
+			network,
+			network.VegaTokenWhale.PublicKey,
+			networkAssets[assetId],
+			amount,
+		); err != nil {
+			return fmt.Errorf("failed to deposit %s: %w", assetId, err)
 		}
 	}
-
-	fmt.Printf("%v", tradersTopUpRegistry)
 
 	return nil
 }
 
-func depositToParty() error {
+// func transferMoneyFromWhale(whaleWallet *wallet.VegaWallet, registry map[string]AssetTopUp) {
+// 	whaleWallet.
+// }
+
+func depositToWhale(
+	logger *zap.Logger,
+	network *veganetwork.VegaNetwork,
+	partyId string,
+	asset *vega.AssetDetails,
+	amount *big.Float,
+) error {
+	if asset.GetErc20() == nil {
+		return fmt.Errorf("Token %s is not an erc20 token", asset.Symbol)
+	}
+
+	if err := depositERC20TokenToParties(
+		network,
+		asset.GetErc20().ContractAddress,
+		[]string{partyId},
+		amount,
+		logger,
+	); err != nil {
+		return fmt.Errorf("failed to deposit erc20 token: %w", err)
+	}
+
 	return nil
 }
 
@@ -146,6 +175,11 @@ func determineWhaleTopUpAmount(
 		if len(whaleFund) > 0 {
 			whaleFundsWithZeros = whaleFund[0].Balance
 		}
+		whaleFunds := big.NewInt(0).
+			Div(
+				whaleFundsWithZeros,
+				big.NewInt(0).Exp(big.NewInt(10), big.NewInt(int64(assetDetails.Decimals)), nil),
+			)
 
 		if whaleFundsWithZeros.Cmp(requiredFundsWithZeros) > -1 {
 			logger.Info(
@@ -153,21 +187,11 @@ func determineWhaleTopUpAmount(
 					"Whale does not need top up for the %s asset. It already has enough funds",
 					traderRegistryEntry.Symbol,
 				),
-				zap.String("Required funds", requiredFundsWithZeros.String()),
-				zap.String("Wallet funds", whaleFundsWithZeros.String()),
+				zap.Int64("Required funds", requiredFunds),
+				zap.String("Wallet funds", whaleFunds.String()),
 			)
 			continue
 		}
-
-		whaleTopUpFactorInt := big.NewInt(int64(WhaleTopUpFactor * 1000))
-		topUpAmountWithZeros := big.NewInt(0).Div(
-			big.NewInt(0).
-				Mul(
-					requiredFundsWithZeros,
-					whaleTopUpFactorInt,
-				),
-			big.NewInt(1000),
-		)
 
 		topUpAmountNonZeros := big.NewFloat(0).
 			Mul(
@@ -180,9 +204,9 @@ func determineWhaleTopUpAmount(
 				"Whale need top up for the %s asset",
 				traderRegistryEntry.Symbol,
 			),
-			zap.String("Required funds", requiredFundsWithZeros.String()),
-			zap.String("Wallet funds", whaleFundsWithZeros.String()),
-			zap.String("Top up amount", topUpAmountWithZeros.String()),
+			zap.Int64("Required funds", requiredFunds),
+			zap.String("Wallet funds", whaleFunds.String()),
+			zap.String("Top up amount", topUpAmountNonZeros.String()),
 		)
 
 		result[traderRegistryEntry.VegaAssetId] = topUpAmountNonZeros
@@ -191,7 +215,11 @@ func determineWhaleTopUpAmount(
 	return result, nil
 }
 
-func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders map[string]bots.BotTraders) (map[string]AssetTopUp, error) {
+func determineTradersTopUpAmount(
+	logger *zap.Logger,
+	assets map[string]*vega.AssetDetails,
+	traders map[string]bots.BotTraders,
+) (map[string]AssetTopUp, error) {
 	topUpRegistry := map[string]AssetTopUp{}
 
 	for _, traderDetails := range traders {
@@ -228,18 +256,14 @@ func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders m
 		currentEntry.Parties[traderDetails.PubKey] = big.NewFloat(requiredTopUp)
 		currentEntry.TotalAmount = big.NewFloat(0.0).Add(currentEntry.TotalAmount, big.NewFloat(requiredTopUp))
 
-		// topUpAmountWithZeros := big.NewInt(0).
-		// 	Mul(
-		// 		big.NewInt(int64(requiredTopUp)),
-		// 		big.NewInt(0).Exp(big.NewInt(10), big.NewInt(int64(assetDetails.Decimals)), nil),
-		// 	)
-		// currentEntry.Parties[traderDetails.PublicKey] = topUpAmountWithZeros
+		logger.Info(
+			"Required top up for party",
+			zap.String("party-id", traderDetails.PubKey),
+			zap.Float64("amount", requiredTopUp),
+			zap.String("asset", assetDetails.Name),
+		)
 
-		// currentEntry.TotalAmount = big.NewInt(0).
-		// 	Add(
-		// 		topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID].TotalAmount,
-		// 		topUpAmountWithZeros,
-		// 	)
+		topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID] = currentEntry
 	}
 
 	return topUpRegistry, nil
