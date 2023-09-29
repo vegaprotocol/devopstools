@@ -5,14 +5,20 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"code.vegaprotocol.io/vega/protos/vega"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	v1 "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
@@ -98,7 +104,7 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 	}
 
 	for assetId, amount := range whaleTopUpRegistry {
-		fmt.Printf("whale top up %s: %s", assetId, amount.String())
+		fmt.Printf("whale top up %s: %s", assetId, tools.AsIntStringFromFloat(amount))
 
 		if err := depositToWhale(
 			args.Logger,
@@ -111,12 +117,184 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		}
 	}
 
+	stats, err := transferMoneyFromWhaleToBots(
+		args.Logger,
+		network,
+		network.VegaTokenWhale,
+		tradersTopUpRegistry,
+	)
+
+	args.Logger.Info(
+		"Transfer of money from whale to bots finished",
+		zap.Int("successful", stats.successful),
+		zap.Int("failed", stats.failed),
+		zap.Int("total", stats.failed+stats.successful),
+		zap.String("failed-transactions", strings.Join(stats.failedTransactions, ", ")),
+		zap.String("successful-transactions", strings.Join(stats.successfulTransactions, ", ")),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to transfer money from whale to bots for one or more parties: %w", err)
+	}
+
 	return nil
 }
 
-// func transferMoneyFromWhale(whaleWallet *wallet.VegaWallet, registry map[string]AssetTopUp) {
-// 	whaleWallet.
-// }
+type transferStats struct {
+	successful             int
+	successfulTransactions []string
+
+	failed             int
+	failedTransactions []string
+}
+
+func transferMoneyFromWhaleToBots(
+	logger *zap.Logger,
+	network *veganetwork.VegaNetwork,
+	whaleWallet *wallet.VegaWallet,
+	registry map[string]AssetTopUp,
+) (*transferStats, error) {
+	networkAssets, err := network.DataNodeClient.GetAssets()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get assets from network: %w", err)
+	}
+
+	stats := &transferStats{}
+	var result *multierror.Error
+
+	for asset, entry := range registry {
+		assetMultiplier := big.NewInt(0).
+			Exp(
+				big.NewInt(10),
+				big.NewInt(0).SetUint64(networkAssets[asset].Decimals),
+				nil,
+			).
+			Int64()
+
+		for receiverPartyId, amount := range entry.Parties {
+			lastBlockData, err := network.DataNodeClient.LastBlockData()
+			if err != nil {
+				logger.Error(
+					"failed to get statistics before transfer transaction is signed",
+					zap.String("token", entry.Symbol),
+					zap.String("receiver", receiverPartyId),
+					zap.String("amount", tools.AsIntStringFromFloat(amount)),
+					zap.Error(err),
+				)
+				multierror.Append(result, fmt.Errorf(
+					"failed to get statistics before transfer transaction is signed: %w",
+					err,
+				))
+
+				stats.failed = stats.failed + 1
+				continue
+			}
+
+			transferAmountWithZeros := big.NewFloat(0).
+				Mul(
+					amount,
+					big.NewFloat(0).SetInt64(assetMultiplier),
+				)
+			signedTransaction, err := whaleWallet.SignTxWithPoW(&v1.SubmitTransactionRequest{
+				PubKey: whaleWallet.PublicKey,
+				Command: &v1.SubmitTransactionRequest_Transfer{
+					Transfer: &vegacmd.Transfer{
+						Reference:       fmt.Sprintf("Transfer from whale to %s", receiverPartyId),
+						FromAccountType: vega.AccountType_ACCOUNT_TYPE_GENERAL,
+						ToAccountType:   vega.AccountType_ACCOUNT_TYPE_GENERAL,
+						To:              receiverPartyId,
+						Asset:           asset,
+						Amount:          tools.AsIntStringFromFloat(transferAmountWithZeros),
+						Kind: &vegacmd.Transfer_OneOff{
+							OneOff: &vegacmd.OneOffTransfer{
+								DeliverOn: 0,
+							},
+						},
+					},
+				},
+			}, lastBlockData)
+
+			if err != nil {
+				logger.Error(
+					"failed to sign transaction with PoW",
+					zap.String("token", entry.Symbol),
+					zap.String("receiver", receiverPartyId),
+					zap.String("amount", tools.AsIntStringFromFloat(amount)),
+					zap.Error(err),
+				)
+
+				multierror.Append(result, fmt.Errorf(
+					"failed to sign the %s transfer for %s bot transaction with vega wallet: %w",
+					entry.Symbol,
+					receiverPartyId,
+					err,
+				))
+
+				stats.failed = stats.failed + 1
+				continue
+			}
+
+			resp, err := network.DataNodeClient.SubmitTransaction(&vegaapipb.SubmitTransactionRequest{
+				Tx:   signedTransaction,
+				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
+			})
+
+			if err != nil {
+				logger.Error(
+					"failed to send the signed transaction",
+					zap.String("token", entry.Symbol),
+					zap.String("receiver", receiverPartyId),
+					zap.String("amount", tools.AsIntStringFromFloat(amount)),
+					zap.Error(err),
+				)
+
+				multierror.Append(result, fmt.Errorf(
+					"failed to send the %s transfer for %s bot: %w",
+					entry.Symbol,
+					receiverPartyId,
+					err,
+				))
+
+				stats.failed = stats.failed + 1
+				continue
+			}
+
+			if !resp.Success {
+				logger.Error(
+					"Sent transaction is not successful",
+					zap.String("token", entry.Symbol),
+					zap.String("receiver", receiverPartyId),
+					zap.String("amount", tools.AsIntStringFromFloat(amount)),
+					zap.String("amount-with-zeros", tools.AsIntStringFromFloat(transferAmountWithZeros)),
+					zap.String("reason", resp.Data),
+				)
+
+				multierror.Append(result,
+					fmt.Errorf("failed to successfully send transfer transaction to the network: %s", resp.Data),
+				)
+
+				stats.failed = stats.failed + 1
+				stats.failedTransactions = append(stats.failedTransactions, resp.TxHash)
+				continue
+			}
+
+			logger.Info(
+				"Tokens has been sent from whale to bot wallet",
+				zap.String("token", entry.Symbol),
+				zap.String("amount", tools.AsIntStringFromFloat(amount)),
+				zap.String("amount-with-zeros", tools.AsIntStringFromFloat(transferAmountWithZeros)),
+				zap.String("receiver", receiverPartyId),
+				zap.String("transaction", resp.TxHash),
+			)
+			stats.successful = stats.successful + 1
+			stats.successfulTransactions = append(stats.successfulTransactions, resp.TxHash)
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	return stats, result.ErrorOrNil()
+}
 
 func depositToWhale(
 	logger *zap.Logger,
@@ -206,7 +384,7 @@ func determineWhaleTopUpAmount(
 			),
 			zap.Int64("Required funds", requiredFunds),
 			zap.String("Wallet funds", whaleFunds.String()),
-			zap.String("Top up amount", topUpAmountNonZeros.String()),
+			zap.String("Top up amount", tools.AsIntStringFromFloat(topUpAmountNonZeros)),
 		)
 
 		result[traderRegistryEntry.VegaAssetId] = topUpAmountNonZeros
