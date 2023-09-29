@@ -79,14 +79,37 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		return fmt.Errorf("failed to read traders: %w", err)
 	}
 
-	topUpRegistry, err := determineTradersTopUpAmount(networkAssets, traders)
+	tradersTopUpRegistry, err := determineTradersTopUpAmount(networkAssets, traders)
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the assets: %w", err)
 	}
 	args.Logger.Info("")
 
-	fmt.Printf("%v", topUpRegistry)
+	whaleTopUpRegistry, err := determineWhaleTopUpAmount(
+		args.Logger,
+		network.DataNodeClient,
+		networkAssets,
+		tradersTopUpRegistry,
+		"654ba5bbe6fdf20df104b7d8009ca5e0a3cdc69693a47f62bb24adb2f9158313",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to compute top up amount for whale: %w", err)
+	}
 
+	for assetId, amount := range whaleTopUpRegistry {
+		fmt.Printf("whale top up %s: %s", assetId, amount.String())
+
+		if err := depositToParty(); err != nil {
+			return fmt.Errorf("Failed to deposit %s: %w", assetId, err)
+		}
+	}
+
+	fmt.Printf("%v", tradersTopUpRegistry)
+
+	return nil
+}
+
+func depositToParty() error {
 	return nil
 }
 
@@ -137,11 +160,19 @@ func determineWhaleTopUpAmount(
 		}
 
 		whaleTopUpFactorInt := big.NewInt(int64(WhaleTopUpFactor * 1000))
+		topUpAmountWithZeros := big.NewInt(0).Div(
+			big.NewInt(0).
+				Mul(
+					requiredFundsWithZeros,
+					whaleTopUpFactorInt,
+				),
+			big.NewInt(1000),
+		)
 
-		topUpAmountWithZeros := big.NewInt(0).
+		topUpAmountNonZeros := big.NewFloat(0).
 			Mul(
-				requiredFundsWithZeros,
-				whaleTopUpFactorInt,
+				traderRegistryEntry.TotalAmount,
+				big.NewFloat(WhaleTopUpFactor),
 			)
 
 		logger.Info(
@@ -153,6 +184,8 @@ func determineWhaleTopUpAmount(
 			zap.String("Wallet funds", whaleFundsWithZeros.String()),
 			zap.String("Top up amount", topUpAmountWithZeros.String()),
 		)
+
+		result[traderRegistryEntry.VegaAssetId] = topUpAmountNonZeros
 	}
 
 	return result, nil
@@ -214,7 +247,7 @@ func determineTradersTopUpAmount(assets map[string]*vega.AssetDetails, traders m
 
 func necessaryTopUp(currentBalance, wantedBalance, factor float64) float64 {
 	if wantedBalance < 0.01 || wantedBalance > currentBalance {
-		return currentBalance * factor
+		return wantedBalance * factor
 	}
 
 	// top up not required
