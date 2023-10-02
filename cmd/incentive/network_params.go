@@ -74,43 +74,6 @@ var expectedNetworkParams = []struct {
 	{Name: "governance.proposal.VolumeDiscountProgram.minVoterBalance", ExpectedValue: "1"},
 }
 
-var expectedNetworkParamsOld = map[string]string{
-	"rewards.vesting.baseRate":                                "0.0055",
-	"rewards.vesting.minimumTransfer":                         "10",
-	"referralProgram.maxReferralTiers":                        "100",
-	"referralProgram.maxStakingTiers":                         "0",
-	"referralProgram.maxReferralRewardFactor":                 "0.2",
-	"referralProgram.maxReferralDiscountFactor":               "0.1",
-	"referralProgram.maxPartyNotionalVolumeByQuantumPerEpoch": "250000",
-	"referralProgram.minStakedVegaTokens":                     "0",
-	"referralProgram.maxReferralRewardProportion":             "0.5",
-	"volumeDiscountProgram.maxBenefitTiers":                   "100",
-	"volumeDiscountProgram.maxVolumeDiscountFactor":           "0.4",
-	//"rewards.activityStreak.benefitTiers":                             "(See next page)",
-	"rewards.activityStreak.inactivityLimit":                          "24",
-	"rewards.activityStreak.minQuantumOpenVolume":                     "100",
-	"rewards.activityStreak.minQuantumnTradeVolume":                   "100",
-	"governance.proposal.referralProgram.minClose":                    "48h0m0s",
-	"governance.proposal.referralProgram.maxClose":                    "8760h0m0s",
-	"governance.proposal.referralProgram.minEnact":                    "48h0m0s",
-	"governance.proposal.referralProgram.maxEnact":                    "8760h0m0s",
-	"governance.proposal.referralProgram.requiredParticipation":       "0.00001",
-	"governance.proposal.referralProgram.requiredMajority":            "0.66",
-	"governance.proposal.referralProgram.minProposerBalance":          "1",
-	"governance.proposal.referralProgram.minVoterBalance":             "1",
-	"governance.proposal.VolumeDiscountProgram.minClose":              "48h0m0s",
-	"governance.proposal.VolumeDiscountProgram.maxClose":              "8760h0m0s",
-	"spam.protection.max.createReferralSet":                           "3",
-	"spam.protection.max.updateReferralSet":                           "3",
-	"spam.protection.max.applyReferralCode":                           "5",
-	"governance.proposal.VolumeDiscountProgram.minEnact":              "48h0m0s",
-	"governance.proposal.VolumeDiscountProgram.maxEnact":              "8760h0m0s",
-	"governance.proposal.VolumeDiscountProgram.requiredParticipation": "0.00001",
-	"governance.proposal.VolumeDiscountProgram.requiredMajority":      "0.66",
-	"governance.proposal.VolumeDiscountProgram.minProposerBalance":    "1",
-	"governance.proposal.VolumeDiscountProgram.minVoterBalance":       "1",
-}
-
 func RunNetworkParams(args NetworkParamsArgs) error {
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
