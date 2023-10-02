@@ -124,7 +124,7 @@ func RunNetworkParameter(args NetworkParameterArgs) error {
 	return nil
 }
 
-func ProposeAndVoteOnNetworkParamters(
+func ProposeAndVoteOnNetworkParameters(
 	nameToValue map[string]string,
 	proposerVegawallet *wallet.VegaWallet,
 	networkParams *types.NetworkParams,
