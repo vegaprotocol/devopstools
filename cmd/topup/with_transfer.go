@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/bots"
+	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
@@ -117,7 +119,13 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		}
 	}
 
-	args.Logger.Info("waiting for money to appear on the whale wallet")
+	args.Logger.Info("Waiting for money to appear on the whale wallet")
+
+	args.Logger.Info("Voting network parameters")
+	numberOfTransfers := countTransferNumbers(tradersTopUpRegistry)
+	if err := prepareNetworkForTransfer(args.Logger, network, numberOfTransfers); err != nil {
+		return fmt.Errorf("failed to prepare network: %w", err)
+	}
 
 	// wait for money
 	for assetId, amount := range whaleTopUpRegistry {
@@ -160,6 +168,68 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		return fmt.Errorf("failed to transfer money from whale to bots for one or more parties: %w", err)
 	}
 
+	return nil
+}
+
+func countTransferNumbers(topUpRegistry map[string]AssetTopUp) int {
+	transferNumbers := 0
+
+	for _, entry := range topUpRegistry {
+		transferNumbers = transferNumbers + len(entry.Parties)
+	}
+
+	return transferNumbers + (10 * transferNumbers / 100)
+}
+
+func prepareNetworkForTransfer(logger *zap.Logger, network *veganetwork.VegaNetwork, numberOfBots int) error {
+	updateParams := map[string]string{
+		"spam.protection.maxUserTransfersPerEpoch": fmt.Sprintf("%d", numberOfBots),
+	}
+
+	logger.Info("Refreshing network parameters")
+	if err := network.RefreshNetworkParams(); err != nil {
+		return fmt.Errorf("failed to refresh network parameters: %w", err)
+	}
+
+	logger.Info("Getting value for spam.protection.maxUserTransfersPerEpoch network parameter")
+	maxUserTransfersPerEpoch, paramExists := network.NetworkParams.Params["spam.protection.maxUserTransfersPerEpoch"]
+	if !paramExists {
+		return fmt.Errorf("failed to get spam.protection.maxUserTransfersPerEpoch value from the network parameters: parameter does not exist")
+	}
+
+	maxUserTransfersPerEpochInt, err := strconv.Atoi(maxUserTransfersPerEpoch)
+	if err != nil {
+		return fmt.Errorf("failed to convert value of spam.protection.maxUserTransfersPerEpoch to int: %w", err)
+	}
+
+	if numberOfBots < maxUserTransfersPerEpochInt {
+		logger.Sugar().Infof(
+			"spam.protection.maxUserTransfersPerEpoch network parameter does not need to be modified. Current value: %d, expected value at least %d",
+			maxUserTransfersPerEpochInt,
+			numberOfBots,
+		)
+		return nil
+	}
+
+	updateCount, err := propose.ProposeAndVoteOnNetworkParameters(
+		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to propose and vote on network parameters: %w", err)
+	}
+	if updateCount > 0 {
+		if err := network.RefreshNetworkParams(); err != nil {
+			return fmt.Errorf("failed to refresh network parameters: %w", err)
+		}
+	}
+	for name, expectedValue := range updateParams {
+		if network.NetworkParams.Params[name] != expectedValue {
+			return fmt.Errorf("failed to update Network Parameter '%s', current value: '%s', expected value: '%s'",
+				name, network.NetworkParams.Params[name], expectedValue,
+			)
+		}
+	}
 	return nil
 }
 
@@ -356,7 +426,7 @@ func depositToWhale(
 	amount *big.Float,
 ) error {
 	if asset.GetErc20() == nil {
-		return fmt.Errorf("Token %s is not an erc20 token", asset.Symbol)
+		return fmt.Errorf("token %s is not an erc20 token", asset.Symbol)
 	}
 
 	if err := depositERC20TokenToParties(
@@ -374,7 +444,7 @@ func depositToWhale(
 
 func determineWhaleTopUpAmount(
 	logger *zap.Logger,
-	datanodeClient vegaapi.DataNodeClient,
+	dataNodeClient vegaapi.DataNodeClient,
 	assets map[string]*vega.AssetDetails,
 	tradersRegistry map[string]AssetTopUp,
 	whalePartyId string,
@@ -390,7 +460,7 @@ func determineWhaleTopUpAmount(
 			)
 		}
 
-		whaleFund, err := datanodeClient.GetFunds(whalePartyId, vega.AccountType_ACCOUNT_TYPE_GENERAL, &traderRegistryEntry.VegaAssetId)
+		whaleFund, err := dataNodeClient.GetFunds(whalePartyId, vega.AccountType_ACCOUNT_TYPE_GENERAL, &traderRegistryEntry.VegaAssetId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get funds for whale(%s): %w", whalePartyId, err)
 		}
@@ -419,6 +489,7 @@ func determineWhaleTopUpAmount(
 				),
 				zap.Int64("Required funds", requiredFunds),
 				zap.String("Wallet funds", whaleFunds.String()),
+				zap.String("Party", whalePartyId),
 			)
 			continue
 		}
@@ -437,6 +508,7 @@ func determineWhaleTopUpAmount(
 			zap.Int64("Required funds", requiredFunds),
 			zap.String("Wallet funds", whaleFunds.String()),
 			zap.String("Top up amount", tools.AsIntStringFromFloat(topUpAmountNonZeros)),
+			zap.String("Party", whalePartyId),
 		)
 
 		result[traderRegistryEntry.VegaAssetId] = topUpAmountNonZeros
