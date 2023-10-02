@@ -45,7 +45,7 @@ func ProposeVoteProvideLP(
 			ProposalSubmission: proposal,
 		},
 	}
-	if err := submitTx("propose market", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+	if err := SubmitTx("propose market", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
 		return err
 	}
 
@@ -85,7 +85,7 @@ func ProposeVoteProvideLP(
 			},
 		},
 	}
-	if err := submitTx("vote on market proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
+	if err := SubmitTx("vote on market proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
 		return err
 	}
 
@@ -137,7 +137,7 @@ func ProposeVoteProvideLP(
 			},
 		},
 	}
-	if err := submitTx("Provide LP", dataNodeClient, proposerVegawallet, logger, &provideLPWalletTxReq); err != nil {
+	if err := SubmitTx("Provide LP", dataNodeClient, proposerVegawallet, logger, &provideLPWalletTxReq); err != nil {
 		return err
 	}
 

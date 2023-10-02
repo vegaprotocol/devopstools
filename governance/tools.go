@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func submitTx(
+func SubmitTx(
 	description string,
 	dataNodeClient vegaapi.DataNodeClient,
 	proposerVegawallet *wallet.VegaWallet,

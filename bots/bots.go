@@ -22,15 +22,6 @@ type BotTraders struct {
 	} `json:"parameters"`
 }
 
-type ResearchBot struct {
-	BotTraders
-	WalletData struct {
-		Index          int64   `json:"index"`
-		PublicKey      string  `json:"publicKey"`
-		RecoveryPhrase *string `json:"recoveryPhrase"`
-	} `json:"wallet"`
-}
-
 func GetBotTraders(
 	network string,
 ) (map[string]BotTraders, error) {
@@ -49,22 +40,6 @@ func GetBotTradersWithURL(
 		Traders map[string]BotTraders `json:"traders"`
 	}
 	err := getBots(botsURL, "", &payload)
-	if err != nil {
-		return nil, err
-	}
-	return payload.Traders, nil
-}
-
-func GetResearchBots(
-	network string,
-	botsAPIToken string,
-) (map[string]ResearchBot, error) {
-	botsURL := fmt.Sprintf("https://%s.bots.vega.rocks/traders", network)
-	log.Printf("Getting research bot traders from: %s", botsURL)
-	var payload struct {
-		Traders map[string]ResearchBot `json:"traders"`
-	}
-	err := getBots(botsURL, botsAPIToken, &payload)
 	if err != nil {
 		return nil, err
 	}

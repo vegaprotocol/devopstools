@@ -4,7 +4,7 @@ import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
-	"github.com/vegaprotocol/devopstools/cmd/bots"
+	"github.com/vegaprotocol/devopstools/cmd/bot"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/helper"
 	"github.com/vegaprotocol/devopstools/cmd/live"
@@ -48,5 +48,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(snapshotcompatibility.SnapshotCompatibilityCmd)
 	rootCmd.RootCmd.AddCommand(version.VersionCmd)
 	rootCmd.RootCmd.AddCommand(propose.ProposeCmd)
-	rootCmd.RootCmd.AddCommand(bots.BotsCmd)
+	rootCmd.RootCmd.AddCommand(bot.BotCmd)
 }

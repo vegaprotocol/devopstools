@@ -32,7 +32,7 @@ func SubmitProposal(
 			ProposalSubmission: proposal,
 		},
 	}
-	if err := submitTx(proposalDescription, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+	if err := SubmitTx(proposalDescription, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
 		return "", err
 	}
 
@@ -71,7 +71,7 @@ func SubmitProposalList(
 				ProposalSubmission: proposalConfig,
 			},
 		}
-		if err := submitTx(description, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+		if err := SubmitTx(description, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
 			return nil, err
 		}
 	}

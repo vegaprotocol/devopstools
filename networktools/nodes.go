@@ -2,6 +2,7 @@ package networktools
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -163,10 +164,14 @@ func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
 }
 
 func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
-	nodes := network.GetNetworkDataNodes(false)
-	addresses := make([]string, len(nodes))
-	for i, node := range nodes {
-		addresses[i] = fmt.Sprintf("%s:3007", node)
+	addresses := []string{}
+	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
+		address := net.JoinHostPort(host, "3007")
+		conn, err := net.DialTimeout("tcp", address, 300*time.Millisecond)
+		if err == nil && conn != nil {
+			conn.Close()
+			addresses = append(addresses, fmt.Sprintf("%s:3007", host))
+		}
 	}
 	return addresses
 }

@@ -127,7 +127,7 @@ func ProposeAndVote(
 			ProposalSubmission: proposal,
 		},
 	}
-	if err := submitTx("submit transaction", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+	if err := SubmitTx("submit transaction", dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
 	}
 
@@ -180,7 +180,7 @@ func ProposeAndVote(
 			},
 		},
 	}
-	if err := submitTx("vote on proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
+	if err := SubmitTx("vote on proposal", dataNodeClient, proposerVegawallet, logger, &voteWalletTxReq); err != nil {
 		return fmt.Errorf("failed to vote on proposal %s: %w", proposalId, err)
 	}
 
