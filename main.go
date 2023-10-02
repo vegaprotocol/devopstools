@@ -7,6 +7,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/bot"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/helper"
+	"github.com/vegaprotocol/devopstools/cmd/incentive"
 	"github.com/vegaprotocol/devopstools/cmd/live"
 	"github.com/vegaprotocol/devopstools/cmd/market"
 	"github.com/vegaprotocol/devopstools/cmd/network"
@@ -49,4 +50,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(version.VersionCmd)
 	rootCmd.RootCmd.AddCommand(propose.ProposeCmd)
 	rootCmd.RootCmd.AddCommand(bot.BotCmd)
+	rootCmd.RootCmd.AddCommand(incentive.IncentiveCmd)
 }

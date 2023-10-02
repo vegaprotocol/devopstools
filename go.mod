@@ -1,6 +1,6 @@
 module github.com/vegaprotocol/devopstools
 
-go 1.19
+go 1.20
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.20.0
 	github.com/libp2p/go-libp2p-core v0.20.1
@@ -82,7 +83,6 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.2.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
