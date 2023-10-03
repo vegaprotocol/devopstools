@@ -24,19 +24,19 @@ func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime tim
 						BenefitTiers: []*vega.BenefitTier{
 							{
 								MinimumRunningNotionalTakerVolume: "10000",
-								MinimumEpochs:                     "1",
+								MinimumEpochs:                     "6",
 								ReferralRewardFactor:              "0.001",
 								ReferralDiscountFactor:            "0.001",
 							},
 							{
-								MinimumRunningNotionalTakerVolume: "20000",
-								MinimumEpochs:                     "7",
+								MinimumRunningNotionalTakerVolume: "500000",
+								MinimumEpochs:                     "24",
 								ReferralRewardFactor:              "0.005",
 								ReferralDiscountFactor:            "0.005",
 							},
 							{
-								MinimumRunningNotionalTakerVolume: "30000",
-								MinimumEpochs:                     "31",
+								MinimumRunningNotionalTakerVolume: "1000000",
+								MinimumEpochs:                     "48",
 								ReferralRewardFactor:              "0.01",
 								ReferralDiscountFactor:            "0.01",
 							},
@@ -51,7 +51,7 @@ func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime tim
 								ReferralRewardMultiplier: "2",
 							},
 							{
-								MinimumStakedTokens:      "3",
+								MinimumStakedTokens:      "5",
 								ReferralRewardMultiplier: "3",
 							},
 						},
