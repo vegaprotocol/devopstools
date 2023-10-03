@@ -114,7 +114,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 	}
 
-	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
+	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 || env == types.NetworkFairground {
 		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
 		result.PerpetualEURUSD = args.ProposePerpetualEURUSD || args.ProposeAll
 		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
@@ -404,7 +404,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewBTCUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC, 6,
+				settlementAssetId.SettlementAsset_USDC, 5,
 				market.PerpetualBTCUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualBTCUSD},
@@ -425,7 +425,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewLINKUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC, 6,
+				settlementAssetId.SettlementAsset_USDC, 5,
 				market.PerpetualLINKUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualLINKUSD},
@@ -446,7 +446,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewDAIUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC, 6,
+				settlementAssetId.SettlementAsset_USDC, 5,
 				market.PerpetualDAIUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualDAIUSD},
@@ -467,7 +467,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewETHUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC, 6,
+				settlementAssetId.SettlementAsset_USDC, 5,
 				market.PerpetualETHUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualETHUSD},
@@ -488,7 +488,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewEURUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC, 6,
+				settlementAssetId.SettlementAsset_USDC, 5,
 				market.PerpetualEURUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualEURUSD},
