@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"time"
 
@@ -62,19 +63,60 @@ func RunReferral(args ReferralArgs) error {
 	}
 	fmt.Printf("got bots %s\n", time.Since(start))
 
+	teamLeadersWallets := []*wallet.VegaWallet{}
+
 	for _, trader := range traders {
-		_, err := trader.GetWallet()
-		if err != nil {
-			return err
-		}
-		if trader.WalletData.Index == 1 {
-			fmt.Printf("-----> %s\n", trader.PubKey)
-		} else {
-			fmt.Printf(" - %s (%d)\n", trader.PubKey, trader.WalletData.Index)
+		if trader.WalletData.Index == 3 {
+			wallet, err := trader.GetWallet()
+			if err != nil {
+				return fmt.Errorf("failed to get wallet for %s trader, %w", trader.PubKey, err)
+			}
+			teamLeadersWallets = append(teamLeadersWallets, wallet)
 		}
 	}
-	fmt.Printf("got wallets %s\n", time.Since(start))
 
+	if err := createReferralSetsForWallets(teamLeadersWallets, network.DataNodeClient, args.Logger); err != nil {
+		return err
+	}
+
+	// for _, trader := range traders {
+	// 	_, err := trader.GetWallet()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if trader.WalletData.Index == 3 {
+	// 		fmt.Printf("-----> %s\n", trader.PubKey)
+	// 	} else {
+	// 		fmt.Printf(" - %s (%d)\n", trader.PubKey, trader.WalletData.Index)
+	// 	}
+	// }
+	// fmt.Printf("got wallets %s\n", time.Since(start))
+
+	return nil
+}
+
+func createReferralSetsForWallets(
+	creatorVegawallet []*wallet.VegaWallet,
+	dataNodeClient vegaapi.DataNodeClient,
+	logger *zap.Logger,
+) error {
+	program, err := dataNodeClient.GetCurrentReferralProgram()
+	if err != nil {
+		return fmt.Errorf("failed to create referral sets, failed to get referral program, %w", err)
+	}
+	minStake, ok := new(big.Int).SetString(program.StakingTiers[0].MinimumStakedTokens, 0)
+	if !ok {
+		return fmt.Errorf("failed to convert %s to big.Int", program.StakingTiers[0].MinimumStakedTokens)
+	}
+	_ = minStake
+	for _, wallet := range creatorVegawallet {
+		stake, err := dataNodeClient.GetPartyTotalStake(wallet.PublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to create referral sets, failed to get stake for %s, %w", wallet.PublicKey, err)
+		}
+		fmt.Printf(" - %s: %d\n", wallet.PublicKey, stake)
+
+	}
 	return nil
 }
 
