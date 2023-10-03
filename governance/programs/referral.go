@@ -1,4 +1,4 @@
-package referral
+package programs
 
 import (
 	"time"

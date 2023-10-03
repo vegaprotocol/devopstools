@@ -9,7 +9,7 @@ import (
 	"code.vegaprotocol.io/vega/core/netparams"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
-	"github.com/vegaprotocol/devopstools/governance/referral"
+	"github.com/vegaprotocol/devopstools/governance/programs"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -92,13 +92,13 @@ func RunReferral(args ReferralArgs) error {
 		}
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-		proposalConfig := referral.NewCreateSimpleReferralSetProposal(closingTime, enactmentTime)
+		proposalConfig := programs.NewCreateSimpleReferralSetProposal(closingTime, enactmentTime)
 
 		//
 		// Propose & Vote & Wait
 		//
 		err = governance.ProposeVoteAndWait(
-			"Referall Program proposal", proposalConfig, proposerVegawallet, network.DataNodeClient, logger,
+			"Referral Program proposal", proposalConfig, proposerVegawallet, network.DataNodeClient, logger,
 		)
 		if err != nil {
 			return err

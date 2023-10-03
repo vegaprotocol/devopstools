@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
-	code.vegaprotocol.io/vega v0.73.0-preview.5
+	code.vegaprotocol.io/vega v0.72.2-0.20231002180350-87173bf5e98a
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6
@@ -189,8 +189,9 @@ require (
 )
 
 replace (
-	github.com/fergusstrange/embedded-postgres => github.com/vegaprotocol/embedded-postgres v1.13.1-0.20220920142401-92fd684a486d
+	github.com/fergusstrange/embedded-postgres => github.com/vegaprotocol/embedded-postgres v1.13.1-0.20221123183204-2e7a2feee5bb
+	github.com/muesli/cancelreader => github.com/vegaprotocol/cancelreader v0.0.0-20230724130739-6f2217a69449
 	github.com/shopspring/decimal => github.com/vegaprotocol/decimal v1.3.1-uint256
-	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
+	github.com/tendermint/tendermint => github.com/vegaprotocol/cometbft v0.34.29-patch.1
 	github.com/tendermint/tm-db => github.com/cometbft/cometbft-db v0.6.7
 )
