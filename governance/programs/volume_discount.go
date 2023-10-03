@@ -23,16 +23,36 @@ func NewUpdateVolumeDiscountProgramProposal(closingTime time.Time, enactmentTime
 					Changes: &vega.VolumeDiscountProgram{
 						BenefitTiers: []*vega.VolumeBenefitTier{
 							{
-								MinimumRunningNotionalTakerVolume: "1000",
-								VolumeDiscountFactor:              "0.001",
+								MinimumRunningNotionalTakerVolume: "10000",
+								VolumeDiscountFactor:              "0.05",
 							},
 							{
-								MinimumRunningNotionalTakerVolume: "20000",
-								VolumeDiscountFactor:              "0.002",
+								MinimumRunningNotionalTakerVolume: "50000",
+								VolumeDiscountFactor:              "0.1",
 							},
 							{
-								MinimumRunningNotionalTakerVolume: "30000",
-								VolumeDiscountFactor:              "0.003",
+								MinimumRunningNotionalTakerVolume: "100000",
+								VolumeDiscountFactor:              "0.15",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "250000",
+								VolumeDiscountFactor:              "0.2",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "500000",
+								VolumeDiscountFactor:              "0.25",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "1000000",
+								VolumeDiscountFactor:              "0.3",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "1500000",
+								VolumeDiscountFactor:              "0.35",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "2000000",
+								VolumeDiscountFactor:              "0.4",
 							},
 						},
 						EndOfProgramTimestamp: time.Now().Add(time.Hour * 24 * 365 * 3).Unix(), // TODO: Do We want to have it open almost forever?
