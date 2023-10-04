@@ -32,12 +32,45 @@ type DownloadMainnetSnapshotArgs struct {
 	SnapshotServerKeyFile  string
 }
 
+func (args DownloadMainnetSnapshotArgs) Check() error {
+	if args.SnapshotServerHost == "" {
+		return fmt.Errorf(
+			"no snapshot server provided: provide value with the --snapshot-server flag",
+		)
+	}
+
+	if args.SnapshotRemoteLocation == "" {
+		return fmt.Errorf(
+			"snapshot remote locatino not provided: provide value with the --snapshot-remote-location flag",
+		)
+	}
+
+	if args.SnapshotServerUser == "" {
+		return fmt.Errorf(
+			"snapshot server user not provided: provide value with the --snapshot-server-user flag",
+		)
+	}
+
+	if !tools.FileExists(args.SnapshotServerKeyFile) {
+		return fmt.Errorf(
+			"snapshot server key does not exist: provide value with the --snapshot-server-key flag",
+		)
+	}
+
+	return nil
+}
+
 var downloadMainnetSnapshotArgs DownloadMainnetSnapshotArgs
 
 var downloadMainnetSnapshotCmd = &cobra.Command{
 	Use:   "download-mainnet-snapshot",
 	Short: "Download the snapshot from the mainnet and put it in the local folder",
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := downloadMainnetSnapshotArgs.Check(); err != nil {
+			loadSnapshotArgs.Logger.Fatal("invalid input", zap.Error(err))
+			return
+		}
+
 		if err := runDownloadMainnetSnapshot(downloadMainnetSnapshotArgs.Logger,
 			downloadMainnetSnapshotArgs.SnapshotServerHost,
 			downloadMainnetSnapshotArgs.SnapshotServerUser,
