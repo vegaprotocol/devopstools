@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -22,4 +23,8 @@ func WhoAmI() (string, error) {
 	}
 
 	return strings.Trim(string(out), " \t\n"), nil
+}
+
+func FormatAssetName(name string, extension string) string {
+	return fmt.Sprintf("%s-%s-%s.%s", name, runtime.GOOS, runtime.GOARCH, extension)
 }

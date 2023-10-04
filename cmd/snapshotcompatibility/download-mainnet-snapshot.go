@@ -47,7 +47,7 @@ var downloadMainnetSnapshotCmd = &cobra.Command{
 			downloadMainnetSnapshotArgs.TemporaryDestination,
 		); err != nil {
 			downloadMainnetSnapshotArgs.Logger.Fatal(
-				"failed to prepare for snapshot compatibility pipeline",
+				"failed to download mainnet snapshot",
 				zap.Error(err),
 			)
 

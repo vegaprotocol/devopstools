@@ -23,6 +23,7 @@ func init() {
 
 	// SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
 	SnapshotCompatibilityCmd.AddCommand(downloadMainnetSnapshotCmd)
+	SnapshotCompatibilityCmd.AddCommand(downloadBinaryCmd)
 	SnapshotCompatibilityCmd.AddCommand(produceNewSnapshotCmd)
 	SnapshotCompatibilityCmd.AddCommand(collectSnapshotCmd)
 }
