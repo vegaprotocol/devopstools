@@ -21,7 +21,8 @@ var SnapshotCompatibilityCmd = &cobra.Command{
 func init() {
 	snapshotCompatibilityArgs.RootArgs = &rootCmd.Args
 
-	SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
+	// SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
+	SnapshotCompatibilityCmd.AddCommand(downloadMainnetSnapshotCmd)
 	SnapshotCompatibilityCmd.AddCommand(produceNewSnapshotCmd)
 	SnapshotCompatibilityCmd.AddCommand(collectSnapshotCmd)
 }
