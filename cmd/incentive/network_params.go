@@ -5,12 +5,14 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
 type NetworkParamsArgs struct {
 	*IncentiveArgs
+	UpdateParams bool
 }
 
 var networkParamsArgs NetworkParamsArgs
@@ -32,6 +34,7 @@ func init() {
 	networkParamsArgs.IncentiveArgs = &incentiveArgs
 
 	IncentiveCmd.AddCommand(networkParamsCmd)
+	networkParamsCmd.PersistentFlags().BoolVar(&networkParamsArgs.UpdateParams, "update", false, "Update Network Parameter values with propose & vote")
 }
 
 var expectedNetworkParams = []struct {
@@ -51,7 +54,7 @@ var expectedNetworkParams = []struct {
 	{Name: "rewards.activityStreak.benefitTiers", ExpectedValue: "{\"tiers\": [{\"minimum_activity_streak\": 1, \"reward_multiplier\": \"1.05\", \"vesting_multiplier\": \"1.05\"}, {\"minimum_activity_streak\": 24, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.10\"}, {\"minimum_activity_streak\": 48, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.15\"}, {\"minimum_activity_streak\": 62, \"reward_multiplier\": \"1.20\", \"vesting_multiplier\": \"1.20\"}]}"},
 	{Name: "rewards.activityStreak.inactivityLimit", ExpectedValue: "24"},
 	{Name: "rewards.activityStreak.minQuantumOpenVolume", ExpectedValue: "100"},
-	{Name: "rewards.activityStreak.minQuantumnTradeVolume", ExpectedValue: "100"},
+	{Name: "rewards.activityStreak.minQuantumTradeVolume", ExpectedValue: "100"},
 	{Name: "governance.proposal.referralProgram.minClose", ExpectedValue: "48h0m0s"},
 	{Name: "governance.proposal.referralProgram.maxClose", ExpectedValue: "8760h0m0s"},
 	{Name: "governance.proposal.referralProgram.minEnact", ExpectedValue: "48h0m0s"},
@@ -80,17 +83,37 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	}
 	defer network.Disconnect()
 
-	if err := checkNetworkParams(network); err != nil {
+	toUpdate, err := checkNetworkParams(network)
+	if err != nil {
 		return err
+	}
+
+	if args.UpdateParams {
+		updateCount, err := propose.ProposeAndVoteOnNetworkParameters(
+			toUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
+		)
+		if err != nil {
+			return err
+		}
+		if updateCount > 0 {
+			if err := network.RefreshNetworkParams(); err != nil {
+				return err
+			}
+		}
+		_, err = checkNetworkParams(network)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func checkNetworkParams(network *veganetwork.VegaNetwork) error {
+func checkNetworkParams(network *veganetwork.VegaNetwork) (map[string]string, error) {
 	yellowText := "\033[1;33m%s\033[0m"
 	greenText := "\033[1;32m%s\033[0m"
 	redText := "\033[1;31m%s\033[0m"
+	toUpdate := map[string]string{}
 	for _, param := range expectedNetworkParams {
 		fmt.Printf(" - %s = ", param.Name)
 		if value, ok := network.NetworkParams.Params[param.Name]; ok {
@@ -98,10 +121,11 @@ func checkNetworkParams(network *veganetwork.VegaNetwork) error {
 				fmt.Printf(greenText, fmt.Sprintf("%s (ok)\n", value))
 			} else {
 				fmt.Printf(redText, fmt.Sprintf("%s != expected %s\n", value, param.ExpectedValue))
+				toUpdate[param.Name] = param.ExpectedValue
 			}
 		} else {
 			fmt.Printf(yellowText, "does not exist\n")
 		}
 	}
-	return nil
+	return toUpdate, nil
 }
