@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	vegaTypes "code.vegaprotocol.io/vega/core/types"
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	e "github.com/vegaprotocol/devopstools/errors"
 	"google.golang.org/grpc/connectivity"
 )
@@ -49,21 +49,19 @@ func (n *DataNode) GetCurrentReferralProgramRaw(req *dataapipb.GetCurrentReferra
 // LIST REFERRAL SETS
 //
 
-func (n *DataNode) ListReferralSets() ([]vegaTypes.ReferralSet, error) {
-	res, err := n.ListReferralSetsRaw(&dataapipb.ListReferralSetsRequest{})
+func (n *DataNode) GetReferralSets() (map[string]v2.ReferralSet, error) {
+	res, err := n.ListReferralSets(&dataapipb.ListReferralSetsRequest{})
 	if err != nil {
 		return nil, err
 	}
-	referralSets := make([]vegaTypes.ReferralSet, len(res.ReferralSets.Edges))
-	for i, edge := range res.ReferralSets.Edges {
-		referralSets[i] = vegaTypes.ReferralSet{
-			ID: vegaTypes.ReferralSetID(edge.Node.Id),
-		}
+	referralSets := map[string]v2.ReferralSet{}
+	for _, edge := range res.ReferralSets.Edges {
+		referralSets[edge.Node.Referrer] = *edge.Node
 	}
 	return referralSets, nil
 }
 
-func (n *DataNode) ListReferralSetsRaw(req *dataapipb.ListReferralSetsRequest) (response *dataapipb.ListReferralSetsResponse, err error) {
+func (n *DataNode) ListReferralSets(req *dataapipb.ListReferralSetsRequest) (response *dataapipb.ListReferralSetsResponse, err error) {
 	msg := "gRPC call failed (data-node): ListReferralSets: %w"
 	if n == nil {
 		err = fmt.Errorf(msg, e.ErrNil)

@@ -170,6 +170,26 @@ func createReferralSetsForWallets(
 	if err := Stake(stakeByPubKey, network, logger); err != nil {
 		return err
 	}
+	//
+	//
+	//
+	referralSets, err := dataNodeClient.GetReferralSets()
+	if err != nil {
+		return fmt.Errorf("failed to get referral sets, %w", err)
+	}
+	for _, wallet := range referralTeamLeadVegawallet {
+		if referralSet, ok := referralSets[wallet.PublicKey]; ok {
+			logger.Debug("party is already team lead", zap.String("pub key", wallet.PublicKey),
+				zap.String("team id", referralSet.Id))
+			continue
+		}
+		//
+		// Create Referral set
+		//
+		if err := createReferralSet(wallet, dataNodeClient, logger); err != nil {
+			return fmt.Errorf("failed to create referral set %s, %w", wallet.PublicKey, err)
+		}
+	}
 
 	return nil
 }
@@ -207,7 +227,8 @@ func createReferralSet(
 			},
 		},
 	}
-	if err := governance.SubmitTx("vote on proposal", dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
+	if err := governance.SubmitTx(fmt.Sprintf("create referral team %s", teamName),
+		dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
 	return nil

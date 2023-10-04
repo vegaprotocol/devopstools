@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
@@ -59,5 +60,6 @@ type DataNodeClient interface {
 	GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error)
 	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
 	GetCurrentReferralProgram() (*dataapipb.ReferralProgram, error)
+	GetReferralSets() (map[string]v2.ReferralSet, error)
 	GetCurrentVolumeDiscountProgram() (*dataapipb.VolumeDiscountProgram, error)
 }
