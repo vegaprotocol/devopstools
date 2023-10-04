@@ -83,3 +83,43 @@ func (n *DataNode) ListReferralSets(req *dataapipb.ListReferralSetsRequest) (res
 	}
 	return
 }
+
+//
+// Referees
+//
+
+func (n *DataNode) GetReferralSetReferees() (map[string]v2.ReferralSetReferee, error) {
+	res, err := n.ListReferralSetReferees(&dataapipb.ListReferralSetRefereesRequest{})
+	if err != nil {
+		return nil, err
+	}
+	referralSetReferees := map[string]v2.ReferralSetReferee{}
+	for _, edge := range res.ReferralSetReferees.Edges {
+		referralSetReferees[edge.Node.Referee] = *edge.Node
+	}
+	return referralSetReferees, nil
+
+}
+
+func (n *DataNode) ListReferralSetReferees(req *dataapipb.ListReferralSetRefereesRequest) (response *dataapipb.ListReferralSetRefereesResponse, err error) {
+	msg := "gRPC call failed (data-node): ListReferralSetReferees: %w"
+	if n == nil {
+		err = fmt.Errorf(msg, e.ErrNil)
+		return
+	}
+
+	if n.Conn.GetState() != connectivity.Ready {
+		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
+		return
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	defer cancel()
+
+	response, err = c.ListReferralSetReferees(ctx, req)
+	if err != nil {
+		err = fmt.Errorf(msg, e.ErrorDetail(err))
+	}
+	return
+}

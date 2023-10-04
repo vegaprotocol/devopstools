@@ -95,21 +95,47 @@ func RunReferral(args ReferralArgs) error {
 	logger.Info("Created Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
 
 	logger.Info("Join Referral Sets (teams)")
-	_ = regularTradersWallets
-	logger.Info("Joined Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
+	referralSets, err := network.DataNodeClient.GetReferralSets()
+	if err != nil {
+		return fmt.Errorf("failed to get referral sets, %w", err)
+	}
+	referralSetIds := make([]string, len(referralSets))
+	i := 0
+	for _, referralSet := range referralSets {
+		referralSetIds[i] = referralSet.Id
+		i++
+	}
+	referralSetReferees, err := network.DataNodeClient.GetReferralSetReferees()
+	if err != nil {
+		return err
+	}
+	for _, wallet := range regularTradersWallets {
+		if referralSet, ok := referralSetReferees[wallet.PublicKey]; ok {
+			logger.Debug("Party already belong to a team", zap.String("pub key", wallet.PublicKey),
+				zap.String("team", referralSet.ReferralSetId), zap.String("team lead", referralSet.Referee))
+			continue
+		}
+		// rand stake
+		rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(referralSetIds))))
+		if err != nil {
+			return err
+		}
+		referralSetId := referralSetIds[rndIdx.Int64()]
 
-	// for _, trader := range traders {
-	// 	_, err := trader.GetWallet()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if trader.WalletData.Index == 3 {
-	// 		fmt.Printf("-----> %s\n", trader.PubKey)
-	// 	} else {
-	// 		fmt.Printf(" - %s (%d)\n", trader.PubKey, trader.WalletData.Index)
-	// 	}
-	// }
-	// fmt.Printf("got wallets %s\n", time.Since(start))
+		walletTxReq := walletpb.SubmitTransactionRequest{
+			PubKey: wallet.PublicKey,
+			Command: &walletpb.SubmitTransactionRequest_ApplyReferralCode{
+				ApplyReferralCode: &commandspb.ApplyReferralCode{
+					Id: referralSetId,
+				},
+			},
+		}
+		if err := governance.SubmitTx(fmt.Sprintf("join referral team %s", referralSetId),
+			network.DataNodeClient, wallet, logger, &walletTxReq); err != nil {
+			return fmt.Errorf("failedy to apply referral code, %w", err)
+		}
+	}
+	logger.Info("Joined Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
 
 	return nil
 }
@@ -171,7 +197,7 @@ func createReferralSetsForWallets(
 		return err
 	}
 	//
-	//
+	// Create Referral Sets where needed
 	//
 	referralSets, err := dataNodeClient.GetReferralSets()
 	if err != nil {
