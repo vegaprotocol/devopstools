@@ -11,18 +11,10 @@ import (
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
 	"go.uber.org/zap"
-	sshlib "golang.org/x/crypto/ssh"
 
-	"github.com/vegaprotocol/devopstools/ssh"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegacapsule"
 	"github.com/vegaprotocol/devopstools/vegacmd"
-)
-
-var (
-	VegaSnapshotPath   = filepath.Join("state", "node", "snapshots")
-	VegaCoreConfigPath = filepath.Join("config", "node", "config.toml")
-	RemoteVegaPath     = "/home/vega/vegavisor_home/current/vega"
 )
 
 type LoadSnapshotArgs struct {
@@ -31,12 +23,7 @@ type LoadSnapshotArgs struct {
 	VegacapsuleHome   string
 	VegacapsuleBinary string
 	VegaBinary        string
-	RemoteVegaBinary  string
-
-	SnapshotServerHost     string
-	SnapshotRemoteLocation string
-	SnapshotServerUser     string
-	SnapshotServerKeyFile  string
+	SnapshotLocation  string
 }
 
 func (args LoadSnapshotArgs) Check() error {
@@ -53,28 +40,8 @@ func (args LoadSnapshotArgs) Check() error {
 		)
 	}
 
-	if args.SnapshotServerHost == "" {
-		return fmt.Errorf(
-			"no snapshot server provided: provide value with the --snapshot-server flag",
-		)
-	}
-
-	if args.SnapshotRemoteLocation == "" {
-		return fmt.Errorf(
-			"snapshot remote locatino not provided: provide value with the --snapshot-remote-location flag",
-		)
-	}
-
-	if args.SnapshotServerUser == "" {
-		return fmt.Errorf(
-			"snapshot server user not provided: provide value with the --snapshot-server-user flag",
-		)
-	}
-
-	if !tools.FileExists(args.SnapshotServerKeyFile) {
-		return fmt.Errorf(
-			"snapshot server key does not exist: provide value with the --snapshot-server-key flag",
-		)
+	if !tools.FileExists(args.SnapshotLocation) {
+		return fmt.Errorf("cannot find downloaded mainnet snapshot in %s", args.SnapshotLocation)
 	}
 
 	return nil
@@ -92,12 +59,8 @@ var loadSnapshotCmd = &cobra.Command{
 		}
 
 		if err := runLoadSnapshot(loadSnapshotArgs.Logger,
-			loadSnapshotArgs.SnapshotServerHost,
-			loadSnapshotArgs.SnapshotServerUser,
-			loadSnapshotArgs.SnapshotServerKeyFile,
-			loadSnapshotArgs.SnapshotRemoteLocation,
+			loadSnapshotArgs.SnapshotLocation,
 			loadSnapshotArgs.VegaBinary,
-			loadSnapshotArgs.RemoteVegaBinary,
 			loadSnapshotArgs.VegacapsuleBinary,
 			loadSnapshotArgs.VegacapsuleHome,
 		); err != nil {
@@ -113,23 +76,14 @@ var loadSnapshotCmd = &cobra.Command{
 func init() {
 	loadSnapshotArgs.SnapshotCompatibilityArgs = &snapshotCompatibilityArgs
 
-	currentUser, _ := tools.WhoAmI()
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegaBinary, "vega-binary", "vega", "Path to the vega executable on local machine")
 	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.RemoteVegaBinary, "remote-vega-binary", RemoteVegaPath, "Path to the vega executable on remote machine")
+		StringVar(&loadSnapshotArgs.SnapshotLocation, "snapshot-location", "/tmp/mainnet-snapshot", "Path to the downloaded snapshot from mainnet server")
 	loadSnapshotCmd.PersistentFlags().
 		StringVar(&loadSnapshotArgs.VegacapsuleBinary, "vegacapsule-binary", "vegacapsule", "Path to the vegacapsule executable")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.SnapshotServerHost, "snapshot-server", "", "The source server for the snapshot")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.SnapshotServerUser, "snapshot-server-user", currentUser, "The SSH user for the snapshot server")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.SnapshotRemoteLocation, "snapshot-remote-location", "/home/vega/vega_home/state/node/snapshots", "The location where the snapshot is on the remote server")
-	loadSnapshotCmd.PersistentFlags().
-		StringVar(&loadSnapshotArgs.SnapshotServerKeyFile, "snapshot-server-key-file", filepath.Join(tools.CurrentUserHomePath(), ".ssh", "id_rsa"), "The SSH private key used to authenticate user")
 }
 
 // TODO: Check vegacapule nodes and return list of all of the validators
@@ -155,8 +109,8 @@ func vegacapsuleValidatorsCoreHomePaths(
 
 func runLoadSnapshot(
 	logger *zap.Logger,
-	snapshotServerHost, snapshotServerUser, snapshotServerKeyFile, snapshotRemoteLocation string,
-	vegaBinary, RemoteVegaBinary, vegacapsuleBinary, vegacapsuleHome string,
+	snapshotLocation string,
+	vegaBinary, vegacapsuleBinary, vegacapsuleHome string,
 ) error {
 	validatorHomePaths, err := vegacapsuleValidatorsCoreHomePaths(
 		vegacapsuleBinary,
@@ -174,63 +128,9 @@ func runLoadSnapshot(
 		}
 	}
 
-	snapshotRemoteTempLocation := fmt.Sprintf("/tmp/snapshots-db-%d/snapshots", time.Now().UnixMicro())
-
-	logger.Info("Creating SSH client",
-		zap.String("host", snapshotServerHost),
-		zap.String("user", snapshotServerUser),
-		zap.String("keyfile", snapshotServerKeyFile))
-
-	sshClient, err := ssh.GetSSHConnection(snapshotServerHost, snapshotServerUser, snapshotServerKeyFile)
-	if err != nil {
-		return fmt.Errorf("failed to create ssh connection client: %w", err)
-	}
-
-	err = tools.RetryRun(3, 5*time.Second, func() error {
-		logger.Info("Trying to copy snapshot.db on remote server into temporary location")
-		return copySnapshotOnRemote(logger,
-			RemoteVegaBinary,
-			sshClient,
-			snapshotRemoteLocation,
-			snapshotRemoteTempLocation)
-	})
-	if err != nil {
-		return fmt.Errorf("failed to copy snapshot on remote temp location: %w", err)
-	}
-	defer remoteCleanup(logger, sshClient, filepath.Dir(snapshotRemoteTempLocation))
-
-	tempDir, err := os.MkdirTemp("", "devopstools-snapshot-compatibility")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary dir to download snapshot db: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	logger.Info(
-		"Downloading the snapshot db",
-		zap.String("server", fmt.Sprintf("%s@%s", snapshotServerUser, snapshotServerHost)),
-		zap.String("source path", snapshotRemoteTempLocation),
-		zap.String("destination", tempDir),
-	)
-
-	err = tools.RetryRun(3, 5*time.Second, func() error {
-		logger.Info("Trying to download snapshot-db")
-		return ssh.Download(
-			snapshotServerHost,
-			snapshotServerUser,
-			snapshotServerKeyFile,
-			snapshotRemoteTempLocation,
-			tempDir,
-			logger,
-		)
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download snapshot db: %w", err)
-	}
-	logger.Info("Snapshot database downloaded")
-
 	logger.Info("Selecting block height for the restart")
 	restartHeight, err := tools.RetryReturn(3, 5*time.Second, func() (int, error) {
-		return selectSnapshotHeight(vegaBinary, filepath.Join(tempDir, "snapshots"))
+		return selectSnapshotHeight(vegaBinary, filepath.Join(snapshotLocation, "snapshots"))
 	})
 	if err != nil {
 		return fmt.Errorf("failed to select height for network start: %w", err)
@@ -253,7 +153,7 @@ func runLoadSnapshot(
 		logger.Info("Config updated")
 
 		snapshotDestination := filepath.Join(validatorHomePath, VegaSnapshotPath)
-		snapshotSource := filepath.Join(tempDir, "snapshots")
+		snapshotSource := filepath.Join(snapshotLocation, "snapshots")
 
 		logger.Info("Calling unsafe reset all for core", zap.String("node", validatorHomePath))
 		if _, err := tools.ExecuteBinary(vegaBinary, []string{"unsafe_reset_all", "--home", validatorHomePath}, nil); err != nil {
@@ -277,77 +177,6 @@ func runLoadSnapshot(
 
 		logger.Info("Snapshot database loaded")
 	}
-	return nil
-}
-
-func remoteCleanup(logger *zap.Logger, sshClient *sshlib.Client, filePath string) error {
-	cleanupCommand := fmt.Sprintf("rm -fr %s || echo 'OK'", filePath)
-	logger.Info("Cleaning the remote server up",
-		zap.String("filepath", filePath))
-
-	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
-		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
-	}
-
-	return nil
-}
-
-func copySnapshotOnRemote(logger *zap.Logger,
-	RemoteVegaBinary string,
-	sshClient *sshlib.Client,
-	source, destination string,
-) error {
-	cleanupCommand := fmt.Sprintf("rm -fr %s || echo 'OK'", destination)
-	logger.Info("Cleaning the destination up",
-		zap.String("filepath", destination))
-
-	if stdout, err := ssh.RunCommandWithClient(sshClient, cleanupCommand); err != nil {
-		logger.Error(
-			"failed to cleanup on remote",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to cleanup on remote: output: %s: %s", stdout, err)
-	}
-
-	mkdirCommand := fmt.Sprintf("mkdir -p %s", filepath.Dir(destination))
-	logger.Info("Ensuring destination directory exists",
-		zap.String("command", mkdirCommand))
-
-	if stdout, err := ssh.RunCommandWithClient(sshClient, mkdirCommand); err != nil {
-		logger.Error(
-			"failed to ensure destination directory exists",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to ensure destination directory exists: output: %s: %s", stdout, err)
-	}
-
-	copyCommand := fmt.Sprintf("cp -r %s %s", source, destination)
-
-	logger.Info("Copying snapshot db to temp location",
-		zap.String("command", copyCommand))
-	if stdout, err := ssh.RunCommandWithClient(sshClient, copyCommand); err != nil {
-		logger.Error(
-			fmt.Sprintf("failed to copy snapshot from %s to %s on remote: output", source, destination),
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to copy snapshot from %s to %s on remote: output: %s: %s", source, destination, stdout, err)
-	}
-
-	checkCommand := fmt.Sprintf("%s tools snapshot --db-path '%s'", RemoteVegaBinary, destination)
-	logger.Info("Checking if copied snapshot was copied correctly",
-		zap.String("command", checkCommand))
-	if stdout, err := ssh.RunCommandWithClient(sshClient, checkCommand); err != nil {
-		logger.Error(
-			"failed to check if snapshot was correctly copied on remote",
-			zap.String("stdout", stdout),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to check if snapshot was correctly copied on remote: output: %s: %w", stdout, err)
-	}
-
 	return nil
 }
 

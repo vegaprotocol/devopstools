@@ -114,7 +114,7 @@ func setupNetworkParametersToSetupReferralProgram(
 	updateParams := map[string]string{
 		"governance.proposal.referralProgram.minEnact": "5s",
 		"governance.proposal.referralProgram.minClose": "5s",
-		"referralProgram.maxReferralTiers":             "3",
+		"referralProgram.maxReferralTiers":             "10",
 		"referralProgram.maxReferralDiscountFactor":    "0.02",
 		"referralProgram.maxReferralRewardFactor":      "0.02",
 	}
