@@ -232,7 +232,7 @@ func NewLiquidityProvisionAmendment(
 	return &walletpb.SubmitTransactionRequest_LiquidityProvisionAmendment{
 		LiquidityProvisionAmendment: &commandspb.LiquidityProvisionAmendment{
 			MarketId:         marketId,
-			CommitmentAmount: amount.String() + "0",
+			CommitmentAmount: amount.String(),
 			Fee:              "0.01",
 		},
 	}
