@@ -7,8 +7,6 @@ import (
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
-
-	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 )
 
 type VegaCoreClient interface {
@@ -42,14 +40,17 @@ type DataNodeClient interface {
 	ListNetworkParameters(req *dataapipb.ListNetworkParametersRequest) (response *dataapipb.ListNetworkParametersResponse, err error)
 	GetCurrentEpoch() (*vega.Epoch, error)
 	GetAssets() (map[string]*vega.AssetDetails, error)
+	GetAssetById(assetId string) (*vega.Asset, error)
 	GetAllMarkets() ([]*vega.Market, error)
 	GetMarketById(marketId string) (*vega.Market, error)
+	GetAllMakertInfo() ([]MarketInfo, error)
+	GetTradeableMakertInfo() ([]MarketInfo, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
 	GetFunds(
 		partyID string,
 		accountType vega.AccountType,
 		assetId *string,
-	) ([]datanode.AccountFunds, error)
+	) ([]AccountFunds, error)
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
 	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)

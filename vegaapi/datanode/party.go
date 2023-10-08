@@ -8,6 +8,7 @@ import (
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	e "github.com/vegaprotocol/devopstools/errors"
+	"github.com/vegaprotocol/devopstools/vegaapi"
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -95,14 +96,7 @@ func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (respo
 	return
 }
 
-type AccountFunds struct {
-	Balance     *big.Int
-	PartyId     string
-	AccountType vega.AccountType
-	AssetId     string
-}
-
-func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]AccountFunds, error) {
+func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]vegaapi.AccountFunds, error) {
 	if n == nil {
 		return nil, fmt.Errorf("data node object not constructed: %w", e.ErrNil)
 	}
@@ -131,7 +125,7 @@ func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetI
 		return nil, fmt.Errorf("failed to list accounts: %w", err)
 	}
 
-	results := []AccountFunds{}
+	results := []vegaapi.AccountFunds{}
 
 	if response.Accounts == nil || len(response.Accounts.Edges) < 1 {
 		return results, nil
@@ -143,7 +137,7 @@ func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetI
 		}
 		balance, _ := big.NewInt(0).SetString(row.Node.Balance, 10)
 
-		results = append(results, AccountFunds{
+		results = append(results, vegaapi.AccountFunds{
 			Balance:     balance,
 			PartyId:     partyID,
 			AssetId:     row.Node.Asset,
