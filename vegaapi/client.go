@@ -51,6 +51,7 @@ type DataNodeClient interface {
 		accountType vega.AccountType,
 		assetId *string,
 	) ([]AccountFunds, error)
+	GetPartyGeneralBalances(partyId string) (map[string]*big.Int, error)
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
 	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)
@@ -61,4 +62,5 @@ type DataNodeClient interface {
 	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
 	GetCurrentReferralProgram() (*dataapipb.ReferralProgram, error)
 	GetCurrentVolumeDiscountProgram() (*dataapipb.VolumeDiscountProgram, error)
+	LPForMarketByParty(marketId string, partyId string) ([]*vega.LiquidityProvision, error)
 }

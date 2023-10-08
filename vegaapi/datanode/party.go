@@ -135,7 +135,7 @@ func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetI
 		if row.Node == nil {
 			continue
 		}
-		balance, _ := big.NewInt(0).SetString(row.Node.Balance, 10)
+		balance, _ := new(big.Int).SetString(row.Node.Balance, 10)
 
 		results = append(results, vegaapi.AccountFunds{
 			Balance:     balance,
