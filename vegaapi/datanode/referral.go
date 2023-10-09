@@ -89,13 +89,25 @@ func (n *DataNode) ListReferralSets(req *dataapipb.ListReferralSetsRequest) (res
 //
 
 func (n *DataNode) GetReferralSetReferees() (map[string]v2.ReferralSetReferee, error) {
-	res, err := n.ListReferralSetReferees(&dataapipb.ListReferralSetRefereesRequest{})
-	if err != nil {
-		return nil, err
-	}
 	referralSetReferees := map[string]v2.ReferralSetReferee{}
-	for _, edge := range res.ReferralSetReferees.Edges {
-		referralSetReferees[edge.Node.Referee] = *edge.Node
+	var pagination *v2.Pagination = nil
+	for {
+		res, err := n.ListReferralSetReferees(&dataapipb.ListReferralSetRefereesRequest{
+			Pagination: pagination,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, edge := range res.ReferralSetReferees.Edges {
+			referralSetReferees[edge.Node.Referee] = *edge.Node
+		}
+		if res.ReferralSetReferees.PageInfo.HasNextPage {
+			pagination = &v2.Pagination{
+				After: &res.ReferralSetReferees.PageInfo.EndCursor,
+			}
+		} else {
+			break
+		}
 	}
 	return referralSetReferees, nil
 
