@@ -24,6 +24,7 @@ import (
 
 type ReferralArgs struct {
 	*BotArgs
+	SetupBotsInReferralProgram bool
 }
 
 var referralArgs ReferralArgs
@@ -45,12 +46,16 @@ func init() {
 	referralArgs.BotArgs = &botArgs
 
 	BotCmd.AddCommand(referralCmd)
+	referralCmd.PersistentFlags().BoolVar(&referralArgs.SetupBotsInReferralProgram, "setup", false, "Setup bots in referral program. By default it is dry run")
 }
 
 func RunReferral(args ReferralArgs) error {
 	logger := args.Logger
 	start := time.Now()
 	logger.Info("Start referral", zap.Time("start", start))
+	if !args.SetupBotsInReferralProgram {
+		logger.Info("DRY RUN - use --setup flag to run for real")
+	}
 	logger.Info("Connecting to nework")
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
@@ -89,7 +94,7 @@ func RunReferral(args ReferralArgs) error {
 		zap.Int("regular wallet count", len(regularTradersWallets)), zap.Duration("since start", time.Since(start)))
 
 	logger.Info("Create Referral Sets (teams)")
-	if err := createReferralSetsForWallets(teamLeadersWallets, network, args.Logger); err != nil {
+	if err := createReferralSetsForWallets(teamLeadersWallets, network, args.Logger, !args.SetupBotsInReferralProgram); err != nil {
 		return err
 	}
 	logger.Info("Created Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
@@ -113,6 +118,10 @@ func RunReferral(args ReferralArgs) error {
 		if referralSet, ok := referralSetReferees[wallet.PublicKey]; ok {
 			logger.Debug("Party already belong to a team", zap.String("pub key", wallet.PublicKey),
 				zap.String("team", referralSet.ReferralSetId), zap.String("team lead", referralSet.Referee))
+			continue
+		}
+		if !args.SetupBotsInReferralProgram {
+			logger.Info("DRY RUN - skip joining a team by", zap.String("pub key", wallet.PublicKey))
 			continue
 		}
 		// rand stake
@@ -144,6 +153,7 @@ func createReferralSetsForWallets(
 	referralTeamLeadVegawallet []*wallet.VegaWallet,
 	network *veganetwork.VegaNetwork,
 	logger *zap.Logger,
+	dryRun bool,
 ) error {
 	var (
 		minStake       *big.Int
@@ -193,8 +203,12 @@ func createReferralSetsForWallets(
 		}
 	}
 
-	if err := Stake(stakeByPubKey, network, logger); err != nil {
-		return err
+	if dryRun {
+		logger.Info("DRY RUN - not running stake\n")
+	} else {
+		if err := Stake(stakeByPubKey, network, logger); err != nil {
+			return err
+		}
 	}
 	//
 	// Create Referral Sets where needed
@@ -212,8 +226,12 @@ func createReferralSetsForWallets(
 		//
 		// Create Referral set
 		//
-		if err := createReferralSet(wallet, dataNodeClient, logger); err != nil {
-			return fmt.Errorf("failed to create referral set %s, %w", wallet.PublicKey, err)
+		if dryRun {
+			logger.Info("DRY RUN - skip creation of referral set for wallet", zap.String("pub key", wallet.PublicKey))
+		} else {
+			if err := createReferralSet(wallet, dataNodeClient, logger); err != nil {
+				return fmt.Errorf("failed to create referral set %s, %w", wallet.PublicKey, err)
+			}
 		}
 	}
 
