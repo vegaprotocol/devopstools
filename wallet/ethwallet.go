@@ -35,9 +35,17 @@ func NewEthWallet(
 	private *secrets.EthereumWalletPrivate,
 ) (*EthWallet, error) {
 	errMsg := "failed to create new Ethereum Wallet for %s, %w"
-	nonce, err := ethClient.PendingNonceAt(context.Background(), common.HexToAddress(private.Address))
+	nonce, err := ethClient.NonceAt(context.Background(), common.HexToAddress(private.Address), nil)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, private.Address, err)
+	}
+	pendingNonce, err := ethClient.PendingNonceAt(context.Background(), common.HexToAddress(private.Address))
+	if err != nil {
+		return nil, fmt.Errorf(errMsg, private.Address, err)
+	}
+	if nonce != pendingNonce {
+		return nil, fmt.Errorf(errMsg, private.Address,
+			fmt.Errorf("wallet might be in use, nonce (%d) != pendingNonce (%d)", nonce, pendingNonce))
 	}
 	privateKey, err := crypto.HexToECDSA(private.PrivateKey)
 	if err != nil {
