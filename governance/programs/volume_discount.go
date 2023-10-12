@@ -20,7 +20,7 @@ func NewUpdateVolumeDiscountProgramProposal(closingTime time.Time, enactmentTime
 			EnactmentTimestamp: enactmentTime.Unix(),
 			Change: &vega.ProposalTerms_UpdateVolumeDiscountProgram{
 				UpdateVolumeDiscountProgram: &vega.UpdateVolumeDiscountProgram{
-					Changes: &vega.VolumeDiscountProgram{
+					Changes: &vega.VolumeDiscountProgramChanges{
 						BenefitTiers: []*vega.VolumeBenefitTier{
 							{
 								MinimumRunningNotionalTakerVolume: "10000",

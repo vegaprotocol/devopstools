@@ -92,7 +92,7 @@ func RunReferral(args ReferralArgs) error {
 		}
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-		proposalConfig := programs.NewCreateSimpleReferralSetProposal(closingTime, enactmentTime)
+		proposalConfig := programs.NewUpdateReferralProgramProposal(closingTime, enactmentTime)
 
 		//
 		// Propose & Vote & Wait
@@ -104,6 +104,7 @@ func RunReferral(args ReferralArgs) error {
 			return err
 		}
 	}
+	logger.Info("Check API", zap.String("url", fmt.Sprintf("https://api.n00.%s.vega.xyz/api/v2/referral-programs/current", network.Network)))
 	return nil
 }
 

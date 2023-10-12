@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	vegatypes "code.vegaprotocol.io/vega/core/types"
-	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
@@ -107,30 +105,6 @@ func provideLiquidity(
 				Fee:              "0.01",
 				MarketId:         marketId,
 				CommitmentAmount: "10000000",
-				Buys: []*vega.LiquidityOrder{
-					{
-						Reference:  vegatypes.PeggedReferenceBestBid,
-						Proportion: 10,
-						Offset:     "1000",
-					},
-					{
-						Reference:  vegatypes.PeggedReferenceBestBid,
-						Proportion: 10,
-						Offset:     "2000",
-					},
-				},
-				Sells: []*vega.LiquidityOrder{
-					{
-						Reference:  vegatypes.PeggedReferenceBestAsk,
-						Proportion: 10,
-						Offset:     "2000",
-					},
-					{
-						Reference:  vegatypes.PeggedReferenceBestAsk,
-						Proportion: 10,
-						Offset:     "1000",
-					},
-				},
 			},
 		},
 	}

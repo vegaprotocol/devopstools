@@ -114,6 +114,7 @@ func RunReferral(args ReferralArgs) error {
 	if err != nil {
 		return err
 	}
+	logger.Info("Number of parties in Referral Program before running script to join", zap.Int("count", len(referralSetReferees)))
 	for _, wallet := range regularTradersWallets {
 		if referralSet, ok := referralSetReferees[wallet.PublicKey]; ok {
 			logger.Debug("Party already belong to a team", zap.String("pub key", wallet.PublicKey),

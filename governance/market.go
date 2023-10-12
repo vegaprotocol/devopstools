@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	vegatypes "code.vegaprotocol.io/vega/core/types"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
@@ -110,30 +109,6 @@ func ProposeVoteProvideLP(
 				Fee:              "0.01",
 				MarketId:         market.Id,
 				CommitmentAmount: "1",
-				Buys: []*vega.LiquidityOrder{
-					{
-						Reference:  vegatypes.PeggedReferenceBestBid,
-						Proportion: 10,
-						Offset:     "1000",
-					},
-					{
-						Reference:  vegatypes.PeggedReferenceBestBid,
-						Proportion: 10,
-						Offset:     "2000",
-					},
-				},
-				Sells: []*vega.LiquidityOrder{
-					{
-						Reference:  vegatypes.PeggedReferenceBestAsk,
-						Proportion: 10,
-						Offset:     "2000",
-					},
-					{
-						Reference:  vegatypes.PeggedReferenceBestAsk,
-						Proportion: 10,
-						Offset:     "1000",
-					},
-				},
 			},
 		},
 	}

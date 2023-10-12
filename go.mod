@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
-	code.vegaprotocol.io/vega v0.72.2-0.20231002180350-87173bf5e98a
+	code.vegaprotocol.io/vega v0.73.0-preview.15
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6

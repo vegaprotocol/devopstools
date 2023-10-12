@@ -8,7 +8,7 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {
+func NewUpdateReferralProgramProposal(closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {
 	return &commandspb.ProposalSubmission{
 		Reference: tools.RandAlphaNumericString(40),
 		Rationale: &vega.ProposalRationale{
@@ -20,7 +20,7 @@ func NewCreateSimpleReferralSetProposal(closingTime time.Time, enactmentTime tim
 			EnactmentTimestamp: enactmentTime.Unix(),
 			Change: &vega.ProposalTerms_UpdateReferralProgram{
 				UpdateReferralProgram: &vega.UpdateReferralProgram{
-					Changes: &vega.ReferralProgram{
+					Changes: &vega.ReferralProgramChanges{
 						BenefitTiers: []*vega.BenefitTier{
 							{
 								MinimumRunningNotionalTakerVolume: "10000",

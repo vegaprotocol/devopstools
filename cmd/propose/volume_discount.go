@@ -104,6 +104,7 @@ func RunVolumeDiscount(args VolumeDiscountArgs) error {
 			return err
 		}
 	}
+	logger.Info("Check API", zap.String("url", fmt.Sprintf("https://api.n00.%s.vega.xyz/api/v2/volume-discount-programs/current", network.Network)))
 	return nil
 }
 
