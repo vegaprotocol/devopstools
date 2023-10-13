@@ -75,6 +75,8 @@ var expectedNetworkParams = []struct {
 	{Name: "governance.proposal.VolumeDiscountProgram.minProposerBalance", ExpectedValue: "1"},
 	{Name: "governance.proposal.VolumeDiscountProgram.minVoterBalance", ExpectedValue: "1"},
 	{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "1000", "reward_multiplier": "1.05"}]}`},
+	{Name: "governance.proposal.transfer.minClose", ExpectedValue: "1m"},
+	{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
 }
 
 func RunNetworkParams(args NetworkParamsArgs) error {
