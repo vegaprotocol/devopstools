@@ -45,9 +45,9 @@ var terminateCmd = &cobra.Command{
 func init() {
 	terminateArgs.MarketArgs = &marketArgs
 
-	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.AllMarkets, "all", false, "Remove all markets")
-	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.ManagedMarkets, "managed", false, "Remove markets managed by ops only")
-	terminateCmd.PersistentFlags().StringSliceVar(&terminateArgs.MarketIds, "market-ids", []string{}, "Remove only certain markets")
+	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.AllMarkets, "all", false, "Terminate all markets")
+	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.ManagedMarkets, "managed", false, fmt.Sprintf("Terminate markets managed by ops only(all with %s metadata)", OpsManagedMetadata))
+	terminateCmd.PersistentFlags().StringSliceVar(&terminateArgs.MarketIds, "market-ids", []string{}, "Terminate only certain markets")
 
 	MarketCmd.AddCommand(terminateCmd)
 }
@@ -131,10 +131,9 @@ func RunTerminate(args *TerminateArgs) error {
 		}
 
 		args.Logger.Info("Terminating market: Waiting for proposal to be picked up on the network", zap.String("market", marketDetails.name))
-		proposalId, err := tools.RetryReturn(5, 5*time.Second, func() (string, error) {
+		proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
 			reference := proposal.Reference
 
-			time.Sleep(time.Second * 10)
 			res, err := network.DataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
 				ProposalReference: &reference,
 			})
