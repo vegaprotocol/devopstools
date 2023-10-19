@@ -1,0 +1,188 @@
+package market
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"code.vegaprotocol.io/vega/core/netparams"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	"code.vegaprotocol.io/vega/protos/vega"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	"github.com/spf13/cobra"
+	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
+)
+
+const OpsManagedMetadata = "managed:vega/ops"
+
+type TerminateArgs struct {
+	AllMarkets     bool
+	ManagedMarkets bool
+	MarketIds      []string
+
+	*MarketArgs
+}
+
+var terminateArgs TerminateArgs
+
+// provideLPCmd represents the provideLP command
+var terminateCmd = &cobra.Command{
+	Use:   "terminate",
+	Short: "Terminate one or more markets",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := RunTerminate(&terminateArgs); err != nil {
+			terminateArgs.Logger.Error("Error", zap.Error(err))
+			os.Exit(1)
+		}
+	},
+}
+
+func init() {
+	terminateArgs.MarketArgs = &marketArgs
+
+	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.AllMarkets, "all", false, "Remove all markets")
+	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.ManagedMarkets, "managed", false, "Remove markets managed by ops only")
+	terminateCmd.PersistentFlags().StringSliceVar(&terminateArgs.MarketIds, "market-ids", []string{}, "Remove only certain markets")
+
+	MarketCmd.AddCommand(terminateCmd)
+}
+
+type marketDetails struct {
+	name string
+	id   string
+}
+
+func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
+	result := []marketDetails{}
+
+	markets, err := dataNodeClient.GetAllMarkets()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all markets")
+	}
+
+	isManaged := func(market *vega.Market) bool {
+		if market.TradableInstrument.Instrument.Metadata == nil {
+			return false
+		}
+
+		for _, metadata := range market.TradableInstrument.Instrument.Metadata.Tags {
+			if metadata == OpsManagedMetadata {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	for _, market := range markets {
+		if allMarkets || slices.Contains(marketIds, market.Id) || isManaged(market) {
+			result = append(result, marketDetails{
+				id:   market.Id,
+				name: market.TradableInstrument.Instrument.Name,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func RunTerminate(args *TerminateArgs) error {
+	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
+	if err != nil {
+		return err
+	}
+	defer network.Disconnect()
+
+	minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinClose])
+	if err != nil {
+		return fmt.Errorf("failed to parse duration for %s: %w", netparams.GovernanceProposalMarketMinClose, err)
+	}
+	minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinEnact])
+	if err != nil {
+		return fmt.Errorf("failed to parse duration for %s: %w", netparams.GovernanceProposalMarketMinEnact, err)
+	}
+
+	marketsToRemove, err := findMarkets(network.DataNodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
+	if err != nil {
+		return fmt.Errorf("failed to find markets to remove: %w", err)
+	}
+
+	for _, marketDetails := range marketsToRemove {
+		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
+		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
+
+		args.Logger.Info("Terminating market", zap.String("market", marketDetails.name))
+		proposal := governance.TerminateMarketProposal(closingTime, enactmentTime, marketDetails.name, marketDetails.id, "10")
+
+		args.Logger.Info("Terminating market: Sending proposal", zap.String("market", marketDetails.name))
+		walletTxReq := walletpb.SubmitTransactionRequest{
+			PubKey: network.VegaTokenWhale.PublicKey,
+			Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
+				ProposalSubmission: proposal,
+			},
+		}
+		if err := governance.SubmitTx("terminate market", network.DataNodeClient, network.VegaTokenWhale, args.Logger, &walletTxReq); err != nil {
+			return err
+		}
+
+		args.Logger.Info("Terminating market: Waiting for proposal to be picked up on the network", zap.String("market", marketDetails.name))
+		proposalId, err := tools.RetryReturn(5, 5*time.Second, func() (string, error) {
+			reference := proposal.Reference
+
+			time.Sleep(time.Second * 10)
+			res, err := network.DataNodeClient.ListGovernanceData(&v2.ListGovernanceDataRequest{
+				ProposalReference: &reference,
+			})
+			if err != nil {
+				return "", fmt.Errorf("failed to list governance data for reference %s: %w", proposal.Reference, err)
+			}
+			var proposalId string
+			for _, edge := range res.Connection.Edges {
+				if edge.Node.Proposal.Reference == reference {
+					args.Logger.Info("Found proposal", zap.String("market", marketDetails.name), zap.String("reference", reference),
+						zap.String("status", edge.Node.Proposal.State.String()),
+						zap.Any("proposal", edge.Node.Proposal))
+					proposalId = edge.Node.Proposal.Id
+					break
+				}
+			}
+
+			if len(proposalId) < 1 {
+				return "", fmt.Errorf("got empty proposal id for the %s reference", reference)
+			}
+
+			return proposalId, nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to find proposal for terminate market %s: %w", marketDetails.name, err)
+		}
+		args.Logger.Info("Terminating market: Proposal found", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
+
+		args.Logger.Info("Terminating market: Voting on proposal", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
+		voteWalletTxReq := walletpb.SubmitTransactionRequest{
+			PubKey: network.VegaTokenWhale.PublicKey,
+			Command: &walletpb.SubmitTransactionRequest_VoteSubmission{
+				VoteSubmission: &commandspb.VoteSubmission{
+					ProposalId: proposalId,
+					Value:      vega.Vote_VALUE_YES,
+				},
+			},
+		}
+		if err := governance.SubmitTx("vote on market proposal", network.DataNodeClient, network.VegaTokenWhale, args.Logger, &voteWalletTxReq); err != nil {
+			return err
+		}
+
+		args.Logger.Info("Terminating market: Voted on proposal", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
+	}
+
+	fmt.Printf("%v\n", marketsToRemove)
+	fmt.Println(len(marketsToRemove))
+
+	return nil
+}
