@@ -120,6 +120,7 @@ func NewCommunityETHUSD230630(
 							"class:fx/crypto",
 							"quarterly",
 							"sector:defi",
+							"managed:vega/ops",
 							"enactment:2023-05-21T08:00:00Z",
 							"settlement:2023-06-30T08:00:00Z",
 						}, extraMetadata...),

@@ -132,6 +132,7 @@ func NewBTCUSDPerpetualMarketProposal(
 							"quote:USD",
 							"class:fx/crypto",
 							"perpetual",
+							"managed:vega/ops",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{

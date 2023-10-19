@@ -111,6 +111,7 @@ func NewBTCUSDMarketProposal(
 							"quote:USD",
 							"class:fx/crypto",
 							"monthly",
+							"managed:vega/ops",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{

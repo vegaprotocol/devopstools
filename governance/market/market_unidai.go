@@ -111,6 +111,7 @@ func NewUNIDAIMarketProposal(
 							"quote:DAI",
 							"class:fx/crypto",
 							"monthly",
+							"managed:vega/ops",
 							"sector:defi",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
