@@ -40,7 +40,7 @@ func NewUNIDAIMarketProposal(
 						DecimalPlaces:           decimalPlaces,
 						PositionDecimalPlaces:   3,
 						LinearSlippageFactor:    "0.1",
-						QuadraticSlippageFactor: "0.1",
+						QuadraticSlippageFactor: "0.0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
 							Code: "UNIDAI.MF21",
