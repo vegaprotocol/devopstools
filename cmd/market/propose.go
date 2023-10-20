@@ -200,8 +200,40 @@ func RunPropose(args ProposeArgs) error {
 		}
 	}
 
+	// Check if all network params has been updated correctly
 	if len(networkParametersProposals) > 0 {
-		time.Sleep(30 * time.Second)
+		err := tools.RetryRun(6, 10*time.Second, func() error {
+			if err := network.RefreshNetworkParams(); err != nil {
+				return fmt.Errorf("failed to refresh network parameters: %w", err)
+			}
+
+			for _, proposal := range networkParametersProposals {
+				changes := proposal.Terms.GetUpdateNetworkParameter()
+				if changes == nil {
+					return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
+				}
+
+				value, ok := network.NetworkParams.Params[changes.Changes.Key]
+				if !ok {
+					return fmt.Errorf("the %s network parameter not found yet on the network", changes.Changes.Key)
+				}
+
+				if value != changes.Changes.Value {
+					return fmt.Errorf(
+						"the %s network parameter not updated yet: expected value %s, current value: %s",
+						changes.Changes.Key,
+						changes.Changes.Value,
+						value,
+					)
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("network parameters not updated yet: %w", err)
+		}
 	}
 
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
