@@ -9,6 +9,7 @@ import (
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
@@ -186,4 +187,30 @@ func GetMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) 
 		}
 	}
 	return nil
+}
+
+func TerminateMarketProposal(closingTime, enactmentTime time.Time, marketName string, marketId string, price string) *commandspb.ProposalSubmission {
+	reference := tools.RandAlphaNumericString(40)
+
+	return &commandspb.ProposalSubmission{
+		Reference: reference,
+		Rationale: &vega.ProposalRationale{
+			Title:       fmt.Sprintf("Terminate %s market", marketName),
+			Description: fmt.Sprintf("Terminate %s market", marketName),
+		},
+		Terms: &vega.ProposalTerms{
+			ClosingTimestamp:   closingTime.Unix(),
+			EnactmentTimestamp: enactmentTime.Unix(),
+
+			Change: &vega.ProposalTerms_UpdateMarketState{
+				UpdateMarketState: &vega.UpdateMarketState{
+					Changes: &vega.UpdateMarketStateConfiguration{
+						MarketId:   marketId,
+						UpdateType: vega.MarketStateUpdateType_MARKET_STATE_UPDATE_TYPE_TERMINATE,
+						Price:      &price,
+					},
+				},
+			},
+		},
+	}
 }

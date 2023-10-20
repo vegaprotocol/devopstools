@@ -111,6 +111,7 @@ func NewTSLAMarketProposal(
 							"ticker:TSLA",
 							"class:equities/single-stock-futures",
 							"sector:tech",
+							"managed:vega/ops",
 							"listing_venue:NASDAQ",
 							"country:US",
 						}, extraMetadata...),

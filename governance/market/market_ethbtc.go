@@ -111,6 +111,7 @@ func NewETHBTCMarketProposal(
 							"quote:BTC",
 							"class:fx/crypto",
 							"quarterly",
+							"managed:vega/ops",
 							"sector:crypto",
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
