@@ -454,6 +454,7 @@ func determineWhaleTopUpAmount(
 	for _, traderRegistryEntry := range tradersRegistry {
 		assetDetails, assetExists := assets[traderRegistryEntry.VegaAssetId]
 		if !assetExists {
+			continue
 			return nil, fmt.Errorf(
 				"failed to find asset on network: whale needs to topup the %s asset but it does not exist on the network",
 				traderRegistryEntry.VegaAssetId,
@@ -527,6 +528,7 @@ func determineTradersTopUpAmount(
 	for _, traderDetails := range traders {
 		assetDetails, assetExists := assets[traderDetails.Parameters.SettlementVegaAssetID]
 		if !assetExists {
+			continue
 			return nil, fmt.Errorf(
 				"failed to find asset on network: bot is using the %s asset but it does not exist on the network",
 				traderDetails.Parameters.SettlementVegaAssetID,

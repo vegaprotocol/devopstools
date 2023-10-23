@@ -536,6 +536,25 @@ func RunPropose(args ProposeArgs) error {
 		}()
 	}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sub := market.NewBTCUSDPerpetualMarketProposal_New(
+			"dd20590509d30d20bdbbe64dc1090c1140c7690121a9b9940bc66f62dfa2e599", 5,
+			market.PerpetualBTCUSDOracleAddress,
+			closingTime, enactmentTime,
+			[]string{market.PerpetualBTCUSDNew},
+		)
+		if err != nil {
+			resultsChannel <- err
+			return
+		}
+		resultsChannel <- governance.ProposeVoteProvideLP(
+			"BTC USD-R Incentive I", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+			market.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, market.PerpetualBTCUSDNew, sub, logger,
+		)
+	}()
+
 	wg.Wait()
 	close(resultsChannel)
 
