@@ -119,7 +119,7 @@ func setupNetworkParametersToSetupReferralProgram(
 		"referralProgram.maxReferralDiscountFactor":    "0.02",
 		"referralProgram.maxReferralRewardFactor":      "0.02",
 	}
-	updateCount, err := ProposeAndVoteOnNetworkParameters(
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
 	if err != nil {

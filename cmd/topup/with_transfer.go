@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/bots"
-	"github.com/vegaprotocol/devopstools/cmd/propose"
+	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
@@ -211,7 +211,7 @@ func prepareNetworkForTransfer(logger *zap.Logger, network *veganetwork.VegaNetw
 		return nil
 	}
 
-	updateCount, err := propose.ProposeAndVoteOnNetworkParameters(
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
 

@@ -127,7 +127,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	return result
 }
 
-func updateNetworkParameters(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
+func networkParametersToChange(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
 	result := []*commandspb.ProposalSubmission{}
 
 	perpetualEnabled, perpetualEnabledParamExist := networkParams[netparams.PerpsMarketTradingEnabled]
@@ -189,7 +189,7 @@ func RunPropose(args ProposeArgs) error {
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
 
-	networkParametersProposals := updateNetworkParameters(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
+	networkParametersProposals := networkParametersToChange(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
 
 	for _, p := range networkParametersProposals {
 		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
@@ -202,38 +202,21 @@ func RunPropose(args ProposeArgs) error {
 
 	// Check if all network params has been updated correctly
 	if len(networkParametersProposals) > 0 {
-		err := tools.RetryRun(6, 10*time.Second, func() error {
-			if err := network.RefreshNetworkParams(); err != nil {
-				return fmt.Errorf("failed to refresh network parameters: %w", err)
+		expectedNetworkParameters := map[string]string{}
+		for _, proposal := range networkParametersProposals {
+			changes := proposal.Terms.GetUpdateNetworkParameter()
+			if changes == nil {
+				return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
 			}
+			expectedNetworkParameters[changes.Changes.Key] = changes.Changes.Value
+		}
 
-			for _, proposal := range networkParametersProposals {
-				changes := proposal.Terms.GetUpdateNetworkParameter()
-				if changes == nil {
-					return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
-				}
-
-				value, ok := network.NetworkParams.Params[changes.Changes.Key]
-				if !ok {
-					return fmt.Errorf("the %s network parameter not found yet on the network", changes.Changes.Key)
-				}
-
-				if value != changes.Changes.Value {
-					return fmt.Errorf(
-						"the %s network parameter not updated yet: expected value %s, current value: %s",
-						changes.Changes.Key,
-						changes.Changes.Value,
-						value,
-					)
-				}
-			}
-
-			return nil
-		})
-
-		if err != nil {
+		args.Logger.Info("Waiting for network parameters to be updated")
+		if err := governance.WaitForNetworkParameters(network, expectedNetworkParameters); err != nil {
 			return fmt.Errorf("network parameters not updated yet: %w", err)
 		}
+		time.Sleep(10 * time.Second)
+		args.Logger.Info("Waiting done. all parameters updated")
 	}
 
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
