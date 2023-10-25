@@ -16,6 +16,14 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var LiveMarketStates = []vega.Market_State{
+	vega.Market_STATE_ACTIVE,
+	vega.Market_STATE_PROPOSED,
+	vega.Market_STATE_PENDING,
+	vega.Market_STATE_SUSPENDED,
+	vega.Market_STATE_SUSPENDED_VIA_GOVERNANCE,
+}
+
 func ProposeVoteProvideLP(
 	name string,
 	dataNodeClient vegaapi.DataNodeClient,
@@ -29,7 +37,7 @@ func ProposeVoteProvideLP(
 	proposal *commandspb.ProposalSubmission,
 	logger *zap.Logger,
 ) error {
-	market := GetMarket(markets, oraclePubKey, marketMetadataMarker)
+	market := GetMarket(markets, oraclePubKey, marketMetadataMarker, LiveMarketStates)
 	if market != nil {
 		logger.Info("market already exist", zap.String("market", market.Id), zap.String("name", name))
 		return nil
@@ -97,7 +105,7 @@ func ProposeVoteProvideLP(
 	if err != nil {
 		return fmt.Errorf("failed to get markets: %w", err)
 	}
-	market = GetMarket(markets, oraclePubKey, marketMetadataMarker)
+	market = GetMarket(markets, oraclePubKey, marketMetadataMarker, LiveMarketStates)
 	if market == nil {
 		return fmt.Errorf("failed to find particular market for %s oracle public key", oraclePubKey)
 	}
@@ -122,9 +130,14 @@ func ProposeVoteProvideLP(
 
 const OracleAll = "*"
 
-func GetMarket(markets []*vega.Market, oraclePubKey string, metadataTag string) *vega.Market {
+func GetMarket(markets []*vega.Market, oraclePubKey string, metadataTag string, validStates []vega.Market_State) *vega.Market {
 	for _, market := range markets {
 		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil {
+			continue
+		}
+
+		// filter by states if any provided
+		if len(validStates) > 0 && !slices.Contains(validStates, market.State) {
 			continue
 		}
 
