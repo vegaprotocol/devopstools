@@ -7,12 +7,10 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/vega/core/netparams"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/market"
-	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"go.uber.org/zap"
@@ -127,14 +125,13 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	return result
 }
 
-func networkParametersToChange(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
-	result := []*commandspb.ProposalSubmission{}
+func networkParametersForMarketPropose(networkVersion string) map[string]string {
+	result := map[string]string{}
 
-	perpetualEnabled, perpetualEnabledParamExist := networkParams[netparams.PerpsMarketTradingEnabled]
 	prePerpsVersion := semver.New(0, 72, 99, "", "")
 
-	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 && (!perpetualEnabledParamExist || perpetualEnabled != "1") {
-		result = append(result, networkparameters.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
+	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 {
+		result[netparams.PerpsMarketTradingEnabled] = "1"
 	}
 
 	return result
@@ -189,34 +186,18 @@ func RunPropose(args ProposeArgs) error {
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
 
-	networkParametersProposals := networkParametersToChange(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
+	networkParametersToUpdate := networkParametersForMarketPropose(statistics.Statistics.AppVersion)
+	if len(networkParametersToUpdate) > 0 {
+		args.Logger.Sugar().Infof("Voting network parmeters required for markets creation: %v", networkParametersToUpdate)
 
-	for _, p := range networkParametersProposals {
-		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
-		enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-
-		if err := governance.ProposeAndVote(logger, proposerVegawallet, network.DataNodeClient, p); err != nil {
-			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
-		}
-	}
-
-	// Check if all network params has been updated correctly
-	if len(networkParametersProposals) > 0 {
-		expectedNetworkParameters := map[string]string{}
-		for _, proposal := range networkParametersProposals {
-			changes := proposal.Terms.GetUpdateNetworkParameter()
-			if changes == nil {
-				return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
-			}
-			expectedNetworkParameters[changes.Changes.Key] = changes.Changes.Value
+		if _, err := governance.ProposeAndVoteOnNetworkParameters(
+			networkParametersToUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
+		); err != nil {
+			return fmt.Errorf("failed to update network parameters required for market creation: %w", err)
 		}
 
-		args.Logger.Info("Waiting for network parameters to be updated")
-		if err := governance.WaitForNetworkParameters(network, expectedNetworkParameters); err != nil {
-			return fmt.Errorf("network parameters not updated yet: %w", err)
-		}
-		time.Sleep(10 * time.Second)
-		args.Logger.Info("Waiting done. all parameters updated")
+		time.Sleep(5 * time.Second)
+		args.Logger.Info("Network parameters updated")
 	}
 
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
