@@ -127,7 +127,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	return result
 }
 
-func updateNetworkParameters(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
+func networkParametersToChange(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
 	result := []*commandspb.ProposalSubmission{}
 
 	perpetualEnabled, perpetualEnabledParamExist := networkParams[netparams.PerpsMarketTradingEnabled]
@@ -189,7 +189,7 @@ func RunPropose(args ProposeArgs) error {
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
 
-	networkParametersProposals := updateNetworkParameters(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
+	networkParametersProposals := networkParametersToChange(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
 
 	for _, p := range networkParametersProposals {
 		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
@@ -200,8 +200,23 @@ func RunPropose(args ProposeArgs) error {
 		}
 	}
 
+	// Check if all network params has been updated correctly
 	if len(networkParametersProposals) > 0 {
-		time.Sleep(30 * time.Second)
+		expectedNetworkParameters := map[string]string{}
+		for _, proposal := range networkParametersProposals {
+			changes := proposal.Terms.GetUpdateNetworkParameter()
+			if changes == nil {
+				return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
+			}
+			expectedNetworkParameters[changes.Changes.Key] = changes.Changes.Value
+		}
+
+		args.Logger.Info("Waiting for network parameters to be updated")
+		if err := governance.WaitForNetworkParameters(network, expectedNetworkParameters); err != nil {
+			return fmt.Errorf("network parameters not updated yet: %w", err)
+		}
+		time.Sleep(10 * time.Second)
+		args.Logger.Info("Waiting done. all parameters updated")
 	}
 
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)

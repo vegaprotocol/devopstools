@@ -8,13 +8,9 @@ import (
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
-	"github.com/vegaprotocol/devopstools/types"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
 	"go.uber.org/zap"
 )
 
@@ -122,55 +118,4 @@ func RunNetworkParameter(args NetworkParameterArgs) error {
 	}
 
 	return nil
-}
-
-func ProposeAndVoteOnNetworkParameters(
-	nameToValue map[string]string,
-	proposerVegawallet *wallet.VegaWallet,
-	networkParams *types.NetworkParams,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (int64, error) {
-	errorMsgPrefix := "failed to Propose and Vote on Update Network Paramter"
-	minClose, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalUpdateNetParamMinClose])
-	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
-	}
-	minEnact, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalUpdateNetParamMinEnact])
-	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
-	}
-	logger.Debug("proposal limits", zap.Duration("minClose", minClose), zap.Duration("minEnact", minEnact))
-
-	//
-	// Prepare proposals
-	//
-	descriptionToProposalConfig := map[string]*commandspb.ProposalSubmission{}
-	for name, value := range nameToValue {
-		if currentValue, ok := networkParams.Params[name]; ok && value == currentValue {
-			logger.Info("Skip Networ Paramter proposal", zap.String("name", name), zap.String("value", value))
-			continue
-		}
-		description := fmt.Sprintf("Update Network Paramter '%s'='%s'", name, value)
-		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
-		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-		descriptionToProposalConfig[description] = networkparameters.NewUpdateParametersProposal(
-			name, value, closingTime, enactmentTime,
-		)
-	}
-	if len(descriptionToProposalConfig) == 0 {
-		return 0, nil
-	}
-
-	//
-	// Propose & Vote
-	//
-	err = governance.ProposeVoteAndWaitList(
-		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
-	}
-
-	return int64(len(descriptionToProposalConfig)), nil
 }

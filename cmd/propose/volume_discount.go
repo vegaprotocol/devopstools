@@ -118,7 +118,7 @@ func setupNetworkParametersToSetupVolumeDiscountProgram(
 		"volumeDiscountProgram.maxBenefitTiers":              "10",
 		"volumeDiscountProgram.maxVolumeDiscountFactor":      "0.4",
 	}
-	updateCount, err := ProposeAndVoteOnNetworkParameters(
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
 	if err != nil {

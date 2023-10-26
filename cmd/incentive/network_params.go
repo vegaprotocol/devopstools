@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/cmd/propose"
+	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -92,7 +92,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	}
 
 	if args.UpdateParams {
-		updateCount, err := propose.ProposeAndVoteOnNetworkParameters(
+		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 			toUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
 		)
 		if err != nil {
