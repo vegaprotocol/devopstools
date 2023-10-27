@@ -93,6 +93,7 @@ type MarketFlags struct {
 	PerpetualEURUSD  bool
 	PerpetualLINKUSD bool
 	PerpetualETHUSD  bool
+	IncentiveBTCUSD  bool
 }
 
 func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
@@ -118,6 +119,10 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
 		result.PerpetualETHUSD = args.ProposePerpetualETHUSD || args.ProposeAll
 		result.PerpetualLINKUSD = args.ProposePerpetualLINKUSD || args.ProposeAll
+	}
+
+	if env == types.NetworkFairground {
+		result.IncentiveBTCUSD = true
 	}
 
 	result.TotalMarkets = tools.StructSize(result) - 1
@@ -173,6 +178,11 @@ func RunPropose(args ProposeArgs) error {
 	markets, err := network.DataNodeClient.GetAllMarkets()
 	if err != nil {
 		return err
+	}
+
+	assets, err := network.DataNodeClient.GetAssets()
+	if err != nil {
+		return fmt.Errorf("failed to get assets: %w", err)
 	}
 
 	settlementAssetId, foundSettlementAssetId := settlementAssetIDs[args.VegaNetworkName]
@@ -498,6 +508,31 @@ func RunPropose(args ProposeArgs) error {
 				market.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
 			)
 		}()
+	}
+
+	if marketsFlags.IncentiveBTCUSD {
+		if _, assetExists := assets[market.IncentiveVegaAssetId]; !assetExists {
+			logger.Warn(fmt.Sprintf("Cannot create incentive market. The %s asset does not exist on the network", market.IncentiveVegaAssetId))
+		} else {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				sub := market.NewBTCUSDIncentiveMarketProposal(
+					market.IncentiveVegaAssetId, 5,
+					market.IncentiveBTCUSDOracleAddress,
+					closingTime, enactmentTime,
+					[]string{market.IncentiveBTCUSD},
+				)
+				if err != nil {
+					resultsChannel <- err
+					return
+				}
+				resultsChannel <- governance.ProposeVoteProvideLP(
+					"Incentive BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+					market.IncentiveBTCUSDOracleAddress, closingTime, enactmentTime, market.IncentiveBTCUSD, sub, logger,
+				)
+			}()
+		}
 	}
 
 	wg.Wait()
