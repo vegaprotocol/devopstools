@@ -167,7 +167,7 @@ func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
 	addresses := []string{}
 	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 		address := net.JoinHostPort(host, "3007")
-		conn, err := net.DialTimeout("tcp", address, 300*time.Millisecond)
+		conn, err := net.DialTimeout("tcp", address, 2*time.Second)
 		if err == nil && conn != nil {
 			conn.Close()
 			addresses = append(addresses, fmt.Sprintf("%s:3007", host))

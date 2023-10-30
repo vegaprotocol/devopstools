@@ -44,19 +44,22 @@ func SubmitProposal(
 	//
 	// Find Proposal
 	//
-	for i := 0; i < 20; i++ {
-		time.Sleep(time.Second * 3)
+	proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
 		proposal, err := fetchProposalByReferenceAndProposer(
 			reference, proposerVegawallet.PublicKey, dataNodeClient,
 		)
+
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to find proposal: %w", err)
 		}
 		if proposal != nil {
 			return proposal.Id, nil
 		}
-	}
-	return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", proposalDescription, reference)
+
+		return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", proposalDescription, reference)
+	})
+
+	return proposalId, fmt.Errorf("failed to find proposal: %w", err)
 }
 
 func SubmitProposalList(
@@ -85,29 +88,36 @@ func SubmitProposalList(
 	// Find ProposalIds
 	//
 	descriptionToProposalId := map[string]string{}
-	for i := 0; i < 20; i++ {
-		time.Sleep(time.Second * 3)
-		for description, proposalConfig := range descriptionToProposalConfig {
-			// skip already fetched proposals
-			if _, ok := descriptionToProposalId[description]; ok {
-				continue
-			}
-			// fetch proposal by reference
-			// on test networks there can be a lot of proposals, so fetching one by one can be more efficient
+
+	for description, proposalConfig := range descriptionToProposalConfig {
+		// skip already fetched proposals
+		if _, ok := descriptionToProposalId[description]; ok {
+			continue
+		}
+		// fetch proposal by reference
+		// on test networks there can be a lot of proposals, so fetching one by one can be more efficient
+
+		proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
 			proposal, err := fetchProposalByReferenceAndProposer(
 				proposalConfig.Reference, proposerVegawallet.PublicKey, dataNodeClient,
 			)
+
 			if err != nil {
-				return nil, err
+				return "", fmt.Errorf("failed to find proposal: %w", err)
 			}
 			if proposal != nil {
-				descriptionToProposalId[description] = proposal.Id
+				return proposal.Id, nil
 			}
+
+			return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", description, proposalConfig.Reference)
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to find proposal: %w", err)
 		}
 
-		if len(descriptionToProposalId) >= len(descriptionToProposalConfig) {
-			break
-		}
+		descriptionToProposalId[description] = proposalId
+
 	}
 
 	if len(descriptionToProposalId) < len(descriptionToProposalConfig) {
@@ -122,9 +132,12 @@ func fetchProposalByReferenceAndProposer(
 	proposerPartyId string,
 	dataNodeClient vegaapi.DataNodeClient,
 ) (*vega.Proposal, error) {
-	res, err := dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
-		Reference: &reference,
+	res, err := tools.RetryReturn(6, 10*time.Second, func() (*v2.GetGovernanceDataResponse, error) {
+		return dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
+			Reference: &reference,
+		})
 	})
+
 	if err != nil {
 		return nil, err
 	}

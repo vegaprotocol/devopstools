@@ -91,6 +91,27 @@ func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managed
 	return result, nil
 }
 
+func networkParametersForMarketsTermination(currentNetworkParameters map[string]string, marketsToTerminate int) map[string]string {
+	const spamParametersMultiplier = 5
+
+	result := map[string]string{}
+	maxVotes := currentNetworkParameters[netparams.SpamProtectionMaxVotes]
+	maxProposals := currentNetworkParameters[netparams.SpamProtectionMaxProposals]
+
+	maxVotesInt := tools.StrToIntOrDefault(maxVotes, 0)
+	maxProposalsInt := tools.StrToIntOrDefault(maxProposals, 0)
+
+	if maxVotesInt < marketsToTerminate*spamParametersMultiplier {
+		result[netparams.SpamProtectionMaxVotes] = fmt.Sprintf("%d", marketsToTerminate*spamParametersMultiplier)
+	}
+
+	if maxProposalsInt < marketsToTerminate*spamParametersMultiplier {
+		result[netparams.SpamProtectionMaxProposals] = fmt.Sprintf("%d", marketsToTerminate*spamParametersMultiplier)
+	}
+
+	return result
+}
+
 func RunTerminate(args *TerminateArgs) error {
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
@@ -110,6 +131,20 @@ func RunTerminate(args *TerminateArgs) error {
 	marketsToRemove, err := findMarkets(network.DataNodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
 	if err != nil {
 		return fmt.Errorf("failed to find markets to remove: %w", err)
+	}
+
+	networkParametersToUpdate := networkParametersForMarketsTermination(network.NetworkParams.Params, len(marketsToRemove))
+	if len(networkParametersToUpdate) > 0 {
+		args.Logger.Sugar().Infof("Voting network parmeters required for markets termination: %v", networkParametersToUpdate)
+
+		if _, err := governance.ProposeAndVoteOnNetworkParameters(
+			networkParametersToUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
+		); err != nil {
+			return fmt.Errorf("failed to update network parameters required for market termination: %w", err)
+		}
+
+		time.Sleep(5 * time.Second)
+		args.Logger.Info("Network parameters updated")
 	}
 
 	for _, marketDetails := range marketsToRemove {

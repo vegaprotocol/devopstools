@@ -7,12 +7,10 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/vega/core/netparams"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/market"
-	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"go.uber.org/zap"
@@ -95,6 +93,7 @@ type MarketFlags struct {
 	PerpetualEURUSD  bool
 	PerpetualLINKUSD bool
 	PerpetualETHUSD  bool
+	IncentiveBTCUSD  bool
 }
 
 func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
@@ -122,19 +121,22 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.PerpetualLINKUSD = args.ProposePerpetualLINKUSD || args.ProposeAll
 	}
 
+	if env == types.NetworkFairground {
+		result.IncentiveBTCUSD = true
+	}
+
 	result.TotalMarkets = tools.StructSize(result) - 1
 
 	return result
 }
 
-func networkParametersToChange(closingTime, enactmentTime time.Time, networkParams map[string]string, networkVersion string) []*commandspb.ProposalSubmission {
-	result := []*commandspb.ProposalSubmission{}
+func networkParametersForMarketPropose(networkVersion string) map[string]string {
+	result := map[string]string{}
 
-	perpetualEnabled, perpetualEnabledParamExist := networkParams[netparams.PerpsMarketTradingEnabled]
 	prePerpsVersion := semver.New(0, 72, 99, "", "")
 
-	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 && (!perpetualEnabledParamExist || perpetualEnabled != "1") {
-		result = append(result, networkparameters.NewUpdateParametersProposal(netparams.PerpsMarketTradingEnabled, "1", closingTime, enactmentTime))
+	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 {
+		result[netparams.PerpsMarketTradingEnabled] = "1"
 	}
 
 	return result
@@ -178,6 +180,11 @@ func RunPropose(args ProposeArgs) error {
 		return err
 	}
 
+	assets, err := network.DataNodeClient.GetAssets()
+	if err != nil {
+		return fmt.Errorf("failed to get assets: %w", err)
+	}
+
 	settlementAssetId, foundSettlementAssetId := settlementAssetIDs[args.VegaNetworkName]
 	if !foundSettlementAssetId {
 		return fmt.Errorf("failed to get assets id's for network %s", err)
@@ -189,34 +196,18 @@ func RunPropose(args ProposeArgs) error {
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
 
-	networkParametersProposals := networkParametersToChange(closingTime, enactmentTime, network.NetworkParams.Params, statistics.Statistics.AppVersion)
+	networkParametersToUpdate := networkParametersForMarketPropose(statistics.Statistics.AppVersion)
+	if len(networkParametersToUpdate) > 0 {
+		args.Logger.Sugar().Infof("Voting network parmeters required for markets creation: %v", networkParametersToUpdate)
 
-	for _, p := range networkParametersProposals {
-		closingTime = time.Now().Add(time.Second * 20).Add(minClose)
-		enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-
-		if err := governance.ProposeAndVote(logger, proposerVegawallet, network.DataNodeClient, p); err != nil {
-			return fmt.Errorf("failed to submit network parameter change proposal: %w", err)
-		}
-	}
-
-	// Check if all network params has been updated correctly
-	if len(networkParametersProposals) > 0 {
-		expectedNetworkParameters := map[string]string{}
-		for _, proposal := range networkParametersProposals {
-			changes := proposal.Terms.GetUpdateNetworkParameter()
-			if changes == nil {
-				return fmt.Errorf("invalid proposal for %s", proposal.Rationale.Title)
-			}
-			expectedNetworkParameters[changes.Changes.Key] = changes.Changes.Value
+		if _, err := governance.ProposeAndVoteOnNetworkParameters(
+			networkParametersToUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
+		); err != nil {
+			return fmt.Errorf("failed to update network parameters required for market creation: %w", err)
 		}
 
-		args.Logger.Info("Waiting for network parameters to be updated")
-		if err := governance.WaitForNetworkParameters(network, expectedNetworkParameters); err != nil {
-			return fmt.Errorf("network parameters not updated yet: %w", err)
-		}
-		time.Sleep(10 * time.Second)
-		args.Logger.Info("Waiting done. all parameters updated")
+		time.Sleep(5 * time.Second)
+		args.Logger.Info("Network parameters updated")
 	}
 
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
@@ -517,6 +508,31 @@ func RunPropose(args ProposeArgs) error {
 				market.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
 			)
 		}()
+	}
+
+	if marketsFlags.IncentiveBTCUSD {
+		if _, assetExists := assets[market.IncentiveVegaAssetId]; !assetExists {
+			logger.Warn(fmt.Sprintf("Cannot create incentive market. The %s asset does not exist on the network", market.IncentiveVegaAssetId))
+		} else {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				sub := market.NewBTCUSDIncentiveMarketProposal(
+					market.IncentiveVegaAssetId, 5,
+					market.IncentiveBTCUSDOracleAddress,
+					closingTime, enactmentTime,
+					[]string{market.IncentiveBTCUSD},
+				)
+				if err != nil {
+					resultsChannel <- err
+					return
+				}
+				resultsChannel <- governance.ProposeVoteProvideLP(
+					"Incentive BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+					market.IncentiveBTCUSDOracleAddress, closingTime, enactmentTime, market.IncentiveBTCUSD, sub, logger,
+				)
+			}()
+		}
 	}
 
 	wg.Wait()
