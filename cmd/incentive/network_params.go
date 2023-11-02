@@ -55,7 +55,7 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "referralProgram.maxReferralRewardProportion", ExpectedValue: "0.5"},
 		{Name: "volumeDiscountProgram.maxBenefitTiers", ExpectedValue: "10"},
 		{Name: "volumeDiscountProgram.maxVolumeDiscountFactor", ExpectedValue: "0.4"},
-		{Name: "rewards.activityStreak.benefitTiers", ExpectedValue: "{\"tiers\": [{\"minimum_activity_streak\": 1, \"reward_multiplier\": \"1.05\", \"vesting_multiplier\": \"1.05\"}, {\"minimum_activity_streak\": 24, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.10\"}, {\"minimum_activity_streak\": 48, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.15\"}, {\"minimum_activity_streak\": 62, \"reward_multiplier\": \"1.20\", \"vesting_multiplier\": \"1.20\"}]}"},
+		{Name: "rewards.activityStreak.benefitTiers", ExpectedValue: "{\"tiers\": [{\"minimum_activity_streak\": 1, \"reward_multiplier\": \"1.05\", \"vesting_multiplier\": \"1.05\"}, {\"minimum_activity_streak\": 6, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.10\"}, {\"minimum_activity_streak\": 24, \"reward_multiplier\": \"1.10\", \"vesting_multiplier\": \"1.15\"}, {\"minimum_activity_streak\": 72, \"reward_multiplier\": \"1.20\", \"vesting_multiplier\": \"1.20\"}]}"},
 		{Name: "rewards.activityStreak.inactivityLimit", ExpectedValue: "24"},
 		{Name: "rewards.activityStreak.minQuantumOpenVolume", ExpectedValue: "100"},
 		{Name: "rewards.activityStreak.minQuantumTradeVolume", ExpectedValue: "100"},
@@ -78,7 +78,7 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "governance.proposal.VolumeDiscountProgram.requiredMajority", ExpectedValue: "0.66"},
 		{Name: "governance.proposal.VolumeDiscountProgram.minProposerBalance", ExpectedValue: "1"},
 		{Name: "governance.proposal.VolumeDiscountProgram.minVoterBalance", ExpectedValue: "1"},
-		{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "1000", "reward_multiplier": "1.05"}]}`},
+		{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "10", "reward_multiplier": "1.05"}, {"minimum_quantum_balance": "100", "reward_multiplier": "1.10"},{"minimum_quantum_balance": "1000", "reward_multiplier": "1.15"},{"minimum_quantum_balance": "10000", "reward_multiplier": "1.20"}]}`},
 		{Name: "governance.proposal.transfer.minClose", ExpectedValue: "1m"},
 		{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
 	}
