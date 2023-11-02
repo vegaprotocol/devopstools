@@ -50,7 +50,7 @@ func getAssets(env string) []assetsgov.AssetProposalDetails {
 		return result
 	}
 
-	// FairgroundAssets
+	// Fairground Assets
 	result = []assetsgov.AssetProposalDetails{
 		{
 			Name:                     "Wrapped Ether",
