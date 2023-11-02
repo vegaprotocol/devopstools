@@ -10,12 +10,12 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const MainnetDogeUSDTMetadataID = "auto:mainnet_btc_usdt"
+const MainnetDogeUSDTMetadataID = "auto:mainnet_doge_usdt"
 
 var (
 	MainnetDogeUSDTOracleDecimalPlaces   = uint64(6)
 	MainnetDogeUSDTMarketSettlementHours = 24 * 31
-	MainnetDogeUSDTPositionDecimalPlaces = int64(4)
+	MainnetDogeUSDTPositionDecimalPlaces = int64(-3)
 	MainnetDogeUSDTDecimalPlaces         = uint64(5)
 )
 
@@ -26,7 +26,7 @@ func NewMainnetDogeUSDT(
 	closingTime time.Time,
 	enactmentTime time.Time,
 	extraMetadata []string,
-) (*commandspb.ProposalSubmission, error) {
+) *commandspb.ProposalSubmission {
 	reference := tools.RandAlphaNumericString(40)
 
 	nowTime := time.Now()
@@ -115,7 +115,7 @@ func NewMainnetDogeUSDT(
 						},
 						DecimalPlaces: MainnetDogeUSDTDecimalPlaces,
 						Metadata: append([]string{
-							"base:BTC",
+							"base:DOGE",
 							"quote:USDT",
 							fmt.Sprintf("enactment:%s", enactmentTime.Format(time.RFC3339)),
 							fmt.Sprintf("settlement:%s", settlementTime.Format(time.RFC3339)),
@@ -142,22 +142,27 @@ func NewMainnetDogeUSDT(
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
 								RiskAversionParameter: 0.000001,
-								Tau:                   0.000009506426342,
+								Tau:                   0.0001140771161,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
-									R:     0,
+									R:     0.016,
 									Sigma: 1.5,
 								},
 							},
 						},
-						PositionDecimalPlaces:   MainnetDogeUSDTPositionDecimalPlaces,
-						LpPriceRange:            &[]string{"0.05"}[0],
-						LiquiditySlaParameters:  nil,
+						PositionDecimalPlaces: MainnetDogeUSDTPositionDecimalPlaces,
+						LpPriceRange:          &[]string{"0.8"}[0],
+						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
+							PerformanceHysteresisEpochs: 1,
+							PriceRange:                  "0.05",
+							SlaCompetitionFactor:        "0.90",
+							CommitmentMinTimeFraction:   "0.95",
+						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 					},
 				},
 			},
 		},
-	}, nil
+	}
 }

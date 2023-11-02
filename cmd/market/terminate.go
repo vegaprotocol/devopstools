@@ -80,6 +80,10 @@ func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managed
 	}
 
 	for _, market := range markets {
+		if !slices.Contains(governance.LiveMarketStates, market.State) {
+			continue
+		}
+
 		if allMarkets || slices.Contains(marketIds, market.Id) || isManaged(market) {
 			result = append(result, marketDetails{
 				id:   market.Id,

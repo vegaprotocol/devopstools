@@ -15,7 +15,7 @@ const MainnetBTCUSDTMetadataID = "auto:mainnet_btc_usdt"
 var (
 	MainnetBTCUSDTOracleDecimalPlaces   = uint64(6)
 	MainnetBTCUSDTMarketSettlementHours = 24 * 31
-	MainnetBTCUSDTPositionDecimalPlaces = int64(3)
+	MainnetBTCUSDTPositionDecimalPlaces = int64(4)
 	MainnetBTCUSDTDecimalPlaces         = uint64(1)
 )
 
@@ -26,7 +26,7 @@ func NewMainnetBTCUSDT(
 	closingTime time.Time,
 	enactmentTime time.Time,
 	extraMetadata []string,
-) (*commandspb.ProposalSubmission, error) {
+) *commandspb.ProposalSubmission {
 	reference := tools.RandAlphaNumericString(40)
 
 	nowTime := time.Now()
@@ -180,14 +180,19 @@ This proposal requests to list BTC/USDT-231231 as a market with USDT as a settle
 								},
 							},
 						},
-						PositionDecimalPlaces:   MainnetBTCUSDTPositionDecimalPlaces,
-						LpPriceRange:            &[]string{"0.05"}[0],
-						LiquiditySlaParameters:  nil,
+						PositionDecimalPlaces: MainnetBTCUSDTPositionDecimalPlaces,
+						LpPriceRange:          &[]string{"0.05"}[0],
+						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
+							PerformanceHysteresisEpochs: 1,
+							PriceRange:                  "0.05",
+							SlaCompetitionFactor:        "0.90",
+							CommitmentMinTimeFraction:   "0.95",
+						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 					},
 				},
 			},
 		},
-	}, nil
+	}
 }

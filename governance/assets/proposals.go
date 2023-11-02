@@ -62,3 +62,34 @@ Proposal to add USD Rewards ($%s) as a settlement asset as discussed for incenti
 		},
 	}
 }
+
+func UpdateAssetProposal(closingTime, enactmentTime time.Time, assetId string, details AssetProposalDetails) *commandspb.ProposalSubmission {
+	reference := tools.RandAlphaNumericString(40)
+
+	return &commandspb.ProposalSubmission{
+		Reference: reference,
+		Rationale: &vega.ProposalRationale{
+			Title:       fmt.Sprintf("Create Asset - %s ($%s)", details.Name, details.Symbol),
+			Description: fmt.Sprintf(`Update the %s($%s) asset`, details.Name, details.Symbol),
+		},
+		Terms: &vega.ProposalTerms{
+			ClosingTimestamp:    closingTime.Unix(),
+			EnactmentTimestamp:  enactmentTime.Unix(),
+			ValidationTimestamp: closingTime.Unix() - 1,
+			Change: &vega.ProposalTerms_UpdateAsset{
+				UpdateAsset: &vega.UpdateAsset{
+					AssetId: assetId,
+					Changes: &vega.AssetDetailsUpdate{
+						Quantum: details.Quantum.String(),
+						Source: &vega.AssetDetailsUpdate_Erc20{
+							Erc20: &vega.ERC20Update{
+								WithdrawThreshold: details.ERC20WithdrawalThreshold,
+								LifetimeLimit:     details.ERC20LifetimeLimit,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}

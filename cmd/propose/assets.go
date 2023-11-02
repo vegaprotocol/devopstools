@@ -102,6 +102,10 @@ func getAssets(env string) []assetsgov.AssetProposalDetails {
 	return result
 }
 
+func isAssetSame(deployed *vega.AssetDetails, proposed *assetsgov.AssetProposalDetails) bool {
+	return false
+}
+
 func ProposeAssetRun(args *ProposeAssetArgs) error {
 	logger := args.Logger
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
