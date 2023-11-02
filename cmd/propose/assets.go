@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"code.vegaprotocol.io/vega/core/netparams"
@@ -31,7 +32,7 @@ var proposeAssetCmd = &cobra.Command{
 	Use:   "assets",
 	Short: "Propose asset",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ProposeAssetRun(&proposeAssetArgs); err != nil {
+		if err := proposeAssetRun(&proposeAssetArgs); err != nil {
 			proposeAssetArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
@@ -71,15 +72,6 @@ func getAssets(env string) []assetsgov.AssetProposalDetails {
 			ERC20WithdrawalThreshold: "1",
 		},
 		{
-			Name:                     "Wrapped Ether",
-			Symbol:                   "WETH",
-			Decimals:                 18,
-			Quantum:                  big.NewInt(500000000000000),
-			ERC20Address:             "0xC0DF5eB3e58f21026E6F997Dd9C3e1Fa07d22428",
-			ERC20LifetimeLimit:       "50000000000000000000",
-			ERC20WithdrawalThreshold: "1",
-		},
-		{
 			Name:                     "Tether USD",
 			Symbol:                   "USDT",
 			Decimals:                 6,
@@ -102,11 +94,23 @@ func getAssets(env string) []assetsgov.AssetProposalDetails {
 	return result
 }
 
-func isAssetSame(deployed *vega.AssetDetails, proposed *assetsgov.AssetProposalDetails) bool {
-	return false
+func isAssetSame(deployedOnNetwork *vega.AssetDetails, proposed *assetsgov.AssetProposalDetails) bool {
+	erc20 := deployedOnNetwork.GetErc20()
+	if erc20 == nil {
+		return false
+	}
+
+	return deployedOnNetwork.Quantum == proposed.Quantum.String() &&
+		erc20.WithdrawThreshold == proposed.ERC20WithdrawalThreshold &&
+		erc20.LifetimeLimit == proposed.ERC20LifetimeLimit
 }
 
-func ProposeAssetRun(args *ProposeAssetArgs) error {
+type vegaNetworkAsset struct {
+	id    string
+	asset *vega.AssetDetails
+}
+
+func proposeAssetRun(args *ProposeAssetArgs) error {
 	logger := args.Logger
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
@@ -119,13 +123,13 @@ func ProposeAssetRun(args *ProposeAssetArgs) error {
 		return fmt.Errorf("failed to get assets already created on the network: %w", err)
 	}
 
-	assetsByERC20 := map[string]*vega.AssetDetails{}
-	for _, asset := range networkAssets {
+	assetsByERC20 := map[string]vegaNetworkAsset{}
+	for id, asset := range networkAssets {
 		erc20 := asset.GetErc20()
 		if erc20 == nil {
 			continue
 		}
-		assetsByERC20[erc20.ContractAddress] = asset
+		assetsByERC20[strings.ToLower(erc20.ContractAddress)] = vegaNetworkAsset{id: id, asset: asset}
 	}
 
 	var errs *multierror.Error
@@ -140,16 +144,6 @@ func ProposeAssetRun(args *ProposeAssetArgs) error {
 			zap.String("withdrawal-threshold", assetDetails.ERC20WithdrawalThreshold),
 			zap.String("lifetime-limit", assetDetails.ERC20LifetimeLimit),
 		)
-
-		if _, assetAlreadyCreated := assetsByERC20[assetDetails.ERC20Address]; assetAlreadyCreated {
-			logger.Info("Asset with given erc20 address already created",
-				zap.String("name", assetDetails.Name),
-				zap.String("symbol", assetDetails.Symbol),
-				zap.String("erc20-address", assetDetails.ERC20Address),
-			)
-
-			continue
-		}
 
 		minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinClose])
 		if err != nil {
@@ -177,7 +171,29 @@ func ProposeAssetRun(args *ProposeAssetArgs) error {
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 
-		proposal := assetsgov.NewAssetProposal(closingTime, enactmentTime, assetDetails)
+		var proposal *commandspb.ProposalSubmission
+		if existingAsset, assetAlreadyCreated := assetsByERC20[strings.ToLower(assetDetails.ERC20Address)]; assetAlreadyCreated {
+			if isAssetSame(existingAsset.asset, &assetDetails) {
+				logger.Info("Asset with given erc20 address already created, and does not need a change",
+					zap.String("name", assetDetails.Name),
+					zap.String("symbol", assetDetails.Symbol),
+					zap.String("erc20-address", assetDetails.ERC20Address),
+				)
+
+				continue
+			}
+
+			logger.Info("Asset with given erc20 address already created. Changes required",
+				zap.String("name", assetDetails.Name),
+				zap.String("symbol", assetDetails.Symbol),
+				zap.String("vega-asset-id", existingAsset.id),
+				zap.String("erc20-address", assetDetails.ERC20Address),
+			)
+
+			proposal = assetsgov.UpdateAssetProposal(closingTime, enactmentTime, existingAsset.id, assetDetails)
+		} else {
+			proposal = assetsgov.NewAssetProposal(closingTime, enactmentTime, assetDetails)
+		}
 
 		args.Logger.Info("Proposing asset: Sending proposal", zap.String("name", assetDetails.Name))
 		walletTxReq := walletpb.SubmitTransactionRequest{
