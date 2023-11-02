@@ -78,7 +78,7 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "governance.proposal.VolumeDiscountProgram.requiredMajority", ExpectedValue: "0.66"},
 		{Name: "governance.proposal.VolumeDiscountProgram.minProposerBalance", ExpectedValue: "1"},
 		{Name: "governance.proposal.VolumeDiscountProgram.minVoterBalance", ExpectedValue: "1"},
-		{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "10", "reward_multiplier": "1.05"}, {"minimum_quantum_balance": "100", "reward_multiplier": "1.10"},{"minimum_quantum_balance": "1000", "reward_multiplier": "1.10"},{"minimum_quantum_balance": "10000", "reward_multiplier": "1.10"}]}`},
+		{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "10", "reward_multiplier": "1.05"}, {"minimum_quantum_balance": "100", "reward_multiplier": "1.10"},{"minimum_quantum_balance": "1000", "reward_multiplier": "1.15"},{"minimum_quantum_balance": "10000", "reward_multiplier": "1.20"}]}`},
 		{Name: "governance.proposal.transfer.minClose", ExpectedValue: "1m"},
 		{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
 	}
