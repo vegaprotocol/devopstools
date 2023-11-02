@@ -24,19 +24,19 @@ func NewUpdateReferralProgramProposal(closingTime time.Time, enactmentTime time.
 						BenefitTiers: []*vega.BenefitTier{
 							{
 								MinimumRunningNotionalTakerVolume: "10000",
-								MinimumEpochs:                     "6",
+								MinimumEpochs:                     "1",
 								ReferralRewardFactor:              "0.001",
 								ReferralDiscountFactor:            "0.001",
 							},
 							{
 								MinimumRunningNotionalTakerVolume: "500000",
-								MinimumEpochs:                     "24",
+								MinimumEpochs:                     "6",
 								ReferralRewardFactor:              "0.005",
 								ReferralDiscountFactor:            "0.005",
 							},
 							{
 								MinimumRunningNotionalTakerVolume: "1000000",
-								MinimumEpochs:                     "48",
+								MinimumEpochs:                     "24",
 								ReferralRewardFactor:              "0.01",
 								ReferralDiscountFactor:            "0.01",
 							},
