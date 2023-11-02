@@ -22,15 +22,11 @@ var (
 // settlementVegaAssetId ideally with 6 decimal places
 func NewMainnetLinkUSDT(
 	settlementVegaAssetId string,
-	decimalPlaces uint64,
 	oraclePubKey string,
 	closingTime time.Time,
 	enactmentTime time.Time,
 	extraMetadata []string,
 ) (*commandspb.ProposalSubmission, error) {
-	if decimalPlaces != 6 {
-		return nil, fmt.Errorf("asset decimal places for market %s(%s) must be 6", "ETH/USDT expiry 2023 June 30th", settlementVegaAssetId)
-	}
 
 	reference := tools.RandAlphaNumericString(40)
 
@@ -60,8 +56,8 @@ This proposal requests to list LINK/USDT-231231 as a market with USDT as a settl
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						Instrument: &vega.InstrumentConfiguration{
-							Name: "LINK/USDT expiry 2023 June 30th",
-							Code: "LINK/USDT-230630",
+							Name: "LINK/USDT",
+							Code: "LINK/USDT-MAINNET",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
@@ -142,7 +138,8 @@ This proposal requests to list LINK/USDT-231231 as a market with USDT as a settl
 							"class:fx/crypto",
 							"quarterly",
 							"sector:defi",
-							"enactment:2023-10-04T08:00:00Z",
+							fmt.Sprintf("enactment:%s", enactmentTime.Format(time.RFC3339)),
+							MainnetLinkUSDTMetadataID,
 							fmt.Sprintf("settlement:%s   2023-12-31T08:00:00Z", settlementTime.Format(time.RFC3339)),
 						}, extraMetadata...),
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
