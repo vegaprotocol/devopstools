@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/programs"
+	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -119,6 +120,10 @@ func setupNetworkParametersToSetupReferralProgram(
 		"referralProgram.maxReferralDiscountFactor":    "0.02",
 		"referralProgram.maxReferralRewardFactor":      "0.02",
 	}
+	if network.Network == types.NetworkDevnet1 {
+		updateParams["governance.proposal.referralProgram.requiredParticipation"] = "0.0001"
+	}
+
 	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
