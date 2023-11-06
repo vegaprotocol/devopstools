@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/programs"
+	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
@@ -118,6 +119,11 @@ func setupNetworkParametersToSetupVolumeDiscountProgram(
 		"volumeDiscountProgram.maxBenefitTiers":              "10",
 		"volumeDiscountProgram.maxVolumeDiscountFactor":      "0.4",
 	}
+
+	if network.Network == types.NetworkDevnet1 {
+		updateParams["governance.proposal.VolumeDiscountProgram.requiredParticipation"] = "0.0001"
+	}
+
 	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
