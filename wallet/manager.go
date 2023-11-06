@@ -2,9 +2,11 @@ package wallet
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
+	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 )
 
@@ -70,9 +72,17 @@ func (wm *WalletManager) getEthereumWallet(
 	if err != nil {
 		return nil, err
 	}
-	ethWallet, err := NewEthWallet(ethClient, walletPrivate)
+
+	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*EthWallet, error) {
+		ethWallet, err := NewEthWallet(ethClient, walletPrivate)
+		if err != nil {
+			return nil, err
+		}
+		return ethWallet, nil
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new eth wallet: %w", err)
 	}
 	return ethWallet, nil
 }
