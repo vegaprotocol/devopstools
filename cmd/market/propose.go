@@ -107,8 +107,8 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		return MarketFlags{
 			TotalMarkets: 6,
 
-			PerpetualBTCUSD: false,
-			PerpetualEURUSD: false,
+			PerpetualBTCUSD: true,
+			PerpetualEURUSD: true,
 
 			MainnetBTCUSDT:  true,
 			MainnetDOGEUSDT: true,
