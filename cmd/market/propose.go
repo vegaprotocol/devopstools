@@ -426,7 +426,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewBTCUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC,
+				settlementAssetId.MainnetLikeAsset_USDT,
 				market.PerpetualBTCUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualBTCUSD},
@@ -489,7 +489,7 @@ func RunPropose(args ProposeArgs) error {
 		go func() {
 			defer wg.Done()
 			sub := market.NewETHUSDPerpetualMarketProposal(
-				settlementAssetId.SettlementAsset_USDC,
+				settlementAssetId.MainnetLikeAsset_USDT,
 				market.PerpetualETHUSDOracleAddress,
 				closingTime, enactmentTime,
 				[]string{market.PerpetualETHUSD},
