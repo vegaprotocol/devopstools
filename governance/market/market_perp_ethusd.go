@@ -15,7 +15,6 @@ const PerpetualETHUSDOracleAddress = "0x694AA1769357215DE4FAC081bf1f309aDC325306
 
 func NewETHUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
-	decimalPlaces uint64,
 	oraclePubKey string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -23,7 +22,7 @@ func NewETHUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "ETHUSD Perpetual"
+		name      = "ETH/USD Perpetual"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +30,8 @@ func NewETHUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New ETHUSD perpetual market",
-			Description: "New ETHUSD perpetual market",
+			Title:       "ETH/USD Perpetual",
+			Description: "An Ethereum (ETH) Perpetual Market denominated in USD and settled in USDT",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -40,21 +39,21 @@ func NewETHUSDPerpetualMarketProposal(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
-						DecimalPlaces:           decimalPlaces,
+						DecimalPlaces:           2,
 						PositionDecimalPlaces:   3,
-						LinearSlippageFactor:    "0.01",
+						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "ETHUSD.PERP",
+							Code: "ETHEREUM.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
 									ClampUpperBound:     "0",
 									InterestRate:        "0",
-									MarginFundingFactor: "0.1",
+									MarginFundingFactor: "0.95",
 									SettlementAsset:     settlementVegaAssetId,
-									QuoteName:           "USD",
+									QuoteName:           "USDT",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
@@ -138,43 +137,33 @@ func NewETHUSDPerpetualMarketProposal(
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
 								{
-									Horizon:          4320,
-									Probability:      "0.99",
+									Horizon:          43200,
+									Probability:      "0.9999999",
 									AuctionExtension: 300,
-								},
-								{
-									Horizon:          1440,
-									Probability:      "0.99",
-									AuctionExtension: 180,
-								},
-								{
-									Horizon:          360,
-									Probability:      "0.99",
-									AuctionExtension: 120,
 								},
 							},
 						},
 						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
-							PriceRange:                  "0.05",
-							CommitmentMinTimeFraction:   "0.95",
+							PriceRange:                  "0.03",
+							CommitmentMinTimeFraction:   "0.85",
 							PerformanceHysteresisEpochs: 1,
-							SlaCompetitionFactor:        "0.90",
+							SlaCompetitionFactor:        "0.5",
 						},
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
 								TimeWindow:    3600,
-								ScalingFactor: 10,
+								ScalingFactor: 1,
 							},
-							TriggeringRatio:  "0.9",
+							TriggeringRatio:  "0.7",
 							AuctionExtension: 1,
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
 								RiskAversionParameter: 0.000001,
-								Tau:                   0.00000380258,
+								Tau:                   0.000009506426342,
 								Params: &vega.LogNormalModelParams{
 									Mu:    0,
-									R:     0,
+									R:     0.016,
 									Sigma: 1.5,
 								},
 							},
