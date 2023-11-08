@@ -94,9 +94,29 @@ type MarketFlags struct {
 	PerpetualLINKUSD bool
 	PerpetualETHUSD  bool
 	IncentiveBTCUSD  bool
+
+	MainnetBTCUSDT  bool
+	MainnetDOGEUSDT bool
+	MainnetETHUSDT  bool
+	MainnetLINKUSDT bool
 }
 
 func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
+	// For fairground We want to keep clean network
+	if env == types.NetworkFairground {
+		return MarketFlags{
+			TotalMarkets: 6,
+
+			PerpetualBTCUSD: false,
+			PerpetualEURUSD: false,
+
+			MainnetBTCUSDT:  true,
+			MainnetDOGEUSDT: true,
+			MainnetETHUSDT:  true,
+			MainnetLINKUSDT: true,
+		}
+	}
+
 	result := MarketFlags{
 		AAPL:    args.ProposeAAPL || args.ProposeAll,
 		AAVEDAI: args.ProposeAAVEDAI || args.ProposeAll,
@@ -113,16 +133,12 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 	}
 
-	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 || env == types.NetworkFairground {
+	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
 		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
 		result.PerpetualEURUSD = args.ProposePerpetualEURUSD || args.ProposeAll
 		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
 		result.PerpetualETHUSD = args.ProposePerpetualETHUSD || args.ProposeAll
 		result.PerpetualLINKUSD = args.ProposePerpetualLINKUSD || args.ProposeAll
-	}
-
-	if env == types.NetworkFairground {
-		result.IncentiveBTCUSD = true
 	}
 
 	result.TotalMarkets = tools.StructSize(result) - 1
@@ -533,6 +549,70 @@ func RunPropose(args ProposeArgs) error {
 				)
 			}()
 		}
+	}
+
+	if marketsFlags.MainnetBTCUSDT {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewMainnetBTCUSDT(
+				settlementAssetId.MainnetLikeAsset_USDT, CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"BTC USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetBTCUSDTMetadataID, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.MainnetDOGEUSDT {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewMainnetDogeUSDT(
+				settlementAssetId.MainnetLikeAsset_USDT, CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"DOGE USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetDogeUSDTMetadataID, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.MainnetETHUSDT {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewMainnetETHUSDT(
+				settlementAssetId.MainnetLikeAsset_USDT, CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"ETH USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetETHUSDTMetadataID, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.MainnetLINKUSDT {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewMainnetLinkUSDT(
+				settlementAssetId.MainnetLikeAsset_USDT, CoinBaseOraclePubKey,
+				closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"LINK USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+			)
+		}()
 	}
 
 	wg.Wait()
