@@ -48,12 +48,12 @@ func NewBTCUSDPerpetualMarketProposal(
 							Code: "BTCUSDT.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
-									// ClampLowerBound:     "0",
-									// ClampUpperBound:     "0",
-									// InterestRate:        "0",
-									// MarginFundingFactor: "0.1",
-									SettlementAsset: settlementVegaAssetId,
-									QuoteName:       "USDT",
+									ClampLowerBound:     "0",
+									ClampUpperBound:     "0",
+									InterestRate:        "0",
+									MarginFundingFactor: "0.95",
+									SettlementAsset:     settlementVegaAssetId,
+									QuoteName:           "USDT",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
