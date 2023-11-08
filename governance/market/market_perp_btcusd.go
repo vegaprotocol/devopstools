@@ -15,7 +15,6 @@ const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43
 
 func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
-	decimalPlaces uint64,
 	oraclePubKey string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -23,7 +22,7 @@ func NewBTCUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "BTCUSD Perpetual Futures"
+		name      = "BTCUSDT Perp"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +30,8 @@ func NewBTCUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New BTCUSD perpetual futures market",
-			Description: "New BTCUSD perpetual futures market",
+			Title:       "BTCUSDT Perp",
+			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Perp as a market with USDT as a settlement asset",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -40,21 +39,21 @@ func NewBTCUSDPerpetualMarketProposal(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
-						DecimalPlaces:           decimalPlaces,
+						DecimalPlaces:           1,
 						PositionDecimalPlaces:   4,
-						LinearSlippageFactor:    "0.01",
-						QuadraticSlippageFactor: "0.0",
+						LinearSlippageFactor:    "0.001",
+						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "BTCUSD.PERP",
+							Code: "BTCUSDT.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
-									ClampLowerBound:     "0",
-									ClampUpperBound:     "0",
-									InterestRate:        "0",
-									MarginFundingFactor: "0.1",
-									SettlementAsset:     settlementVegaAssetId,
-									QuoteName:           "USD",
+									// ClampLowerBound:     "0",
+									// ClampUpperBound:     "0",
+									// InterestRate:        "0",
+									// MarginFundingFactor: "0.1",
+									SettlementAsset: settlementVegaAssetId,
+									QuoteName:       "USDT",
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{
@@ -111,7 +110,7 @@ func NewBTCUSDPerpetualMarketProposal(
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 300, // 5 mins in seconds
+																Every: 1800, // 5 mins in seconds
 															},
 														},
 													},
@@ -155,10 +154,10 @@ func NewBTCUSDPerpetualMarketProposal(
 							},
 						},
 						LiquiditySlaParameters: &vega.LiquiditySLAParameters{
-							PriceRange:                  "0.05",
-							CommitmentMinTimeFraction:   "0.95",
-							PerformanceHysteresisEpochs: 1,
-							SlaCompetitionFactor:        "0.90",
+							PriceRange:                  "0.015",
+							CommitmentMinTimeFraction:   "0.60",
+							PerformanceHysteresisEpochs: 0,
+							SlaCompetitionFactor:        "0.2",
 						},
 						LiquidityMonitoringParameters: &vega.LiquidityMonitoringParameters{
 							TargetStakeParameters: &vega.TargetStakeParameters{
