@@ -84,7 +84,7 @@ func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managed
 			continue
 		}
 
-		if allMarkets || slices.Contains(marketIds, market.Id) || isManaged(market) {
+		if allMarkets || slices.Contains(marketIds, market.Id) || (managedMarkets && isManaged(market)) {
 			result = append(result, marketDetails{
 				id:   market.Id,
 				name: market.TradableInstrument.Instrument.Name,
