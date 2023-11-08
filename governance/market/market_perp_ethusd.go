@@ -23,7 +23,7 @@ func NewETHUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "ETHUSD Perpetual"
+		name      = "ETH/USD Perpetual"
 	)
 
 	contractABI := `[{"inputs":[],"name":"latestAnswer","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +31,8 @@ func NewETHUSDPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New ETHUSD perpetual market",
-			Description: "New ETHUSD perpetual market",
+			Title:       "ETH/USD Perpetual",
+			Description: "An Ethereum (ETH) Perpetual Market denominated in USD and settled in USDT",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -46,7 +46,7 @@ func NewETHUSDPerpetualMarketProposal(
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "ETHUSD.PERP",
+							Code: "ETHEREUM.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "0",
