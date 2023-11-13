@@ -3,7 +3,8 @@ package incentive
 import (
 	"fmt"
 	"os"
-	"slices"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
@@ -84,7 +85,7 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
 	}
 
-	if slices.Contains(env, []string{types.NetworkStagnet1, types.NetworkFairground}) {
+	if slices.Contains([]string{types.NetworkStagnet1, types.NetworkFairground}, env) {
 		result = append(result, expectedNetworkParameter{
 			Name:          "validators.epoch.length",
 			ExpectedValue: "30m",
