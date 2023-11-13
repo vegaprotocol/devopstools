@@ -49,7 +49,7 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		ETHDAI:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 
 		SettlementAsset_USDC:  "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
-		MainnetLikeAsset_USDT: "",
+		MainnetLikeAsset_USDT: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d",
 	},
 	types.NetworkStagnet1: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
@@ -61,7 +61,7 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		ETHDAI:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 
 		SettlementAsset_USDC:  "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
-		MainnetLikeAsset_USDT: "",
+		MainnetLikeAsset_USDT: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d",
 	},
 	types.NetworkStagnet3: {
 		AAPL:    "ede4076aef07fd79502d14326c54ab3911558371baaf697a19d077f4f89de399", // "tUSDC"
