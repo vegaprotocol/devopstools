@@ -189,6 +189,12 @@ This proposal requests to list LINK/USDT-231231 as a market with USDT as a settl
 							SlaCompetitionFactor:        "0.90",
 							CommitmentMinTimeFraction:   "0.95",
 						},
+						LiquidationStrategy: &vega.LiquidationStrategy{
+							DisposalTimeStep:    30,
+							MaxFractionConsumed: "0.1",
+							DisposalFraction:    "0.1",
+							// FullDisposalSize:    0,
+						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 					},
