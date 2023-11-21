@@ -167,6 +167,12 @@ func NewBTCUSDPerpetualMarketProposal(
 							TriggeringRatio:  "0.9",
 							AuctionExtension: 1,
 						},
+						LiquidationStrategy: &vega.LiquidationStrategy{
+							DisposalTimeStep:    30,
+							MaxFractionConsumed: "0.1",
+							DisposalFraction:    "0.1",
+							// FullDisposalSize:    0,
+						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{
 								RiskAversionParameter: 0.000001,

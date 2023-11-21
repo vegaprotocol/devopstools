@@ -177,6 +177,12 @@ func NewCommunityLinkUSD230630(
 							PerformanceHysteresisEpochs: 1,
 							SlaCompetitionFactor:        "0.90",
 						},
+						LiquidationStrategy: &vega.LiquidationStrategy{
+							DisposalTimeStep:    30,
+							MaxFractionConsumed: "0.1",
+							DisposalFraction:    "0.1",
+							// FullDisposalSize:    0,
+						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
 					},
