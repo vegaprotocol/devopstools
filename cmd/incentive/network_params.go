@@ -83,6 +83,8 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "rewards.vesting.benefitTiers", ExpectedValue: `{"tiers": [{"minimum_quantum_balance": "10", "reward_multiplier": "1.05"}, {"minimum_quantum_balance": "100", "reward_multiplier": "1.10"},{"minimum_quantum_balance": "1000", "reward_multiplier": "1.15"},{"minimum_quantum_balance": "10000", "reward_multiplier": "1.20"}]}`},
 		{Name: "governance.proposal.transfer.minClose", ExpectedValue: "1m"},
 		{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
+		{Name: "governance.proposal.updateAsset.minClose", ExpectedValue: "5s"},
+		{Name: "governance.proposal.updateAsset.minEnact", ExpectedValue: "5s"},
 	}
 
 	if slices.Contains([]string{types.NetworkStagnet1, types.NetworkFairground}, env) {
