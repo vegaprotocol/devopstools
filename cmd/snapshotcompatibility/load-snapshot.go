@@ -176,6 +176,18 @@ func runLoadSnapshot(
 		}
 
 		logger.Info("Snapshot database loaded")
+
+		// force protocol-upgrade flag to be true in the snapshots
+		logger.Info("Forcing protocol-upgrade flag to true in snapshot")
+		snapshotToJSONArgs := []string{
+			"tools",
+			"snapshot",
+			"--set-pup",
+			"--home", validatorHomePath,
+		}
+		if _, err := tools.ExecuteBinary(vegaBinary, snapshotToJSONArgs, nil); err != nil {
+			return fmt.Errorf("failed to set protocol-upgrade flag in latest snapshot: %w", err)
+		}
 	}
 	return nil
 }
