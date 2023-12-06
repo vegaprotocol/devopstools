@@ -117,8 +117,8 @@ func setupNetworkParametersToSetupReferralProgram(
 		"governance.proposal.referralProgram.minEnact": "5s",
 		"governance.proposal.referralProgram.minClose": "5s",
 		"referralProgram.maxReferralTiers":             "10",
-		"referralProgram.maxReferralDiscountFactor":    "0.02",
-		"referralProgram.maxReferralRewardFactor":      "0.02",
+		"referralProgram.maxReferralDiscountFactor":    "0.1",
+		"referralProgram.maxReferralRewardFactor":      "0.2",
 	}
 	if network.Network == types.NetworkDevnet1 {
 		updateParams["governance.proposal.referralProgram.requiredParticipation"] = "0.0001"
