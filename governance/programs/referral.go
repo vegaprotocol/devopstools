@@ -22,41 +22,72 @@ func NewUpdateReferralProgramProposal(closingTime time.Time, enactmentTime time.
 				UpdateReferralProgram: &vega.UpdateReferralProgram{
 					Changes: &vega.ReferralProgramChanges{
 						BenefitTiers: []*vega.BenefitTier{
+
 							{
-								MinimumRunningNotionalTakerVolume: "10000",
+								MinimumRunningNotionalTakerVolume: "100000",
 								MinimumEpochs:                     "1",
-								ReferralRewardFactor:              "0.001",
-								ReferralDiscountFactor:            "0.001",
-							},
-							{
-								MinimumRunningNotionalTakerVolume: "500000",
-								MinimumEpochs:                     "6",
-								ReferralRewardFactor:              "0.005",
-								ReferralDiscountFactor:            "0.005",
+								ReferralRewardFactor:              "0.05",
+								ReferralDiscountFactor:            "0.1",
 							},
 							{
 								MinimumRunningNotionalTakerVolume: "1000000",
-								MinimumEpochs:                     "24",
-								ReferralRewardFactor:              "0.01",
-								ReferralDiscountFactor:            "0.01",
+								MinimumEpochs:                     "1",
+								ReferralRewardFactor:              "0.075",
+								ReferralDiscountFactor:            "0.1",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "5000000",
+								MinimumEpochs:                     "1",
+								ReferralRewardFactor:              "0.1",
+								ReferralDiscountFactor:            "0.1",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "25000000",
+								MinimumEpochs:                     "1",
+								ReferralRewardFactor:              "0.125",
+								ReferralDiscountFactor:            "0.1",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "75000000",
+								MinimumEpochs:                     "1",
+								ReferralRewardFactor:              "0.15",
+								ReferralDiscountFactor:            "0.1",
+							},
+							{
+								MinimumRunningNotionalTakerVolume: "150000000",
+								MinimumEpochs:                     "1",
+								ReferralRewardFactor:              "0.175",
+								ReferralDiscountFactor:            "0.1",
 							},
 						},
 						StakingTiers: []*vega.StakingTier{
 							{
-								MinimumStakedTokens:      "1",
-								ReferralRewardMultiplier: "1",
+								MinimumStakedTokens:      "100000000000000000000",
+								ReferralRewardMultiplier: "1.025",
 							},
 							{
-								MinimumStakedTokens:      "2",
-								ReferralRewardMultiplier: "2",
+								MinimumStakedTokens:      "1000000000000000000000",
+								ReferralRewardMultiplier: "1.05",
 							},
 							{
-								MinimumStakedTokens:      "5",
-								ReferralRewardMultiplier: "3",
+								MinimumStakedTokens:      "5000000000000000000000",
+								ReferralRewardMultiplier: "1.1",
+							},
+							{
+								MinimumStakedTokens:      "50000000000000000000000",
+								ReferralRewardMultiplier: "1.2",
+							},
+							{
+								MinimumStakedTokens:      "250000000000000000000000",
+								ReferralRewardMultiplier: "1.25",
+							},
+							{
+								MinimumStakedTokens:      "500000000000000000000000",
+								ReferralRewardMultiplier: "1.3",
 							},
 						},
 						EndOfProgramTimestamp: time.Now().Add(time.Hour * 24 * 365 * 3).Unix(), // TODO: Do We want to have it open almost forever?
-						WindowLength:          3,
+						WindowLength:          30,
 					},
 				},
 			},
