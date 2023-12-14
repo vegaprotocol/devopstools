@@ -85,6 +85,7 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "governance.proposal.transfer.minEnact", ExpectedValue: "1m"},
 		{Name: "governance.proposal.updateAsset.minClose", ExpectedValue: "5s"},
 		{Name: "governance.proposal.updateAsset.minEnact", ExpectedValue: "5s"},
+		{Name: "ethereum.oracles.enabled", ExpectedValue: "1"},
 	}
 
 	if slices.Contains([]string{types.NetworkStagnet1, types.NetworkFairground}, env) {
