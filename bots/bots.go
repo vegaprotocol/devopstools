@@ -8,7 +8,12 @@ import (
 	"time"
 )
 
-type BotTraders struct {
+const (
+	// MarketMakerWalletIndex defines index of the market marker wallet. This is hardcoded in the vega-market-sim.
+	MarketMakerWalletIndex = 3
+)
+
+type BotTrader struct {
 	Name       string `json:"name"`
 	PubKey     string `json:"pubKey"`
 	Parameters struct {
@@ -22,22 +27,24 @@ type BotTraders struct {
 	} `json:"parameters"`
 }
 
+type BotTraders map[string]BotTrader
+
 func GetBotTraders(
 	network string,
-) (map[string]BotTraders, error) {
+) (BotTraders, error) {
 	return GetBotTradersWithURL(network, "")
 }
 
 func GetBotTradersWithURL(
 	network string,
 	botsURL string,
-) (map[string]BotTraders, error) {
+) (BotTraders, error) {
 	if len(botsURL) == 0 {
 		botsURL = fmt.Sprintf("https://%s.bots.vega.rocks/traders", network)
 	}
 	log.Printf("Getting traders from: %s", botsURL)
 	var payload struct {
-		Traders map[string]BotTraders `json:"traders"`
+		Traders BotTraders `json:"traders"`
 	}
 	err := getBots(botsURL, "", &payload)
 	if err != nil {

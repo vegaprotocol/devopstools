@@ -81,7 +81,7 @@ func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
 		return fmt.Errorf("failed to get assets from datanode: %w", err)
 	}
 
-	traders, err := tools.RetryReturn(10, 5*time.Second, func() (map[string]bots.BotTraders, error) {
+	traders, err := tools.RetryReturn(10, 5*time.Second, func() (bots.BotTraders, error) {
 		return bots.GetBotTradersWithURL(args.VegaNetworkName, args.TradersURL)
 	})
 	if err != nil {
@@ -520,7 +520,7 @@ func determineWhaleTopUpAmount(
 func determineTradersTopUpAmount(
 	logger *zap.Logger,
 	assets map[string]*vega.AssetDetails,
-	traders map[string]bots.BotTraders,
+	traders map[string]bots.BotTrader,
 ) (map[string]AssetTopUp, error) {
 	topUpRegistry := map[string]AssetTopUp{}
 
