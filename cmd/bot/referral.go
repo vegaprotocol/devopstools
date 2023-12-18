@@ -14,7 +14,7 @@ import (
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/ethutils"
@@ -674,7 +674,7 @@ func doStake(
 	// Stake
 	//
 	var (
-		stakeTxs     = make(map[string]*ethTypes.Transaction, len(missingStakeByPubKey))
+		stakeTxs     = make(map[string]*ethtypes.Transaction, len(missingStakeByPubKey))
 		failedCount  = 0
 		successCount = 0
 	)
