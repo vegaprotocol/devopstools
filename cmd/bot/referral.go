@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
@@ -25,6 +28,9 @@ import (
 type ReferralArgs struct {
 	*BotArgs
 	SetupBotsInReferralProgram bool
+	Assets                     []string
+	NumberOfTeams              uint32
+	NumberOfMembersPerTeam     uint32
 }
 
 var referralArgs ReferralArgs
@@ -46,7 +52,30 @@ func init() {
 	referralArgs.BotArgs = &botArgs
 
 	BotCmd.AddCommand(referralCmd)
-	referralCmd.PersistentFlags().BoolVar(&referralArgs.SetupBotsInReferralProgram, "setup", false, "Setup bots in referral program. By default it is dry run")
+	referralCmd.PersistentFlags().BoolVar(
+		&referralArgs.SetupBotsInReferralProgram,
+		"setup",
+		false,
+		"Setup bots in referral program. By default it is dry run",
+	)
+	referralCmd.PersistentFlags().StringSliceVar(
+		&referralArgs.Assets,
+		"assets-symbols",
+		[]string{},
+		"Assets, bots operates. Script will ignore all other bots and won't add them to the teams. Empty == all markets included",
+	)
+	referralCmd.PersistentFlags().Uint32Var(
+		&referralArgs.NumberOfTeams,
+		"max-number-of-teams",
+		10,
+		"Maximum number of teams. However we create one team per one market maker",
+	)
+	referralCmd.PersistentFlags().Uint32Var(
+		&referralArgs.NumberOfMembersPerTeam,
+		"max-number-of-team-members",
+		15,
+		"Maximum number of team members. It is limited by number of traders on the research bots",
+	)
 }
 
 type TeamMember struct {
@@ -68,7 +97,7 @@ func NewTeam(leader TeamMember) Team {
 	}
 }
 
-func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers int) ([]Team, error) {
+func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers int, includedMarkets []string) ([]Team, error) {
 	if numberOfTeams < 1 {
 		return nil, fmt.Errorf("you must create at least one team")
 	}
@@ -77,9 +106,20 @@ func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers 
 		return nil, fmt.Errorf("you must add at least one member to each of the team")
 	}
 
+	// traderId contains the market id in the name it is trading on
+	filteredTraders := bots.ResearchBots{}
+	for traderId, trader := range traders {
+		for _, marketId := range includedMarkets {
+			if strings.Contains(traderId, marketId) {
+				filteredTraders[traderId] = trader
+				break
+			}
+		}
+	}
+
 	teams := []Team{}
 	// Create reams with leaders
-	for _, trader := range traders {
+	for _, trader := range filteredTraders {
 		if trader.WalletData.Index == bots.MarketMakerWalletIndex {
 			wallet, err := trader.GetWallet()
 			if err != nil {
@@ -102,7 +142,7 @@ func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers 
 
 	// add members to the teams
 	potentialMembers := []string{}
-	for traderId, trader := range traders {
+	for traderId, trader := range filteredTraders {
 		if trader.WalletData.Index != bots.MarketMakerWalletIndex {
 			potentialMembers = append(potentialMembers, traderId)
 		}
@@ -120,7 +160,7 @@ func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers 
 				break // no more teams
 			}
 
-			trader := traders[candidateId]
+			trader := filteredTraders[candidateId]
 			wallet, err := trader.GetWallet()
 			if err != nil {
 				return nil, fmt.Errorf("failed to get wallet for %s trader when assigning members to the teams: %w", trader.PubKey, err)
@@ -142,7 +182,7 @@ func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers 
 			continue
 		}
 
-		trader := traders[candidateId]
+		trader := filteredTraders[candidateId]
 		wallet, err := trader.GetWallet()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get wallet for %s trader when assigning members to the teams: %w", trader.PubKey, err)
@@ -154,6 +194,49 @@ func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers 
 	}
 
 	return teams, nil
+}
+
+func findMarketMarketsForAssets(dataNodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
+	allMarkets, err := dataNodeClient.GetAllMarkets()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all markets: %w", err)
+	}
+	allAssets, err := dataNodeClient.GetAssets()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all assets: %w", err)
+	}
+
+	result := []string{}
+	for _, market := range allMarkets {
+		settlementAsset := ""
+
+		if market.GetTradableInstrument() != nil && market.GetTradableInstrument().GetInstrument() != nil {
+			instrument := market.GetTradableInstrument().GetInstrument()
+
+			if instrument.GetFuture() != nil {
+				settlementAsset = instrument.GetFuture().SettlementAsset
+			} else if instrument.GetPerpetual() != nil {
+				settlementAsset = instrument.GetPerpetual().SettlementAsset
+			}
+		}
+
+		if settlementAsset == "" {
+			continue
+		}
+
+		assetDetails, assetFound := allAssets[settlementAsset]
+		if !assetFound {
+			return nil, fmt.Errorf("failed to find the %s asset on the network which is used for market %s", settlementAsset, market.Id)
+		}
+
+		if len(assetsSymbols) > 0 && !slices.Contains(assetsSymbols, assetDetails.Symbol) {
+			continue // we are not interested in this market
+		}
+
+		result = append(result, market.Id)
+	}
+
+	return result, nil
 }
 
 func RunReferral(args ReferralArgs) error {
@@ -183,102 +266,125 @@ func RunReferral(args ReferralArgs) error {
 	}
 	logger.Info("Got bots", zap.Int("count", len(traders)), zap.Duration("since start", time.Since(start)))
 
-	teams, err := PrepareTeams(traders, 5, 5)
+	wantedMarketsIds, err := findMarketMarketsForAssets(network.DataNodeClient, args.Assets)
+	if err != nil {
+		return fmt.Errorf("failed to find markets for wanted assets")
+	}
+
+	teams, err := PrepareTeams(traders, int(args.NumberOfTeams), int(args.NumberOfMembersPerTeam), wantedMarketsIds)
 	if err != nil {
 		return fmt.Errorf("failed to prepare teams: %w", err)
 	}
 
-	fmt.Printf("%#v", teams)
+	logger.Info("Teams design created.")
+	for teamNo, team := range teams {
+		teamMembersPublicKeys := []string{}
 
-	// teamLeadersWallets := []*wallet.VegaWallet{}
-	// regularTradersWallets := []*wallet.VegaWallet{}
+		for _, member := range team.Members {
+			teamMembersPublicKeys = append(teamMembersPublicKeys, member.Wallet.PublicKey)
+		}
 
-	// for _, trader := range traders {
-	// 	wallet, err := trader.GetWallet()
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to get wallet for %s trader, %w", trader.PubKey, err)
-	// 	}
-	// 	if trader.WalletData.Index == 3 {
-	// 		teamLeadersWallets = append(teamLeadersWallets, wallet)
-	// 	} else {
-	// 		regularTradersWallets = append(regularTradersWallets, wallet)
-	// 	}
-	// }
-	// logger.Info("Divided bots into team leaders and regular wallets", zap.Int("leaders count", len(teamLeadersWallets)),
-	// 	zap.Int("regular wallet count", len(regularTradersWallets)), zap.Duration("since start", time.Since(start)))
+		logger.Sugar().Infof(
+			"Team #%d has leader %s and %d members: \n\t - %s",
+			teamNo,
+			team.Leader.Wallet.PublicKey,
+			len(team.Members),
+			strings.Join(teamMembersPublicKeys, "\n\t - "),
+		)
+	}
+	logger.Info("Staking to teams leaders")
+	if err := stakeToTeamLeaders(logger, teams, network, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to stake to the team leaders: %w", err)
+	}
+	logger.Info("Staked tokens to the team leaders")
 
-	// logger.Info("Create Referral Sets (teams)")
-	// if err := createReferralSetsForWallets(teamLeadersWallets, network, args.Logger, !args.SetupBotsInReferralProgram); err != nil {
-	// 	return err
-	// }
-	// logger.Info("Created Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
+	logger.Info("Creating referral sets")
+	if err := createReferralSets(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to create referral sets: %w", err)
+	}
+	logger.Info("Teams created")
 
-	// logger.Info("Join Referral Sets (teams)")
-	// referralSets, err := network.DataNodeClient.GetReferralSets()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get referral sets, %w", err)
-	// }
-	// referralSetIds := make([]string, len(referralSets))
-	// i := 0
-	// for _, referralSet := range referralSets {
-	// 	referralSetIds[i] = referralSet.Id
-	// 	i++
-	// }
-	// referralSetReferees, err := network.DataNodeClient.GetReferralSetReferees()
-	// if err != nil {
-	// 	return err
-	// }
-	// logger.Info("Number of parties in Referral Program before running script to join", zap.Int("count", len(referralSetReferees)))
-	// for _, wallet := range regularTradersWallets {
-	// 	if referralSet, ok := referralSetReferees[wallet.PublicKey]; ok {
-	// 		logger.Debug("Party already belong to a team", zap.String("pub key", wallet.PublicKey),
-	// 			zap.String("team", referralSet.ReferralSetId), zap.String("team lead", referralSet.Referee))
-	// 		continue
-	// 	}
-	// 	if !args.SetupBotsInReferralProgram {
-	// 		logger.Info("DRY RUN - skip joining a team by", zap.String("pub key", wallet.PublicKey))
-	// 		continue
-	// 	}
-	// 	// rand stake
-	// 	rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(referralSetIds))))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	referralSetId := referralSetIds[rndIdx.Int64()]
-
-	// 	walletTxReq := walletpb.SubmitTransactionRequest{
-	// 		PubKey: wallet.PublicKey,
-	// 		Command: &walletpb.SubmitTransactionRequest_ApplyReferralCode{
-	// 			ApplyReferralCode: &commandspb.ApplyReferralCode{
-	// 				Id: referralSetId,
-	// 			},
-	// 		},
-	// 	}
-	// 	if err := governance.SubmitTx(fmt.Sprintf("join referral team %s", referralSetId),
-	// 		network.DataNodeClient, wallet, logger, &walletTxReq); err != nil {
-	// 		return fmt.Errorf("failedy to apply referral code, %w", err)
-	// 	}
-	// }
-	// logger.Info("Joined Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
+	logger.Info("Joining members to the cluster")
+	if err := joinMemberTeams(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to join members to the teams: %w", err)
+	}
+	logger.Info("FINISHED")
 
 	return nil
 }
 
-func createReferralSetsForWallets(
-	referralTeamLeadVegawallet []*wallet.VegaWallet,
-	network *veganetwork.VegaNetwork,
+func joinMemberTeams(
 	logger *zap.Logger,
+	teams []Team,
+	dataNodeClient vegaapi.DataNodeClient,
 	dryRun bool,
 ) error {
-	var (
-		minStake       *big.Int
-		dataNodeClient = network.DataNodeClient
-	)
+
+	logger.Info("Join Referral Sets (teams)")
+	referralSets, err := dataNodeClient.GetReferralSets()
+	if err != nil {
+		return fmt.Errorf("failed to get referral sets, %w", err)
+	}
+
+	referralSetReferees, err := dataNodeClient.GetReferralSetReferees()
+	if err != nil {
+		return fmt.Errorf("failed to get referral set referees: %w", err)
+	}
+
+	for _, team := range teams {
+		start := time.Now()
+		referralSet, isLeaderInTheTeam := referralSets[team.Leader.Wallet.PublicKey]
+		if isLeaderInTheTeam {
+			return fmt.Errorf("the team leader %s is not in the team", team.Leader.Wallet.PublicKey)
+		}
+
+		for _, member := range team.Members {
+			if referralSet, ok := referralSetReferees[member.Wallet.PublicKey]; ok {
+				logger.Debug("Party already belong to a team", zap.String("pub key", member.Wallet.PublicKey),
+					zap.String("team", referralSet.ReferralSetId), zap.String("team lead", referralSet.Referee))
+				continue
+			}
+
+			if dryRun {
+				logger.Info("DRY RUN - skip joining a team by", zap.String("pub key", member.Wallet.PublicKey))
+				continue
+			}
+
+			walletTxReq := walletpb.SubmitTransactionRequest{
+				PubKey: member.Wallet.PublicKey,
+				Command: &walletpb.SubmitTransactionRequest_ApplyReferralCode{
+					ApplyReferralCode: &commandspb.ApplyReferralCode{
+						Id: referralSet.Id,
+					},
+				},
+			}
+			if err := governance.SubmitTx(fmt.Sprintf("join referral team %s", referralSet.Id),
+				dataNodeClient, member.Wallet, logger, &walletTxReq); err != nil {
+				return fmt.Errorf("failedy to apply referral code, %w", err)
+			}
+
+			logger.Info("Joined Referral Sets (teams)", zap.Duration("since start", time.Since(start)))
+		}
+	}
+
+	return nil
+}
+
+func stakeToTeamLeaders(
+	logger *zap.Logger,
+	teams []Team,
+	network *veganetwork.VegaNetwork,
+	dryRun bool,
+) error {
+	minStake := big.NewInt(0)
+	dataNodeClient := network.DataNodeClient
+
 	// get Referrals Tiers
 	program, err := dataNodeClient.GetCurrentReferralProgram()
 	if err != nil {
-		return fmt.Errorf("failed to create referral sets, failed to get referral program, %w", err)
+		return fmt.Errorf("failed to create referral sets, failed to get referral program: %w", err)
 	}
+
 	tiersMinStakeAmounts := make([]*big.Int, len(program.StakingTiers))
 	for i, stakingTier := range program.StakingTiers {
 		if stakeAmount, ok := new(big.Int).SetString(stakingTier.MinimumStakedTokens, 0); ok {
@@ -286,19 +392,20 @@ func createReferralSetsForWallets(
 		} else {
 			return fmt.Errorf("failed to convert %s to big.Int", stakingTier.MinimumStakedTokens)
 		}
-		if minStake == nil || minStake.Cmp(tiersMinStakeAmounts[i]) > 0 {
+		if minStake.Cmp(tiersMinStakeAmounts[i]) > 0 {
 			minStake = tiersMinStakeAmounts[i]
 		}
 	}
+
 	logger.Debug("Got Referral Program Staking Tiers", zap.Int("tiers count", len(tiersMinStakeAmounts)),
 		zap.String("minStake", minStake.String()), zap.Any("tiers", tiersMinStakeAmounts))
 
 	stakeByPubKey := map[string]*big.Int{}
 
-	for _, wallet := range referralTeamLeadVegawallet {
-		currentStake, err := dataNodeClient.GetPartyTotalStake(wallet.PublicKey)
+	for _, team := range teams {
+		currentStake, err := dataNodeClient.GetPartyTotalStake(team.Leader.Wallet.PublicKey)
 		if err != nil {
-			return fmt.Errorf("failed to create referral sets, failed to get stake for %s, %w", wallet.PublicKey, err)
+			return fmt.Errorf("failed to create referral sets, failed to get stake for %: %w", team.Leader.Wallet.PublicKey, err)
 		}
 		if currentStake.Cmp(minStake) < 0 {
 			// rand stake
@@ -307,13 +414,13 @@ func createReferralSetsForWallets(
 				return err
 			}
 			expectedStake := tiersMinStakeAmounts[rndIdx.Int64()]
-			stakeByPubKey[wallet.PublicKey] = expectedStake
-			logger.Debug("Need to top up", zap.String("wallet", wallet.PublicKey),
+			stakeByPubKey[team.Leader.Wallet.PublicKey] = expectedStake
+			logger.Debug("Need to top up", zap.String("wallet", team.Leader.Wallet.PublicKey),
 				zap.String("current stake", currentStake.String()), zap.String("min stake", minStake.String()),
 				zap.String("expected stake", expectedStake.String()))
 		} else {
-			stakeByPubKey[wallet.PublicKey] = currentStake
-			logger.Debug("No need to top up", zap.String("wallet", wallet.PublicKey),
+			stakeByPubKey[team.Leader.Wallet.PublicKey] = currentStake
+			logger.Debug("No need to top up", zap.String("wallet", team.Leader.Wallet.PublicKey),
 				zap.String("current stake", currentStake.String()), zap.String("min stake", minStake.String()))
 		}
 	}
@@ -321,31 +428,37 @@ func createReferralSetsForWallets(
 	if dryRun {
 		logger.Info("DRY RUN - not running stake\n")
 	} else {
-		if err := Stake(stakeByPubKey, network, logger); err != nil {
+		if err := doStake(stakeByPubKey, network, logger); err != nil {
 			return err
 		}
 	}
-	//
-	// Create Referral Sets where needed
-	//
+
+	return nil
+}
+
+func createReferralSets(
+	logger *zap.Logger,
+	teams []Team,
+	dataNodeClient vegaapi.DataNodeClient,
+	dryRun bool,
+) error {
 	referralSets, err := dataNodeClient.GetReferralSets()
 	if err != nil {
 		return fmt.Errorf("failed to get referral sets, %w", err)
 	}
-	for _, wallet := range referralTeamLeadVegawallet {
-		if referralSet, ok := referralSets[wallet.PublicKey]; ok {
-			logger.Debug("party is already team lead", zap.String("pub key", wallet.PublicKey),
+	for _, team := range teams {
+		if referralSet, ok := referralSets[team.Leader.Wallet.PublicKey]; ok {
+			logger.Debug("party is already team lead", zap.String("pub key", team.Leader.Wallet.PublicKey),
 				zap.String("team id", referralSet.Id))
 			continue
 		}
-		//
-		// Create Referral set
-		//
+
+		// create referral set
 		if dryRun {
-			logger.Info("DRY RUN - skip creation of referral set for wallet", zap.String("pub key", wallet.PublicKey))
+			logger.Info("DRY RUN - skip creation of referral set for wallet", zap.String("pub key", team.Leader.Wallet.PublicKey))
 		} else {
-			if err := createReferralSet(wallet, dataNodeClient, logger); err != nil {
-				return fmt.Errorf("failed to create referral set %s, %w", wallet.PublicKey, err)
+			if err := createReferralSet(team.Leader.Wallet, dataNodeClient, logger); err != nil {
+				return fmt.Errorf("failed to create referral set %s, %w", team.Leader.Wallet.PublicKey, err)
 			}
 		}
 	}
@@ -393,13 +506,13 @@ func createReferralSet(
 	return nil
 }
 
-func Stake(
+func doStake(
 	expectedStakeForParty map[string]*big.Int,
 	network *veganetwork.VegaNetwork,
 	logger *zap.Logger,
 ) error {
 	if len(expectedStakeForParty) == 0 {
-		logger.Info("No part needs staking")
+		logger.Info("No parties need staking")
 		return nil
 	}
 	//

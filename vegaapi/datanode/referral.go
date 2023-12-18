@@ -49,14 +49,14 @@ func (n *DataNode) GetCurrentReferralProgramRaw(req *dataapipb.GetCurrentReferra
 // LIST REFERRAL SETS
 //
 
-func (n *DataNode) GetReferralSets() (map[string]v2.ReferralSet, error) {
+func (n *DataNode) GetReferralSets() (map[string]*v2.ReferralSet, error) {
 	res, err := n.ListReferralSets(&dataapipb.ListReferralSetsRequest{})
 	if err != nil {
 		return nil, err
 	}
-	referralSets := map[string]v2.ReferralSet{}
+	referralSets := map[string]*v2.ReferralSet{}
 	for _, edge := range res.ReferralSets.Edges {
-		referralSets[edge.Node.Referrer] = *edge.Node
+		referralSets[edge.Node.Referrer] = edge.Node
 	}
 	return referralSets, nil
 }

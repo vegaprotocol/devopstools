@@ -60,7 +60,7 @@ type DataNodeClient interface {
 	GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error)
 	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
 	GetCurrentReferralProgram() (*dataapipb.ReferralProgram, error)
-	GetReferralSets() (map[string]v2.ReferralSet, error)
+	GetReferralSets() (map[string]*v2.ReferralSet, error)
 	GetReferralSetReferees() (map[string]v2.ReferralSetReferee, error)
 	GetCurrentVolumeDiscountProgram() (*dataapipb.VolumeDiscountProgram, error)
 }
