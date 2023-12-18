@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -25,6 +26,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const waitTimeout = 5 * time.Minute
+
 type ReferralArgs struct {
 	*BotArgs
 	SetupBotsInReferralProgram bool
@@ -41,7 +44,7 @@ var referralCmd = &cobra.Command{
 	Short: "manage bots in referral program",
 	Long:  `manage bots in referral program`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := RunReferral(referralArgs); err != nil {
+		if err := runReferral(referralArgs); err != nil {
 			referralArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
@@ -83,7 +86,6 @@ type TeamMember struct {
 	Wallet *wallet.VegaWallet
 }
 
-// PrepareTeams should generate deterministic teams based on the response from the /traders endpoint
 type Team struct {
 	Leader TeamMember
 
@@ -97,7 +99,149 @@ func NewTeam(leader TeamMember) Team {
 	}
 }
 
-func PrepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers int, includedMarkets []string) ([]Team, error) {
+func runReferral(args ReferralArgs) error {
+	logger := args.Logger
+	start := time.Now()
+	logger.Info("Start referral", zap.Time("start", start))
+	if !args.SetupBotsInReferralProgram {
+		logger.Info("DRY RUN - use --setup flag to run for real")
+	}
+	logger.Info("Connecting to nework")
+	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
+	if err != nil {
+		return err
+	}
+	defer network.Disconnect()
+	logger.Info("Connected to network", zap.String("network", args.VegaNetworkName), zap.Duration("since start", time.Since(start)))
+
+	logger.Info("Getting bots")
+	botsAPIToken := args.BotsAPIToken
+	if len(botsAPIToken) == 0 {
+		botsAPIToken = network.BotsApiToken
+	}
+
+	traders, err := bots.GetResearchBots(args.VegaNetworkName, botsAPIToken)
+	if err != nil {
+		return err
+	}
+	logger.Info("Got bots", zap.Int("count", len(traders)), zap.Duration("since start", time.Since(start)))
+
+	wantedMarketsIds, err := findMarketMarketsForAssets(network.DataNodeClient, args.Assets)
+	if err != nil {
+		return fmt.Errorf("failed to find markets for wanted assets")
+	}
+
+	teams, err := prepareTeams(traders, int(args.NumberOfTeams), int(args.NumberOfMembersPerTeam), wantedMarketsIds)
+	if err != nil {
+		return fmt.Errorf("failed to prepare teams: %w", err)
+	}
+
+	logger.Info("Teams design created.")
+	for teamNo, team := range teams {
+		teamMembersPublicKeys := []string{}
+
+		for _, member := range team.Members {
+			teamMembersPublicKeys = append(teamMembersPublicKeys, member.Wallet.PublicKey)
+		}
+
+		logger.Sugar().Infof(
+			"Team #%d has leader %s and %d members: \n\t - %s",
+			teamNo,
+			team.Leader.Wallet.PublicKey,
+			len(team.Members),
+			strings.Join(teamMembersPublicKeys, "\n\t - "),
+		)
+	}
+
+	logger.Info("Staking to teams leaders")
+	if err := stakeToTeamLeaders(logger, teams, network, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to stake to the team leaders: %w", err)
+	}
+	logger.Info("Staked tokens to the team leaders")
+
+	logger.Info("Creating referral sets")
+	if err := createReferralSets(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to create referral sets: %w", err)
+	}
+	logger.Info("Teams created")
+
+	logger.Info("Waiting for referral set to be created")
+	if err := waitForReferralSets(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram, waitTimeout); err != nil {
+		return fmt.Errorf("failed to wait for referral sets: %w")
+	}
+	logger.Info("All referral sets are ready")
+
+	logger.Info("Joining members to the cluster")
+	if err := joinMemberTeams(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
+		return fmt.Errorf("failed to join members to the teams: %w", err)
+	}
+	logger.Info("FINISHED")
+
+	return nil
+}
+
+func waitForReferralSets(
+	logger *zap.Logger,
+	teams []Team,
+	dataNodeClient vegaapi.DataNodeClient,
+	dryRun bool,
+	timeout time.Duration,
+) error {
+	wantedTeamsLeaderPubKeys := make([]string, len(teams))
+	for _, team := range teams {
+		wantedTeamsLeaderPubKeys = append(wantedTeamsLeaderPubKeys, team.Leader.Wallet.PublicKey)
+	}
+
+	ticker := time.NewTicker(10 * time.Second)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	for {
+		select {
+		case <-ticker.C:
+			referralSets, err := dataNodeClient.GetReferralSets()
+			if err != nil {
+				logger.Sugar().Errorf("Cannot get referral sets: %s", err.Error())
+				continue
+			}
+			if len(referralSets) < 1 {
+				logger.Info("No referral sets found yet on the network")
+				continue
+			}
+
+			for referrer, referralSet := range referralSets {
+				if !slices.Contains(wantedTeamsLeaderPubKeys, referrer) {
+					continue // team already confirmed or external team
+				}
+
+				logger.Sugar().Infof("Found team with id %s for leader %s", referralSet.Id, referrer)
+				wantedTeamsLeaderPubKeys = slices.DeleteFunc(wantedTeamsLeaderPubKeys, func(item string) bool {
+					return item == referrer
+				})
+			}
+
+			stillWaitingFor := []string{}
+			for _, partyId := range wantedTeamsLeaderPubKeys {
+				if len(partyId) > 0 {
+					stillWaitingFor = append(stillWaitingFor, partyId)
+				}
+			}
+
+			if len(stillWaitingFor) < 1 {
+				logger.Info("All required teams exist")
+				return nil
+			}
+			logger.Sugar().Infof("Still waiting for referral sets for the %#v leaders", stillWaitingFor)
+		case <-timeoutCtx.Done():
+			return fmt.Errorf("timeout exceeded")
+		}
+	}
+
+	return nil
+}
+
+// prepareTeams should generate deterministic teams based on the response from the /traders endpoint
+func prepareTeams(traders bots.ResearchBots, numberOfTeams int, numberOfMembers int, includedMarkets []string) ([]Team, error) {
 	if numberOfTeams < 1 {
 		return nil, fmt.Errorf("you must create at least one team")
 	}
@@ -239,80 +383,6 @@ func findMarketMarketsForAssets(dataNodeClient vegaapi.DataNodeClient, assetsSym
 	return result, nil
 }
 
-func RunReferral(args ReferralArgs) error {
-	logger := args.Logger
-	start := time.Now()
-	logger.Info("Start referral", zap.Time("start", start))
-	if !args.SetupBotsInReferralProgram {
-		logger.Info("DRY RUN - use --setup flag to run for real")
-	}
-	logger.Info("Connecting to nework")
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
-	if err != nil {
-		return err
-	}
-	defer network.Disconnect()
-	logger.Info("Connected to network", zap.String("network", args.VegaNetworkName), zap.Duration("since start", time.Since(start)))
-
-	logger.Info("Getting bots")
-	botsAPIToken := args.BotsAPIToken
-	if len(botsAPIToken) == 0 {
-		botsAPIToken = network.BotsApiToken
-	}
-
-	traders, err := bots.GetResearchBots(args.VegaNetworkName, botsAPIToken)
-	if err != nil {
-		return err
-	}
-	logger.Info("Got bots", zap.Int("count", len(traders)), zap.Duration("since start", time.Since(start)))
-
-	wantedMarketsIds, err := findMarketMarketsForAssets(network.DataNodeClient, args.Assets)
-	if err != nil {
-		return fmt.Errorf("failed to find markets for wanted assets")
-	}
-
-	teams, err := PrepareTeams(traders, int(args.NumberOfTeams), int(args.NumberOfMembersPerTeam), wantedMarketsIds)
-	if err != nil {
-		return fmt.Errorf("failed to prepare teams: %w", err)
-	}
-
-	logger.Info("Teams design created.")
-	for teamNo, team := range teams {
-		teamMembersPublicKeys := []string{}
-
-		for _, member := range team.Members {
-			teamMembersPublicKeys = append(teamMembersPublicKeys, member.Wallet.PublicKey)
-		}
-
-		logger.Sugar().Infof(
-			"Team #%d has leader %s and %d members: \n\t - %s",
-			teamNo,
-			team.Leader.Wallet.PublicKey,
-			len(team.Members),
-			strings.Join(teamMembersPublicKeys, "\n\t - "),
-		)
-	}
-	logger.Info("Staking to teams leaders")
-	if err := stakeToTeamLeaders(logger, teams, network, !args.SetupBotsInReferralProgram); err != nil {
-		return fmt.Errorf("failed to stake to the team leaders: %w", err)
-	}
-	logger.Info("Staked tokens to the team leaders")
-
-	logger.Info("Creating referral sets")
-	if err := createReferralSets(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
-		return fmt.Errorf("failed to create referral sets: %w", err)
-	}
-	logger.Info("Teams created")
-
-	logger.Info("Joining members to the cluster")
-	if err := joinMemberTeams(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram); err != nil {
-		return fmt.Errorf("failed to join members to the teams: %w", err)
-	}
-	logger.Info("FINISHED")
-
-	return nil
-}
-
 func joinMemberTeams(
 	logger *zap.Logger,
 	teams []Team,
@@ -334,7 +404,7 @@ func joinMemberTeams(
 	for _, team := range teams {
 		start := time.Now()
 		referralSet, isLeaderInTheTeam := referralSets[team.Leader.Wallet.PublicKey]
-		if isLeaderInTheTeam {
+		if !isLeaderInTheTeam {
 			return fmt.Errorf("the team leader %s is not in the team", team.Leader.Wallet.PublicKey)
 		}
 
