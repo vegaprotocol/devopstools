@@ -7,8 +7,10 @@ import (
 	"github.com/vegaprotocol/devopstools/wallet"
 )
 
+const LeaderWalletIndex = 0
+
 type ResearchBot struct {
-	BotTraders
+	BotTrader
 	WalletData struct {
 		Index          int64   `json:"index"`
 		PublicKey      string  `json:"publicKey"`
@@ -18,10 +20,12 @@ type ResearchBot struct {
 	wallet *wallet.VegaWallet
 }
 
+type ResearchBots map[string]ResearchBot
+
 func GetResearchBots(
 	network string,
 	botsAPIToken string,
-) (map[string]ResearchBot, error) {
+) (ResearchBots, error) {
 	botsURL := fmt.Sprintf("https://%s.bots.vega.rocks/traders", network)
 	log.Printf("Getting research bot traders from: %s", botsURL)
 	var payload struct {
