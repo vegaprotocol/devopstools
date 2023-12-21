@@ -1,6 +1,8 @@
 module github.com/vegaprotocol/devopstools
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
