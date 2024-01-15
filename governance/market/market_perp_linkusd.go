@@ -185,6 +185,9 @@ func NewLINKUSDPerpetualMarketProposal(
 								},
 							},
 						},
+						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
+							CompositePriceType: vega.CompositePriceType_COMPOSITE_PRICE_TYPE_LAST_TRADE,
+						},
 					},
 				},
 			},

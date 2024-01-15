@@ -184,6 +184,9 @@ func NewCommunityETHUSD230630(
 							DisposalFraction:    "0.1",
 							// FullDisposalSize:    0,
 						},
+						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
+							CompositePriceType: vega.CompositePriceType_COMPOSITE_PRICE_TYPE_LAST_TRADE,
+						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
 					},
