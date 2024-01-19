@@ -93,6 +93,7 @@ func NewLINKUSDPerpetualMarketProposal(
 																},
 															},
 														},
+														SourceChainId: SepoliaChainID,
 													},
 												},
 											},

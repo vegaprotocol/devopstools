@@ -92,6 +92,7 @@ func NewBTCUSDPerpetualMarketProposal(
 																},
 															},
 														},
+														SourceChainId: SepoliaChainID,
 													},
 												},
 											},

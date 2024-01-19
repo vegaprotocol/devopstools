@@ -93,6 +93,7 @@ func NewEURUSDPerpetualMarketProposal(
 																},
 															},
 														},
+														SourceChainId: SepoliaChainID,
 													},
 												},
 											},
