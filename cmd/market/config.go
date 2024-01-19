@@ -1,6 +1,7 @@
 package market
 
 import (
+	"code.vegaprotocol.io/vega/protos/vega"
 	"github.com/vegaprotocol/devopstools/types"
 )
 
@@ -28,6 +29,20 @@ type networkAssetsIDs struct {
 
 	SettlementAsset_USDC  string
 	MainnetLikeAsset_USDT string
+}
+
+var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL2Config{
+	types.NetworkDevnet1: {
+		// &vega.EthereumL2Config{
+		// 	NetworkId:     "11155111",
+		// 	ChainId:       "11155111",
+		// 	Name:          "Sepolia Test Network",
+		// 	Confirmations: 3,
+		// },
+	},
+	types.NetworkStagnet1:   {},
+	types.NetworkStagnet3:   {},
+	types.NetworkFairground: {},
 }
 
 var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs{
