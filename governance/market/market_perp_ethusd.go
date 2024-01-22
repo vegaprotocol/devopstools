@@ -92,6 +92,7 @@ func NewETHUSDPerpetualMarketProposal(
 																},
 															},
 														},
+														SourceChainId: SepoliaChainID,
 													},
 												},
 											},

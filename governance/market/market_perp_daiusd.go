@@ -93,6 +93,7 @@ func NewDAIUSDPerpetualMarketProposal(
 																},
 															},
 														},
+														SourceChainId: SepoliaChainID,
 													},
 												},
 											},

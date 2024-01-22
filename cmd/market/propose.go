@@ -1,6 +1,7 @@
 package market
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -11,8 +12,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/market"
+	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
@@ -146,16 +149,56 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	return result
 }
 
-func networkParametersForMarketPropose(networkVersion string) map[string]string {
+func networkParametersForMarketPropose(network *veganetwork.VegaNetwork) (map[string]string, error) {
+	statistics, err := network.DataNodeClient.Statistics()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get statistics: %w", err)
+	}
+
+	networkVersion := semver.MustParse(statistics.Statistics.AppVersion)
+
 	result := map[string]string{}
 
 	prePerpsVersion := semver.New(0, 72, 99, "", "")
 
-	if prePerpsVersion.Compare(semver.MustParse(networkVersion)) <= 0 {
+	if prePerpsVersion.Compare(networkVersion) <= 0 {
 		result[netparams.PerpsMarketTradingEnabled] = "1"
 	}
 
-	return result
+	preEthereumL2Version := semver.New(0, 73, 99, "", "")
+
+	if preEthereumL2Version.Compare(networkVersion) <= 0 {
+		if err := network.RefreshNetworkParams(); err != nil {
+			return nil, fmt.Errorf("failed to refresh the network parameters: %w", err)
+		}
+
+		currentL2Config, err := network.NetworkParams.GetEthereumL2Configs()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the ethereum l2 configs: %w", err)
+		}
+
+		newL2Config := networkparameters.CloneEthereumL2Config(currentL2Config)
+		l2ConfigChanged := false
+
+		for _, l2Config := range l2Configs[network.Network] {
+			l2ConfigChanged = true
+			newL2Config, err = networkparameters.AppendEthereumL2Config(newL2Config, l2Config, true)
+			if err != nil {
+				return nil, fmt.Errorf("failed to append ethereum sepolia config to the l2 config: %w", err)
+			}
+
+		}
+
+		if l2ConfigChanged {
+			l2ConfigJSON, err := json.Marshal(newL2Config)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert l2 config from proto to json: %w", err)
+			}
+			result[netparams.BlockchainsEthereumL2Configs] = string(l2ConfigJSON)
+		}
+	}
+
+	return result, nil
 }
 
 func RunPropose(args ProposeArgs) error {
@@ -187,10 +230,6 @@ func RunPropose(args ProposeArgs) error {
 	if err != nil {
 		return err
 	}
-	statistics, err := network.DataNodeClient.Statistics()
-	if err != nil {
-		return err
-	}
 	markets, err := network.DataNodeClient.GetAllMarkets()
 	if err != nil {
 		return err
@@ -212,7 +251,10 @@ func RunPropose(args ProposeArgs) error {
 	resultsChannel := make(chan error, marketsFlags.TotalMarkets)
 	var wg sync.WaitGroup
 
-	networkParametersToUpdate := networkParametersForMarketPropose(statistics.Statistics.AppVersion)
+	networkParametersToUpdate, err := networkParametersForMarketPropose(network)
+	if err != nil {
+		return fmt.Errorf("failed to get network parameters that needs to be updated: %w", err)
+	}
 	if len(networkParametersToUpdate) > 0 {
 		args.Logger.Sugar().Infof("Voting network parmeters required for markets creation: %v", networkParametersToUpdate)
 

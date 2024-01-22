@@ -8,6 +8,7 @@ import (
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	"code.vegaprotocol.io/vega/protos/vega"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type NetworkParams struct {
@@ -44,6 +45,20 @@ func (p *NetworkParams) GetEthereumConfig() (*vega.EthereumConfig, error) {
 	result := &vega.EthereumConfig{}
 	if err := json.Unmarshal([]byte(val), result); err != nil {
 		return nil, fmt.Errorf("failed to get EthereumConfig, failed to parse %v, %w", result, err)
+	}
+
+	return result, nil
+}
+
+func (p *NetworkParams) GetEthereumL2Configs() (*vega.EthereumL2Configs, error) {
+	val, ok := p.Params[netparams.BlockchainsEthereumL2Configs]
+	if !ok {
+		return nil, fmt.Errorf("the %s network parameter is missing", netparams.BlockchainsEthereumL2Configs)
+	}
+
+	result := &vega.EthereumL2Configs{}
+	if err := protojson.Unmarshal([]byte(val), result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal the %s parameter into go structure: %w", netparams.BlockchainsEthereumL2Configs, err)
 	}
 
 	return result, nil
