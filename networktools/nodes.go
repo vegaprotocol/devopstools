@@ -220,8 +220,12 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 			continue
 		}
 
+		resp, err := httpClient.Get(fmt.Sprintf("https://%s/abci_info", host))
 		network.logger.Sugar().Debugf("Checking /abci_info for %s", host)
-		if _, err := httpClient.Get(fmt.Sprintf("https://%s/abci_info", host)); err != nil {
+		if err != nil {
+			continue
+		}
+		if resp.StatusCode != http.StatusOK {
 			continue
 		}
 
