@@ -40,7 +40,14 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 		// 	Confirmations: 3,
 		// },
 	},
-	types.NetworkStagnet1:   {},
+	types.NetworkStagnet1: {
+		&vega.EthereumL2Config{
+			NetworkId:     "100",
+			ChainId:       "100",
+			Name:          "Gnosis Chain",
+			Confirmations: 3,
+		},
+	},
 	types.NetworkStagnet3:   {},
 	types.NetworkFairground: {},
 }
