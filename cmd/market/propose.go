@@ -503,7 +503,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual BTC USD (gnosis fake oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, market.PerpetualBTCUSDGnosis, sub, logger,
+				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualBTCUSDGnosis, sub, logger,
 			)
 		}()
 	}
