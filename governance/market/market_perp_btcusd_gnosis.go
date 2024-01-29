@@ -131,7 +131,7 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 														},
 														Triggers: []*datav1.InternalTimeTrigger{
 															{
-																Every: 1800, // 5 mins in seconds
+																Every: 300, // 5 mins in seconds
 															},
 														},
 													},
