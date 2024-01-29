@@ -23,7 +23,7 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "BTCUSDT Perp"
+		name      = "BTCUSDT Gnosis Perp"
 	)
 
 	contractABI := `[{"inputs":[{"internalType":"string","name":"pair","type":"string"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`
@@ -31,8 +31,8 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "BTCUSDT Perp",
-			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Perp as a market with USDT as a settlement asset",
+			Title:       name,
+			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Gnosis Perp as a market with USDT as a settlement asset",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -54,7 +54,7 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "BTCUSDT.PERP",
+							Code: "BTCUSDT.GNOSIS.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									IndexPriceConfiguration: &vega.CompositePriceConfiguration{
@@ -150,6 +150,7 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 							"formerly:50657270657475616c",
 							"base:BTC",
 							"quote:USD",
+							"chain:gnosis",
 							"class:fx/crypto",
 							"perpetual",
 							"managed:vega/ops",
