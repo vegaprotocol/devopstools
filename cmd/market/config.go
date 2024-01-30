@@ -48,8 +48,15 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			Confirmations: 3,
 		},
 	},
-	types.NetworkStagnet3:   {},
-	types.NetworkFairground: {},
+	types.NetworkStagnet3: {},
+	types.NetworkFairground: {
+		&vega.EthereumL2Config{
+			NetworkId:     "100",
+			ChainId:       "100",
+			Name:          "Gnosis Chain",
+			Confirmations: 3,
+		},
+	},
 }
 
 var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs{

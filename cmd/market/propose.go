@@ -115,32 +115,34 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 			PerpetualBTCUSD: true,
 			PerpetualETHUSD: true,
 
-			MainnetBTCUSDT:  true,
-			MainnetDOGEUSDT: true,
-			MainnetETHUSDT:  true,
-			MainnetLINKUSDT: true,
+			MainnetBTCUSDT:        true,
+			MainnetDOGEUSDT:       true,
+			MainnetETHUSDT:        true,
+			MainnetLINKUSDT:       true,
+			PerpetualBTCUSDGnosis: true,
 		}
 	}
 
 	result := MarketFlags{
-		AAPL:    args.ProposeAAPL || args.ProposeAll,
-		AAVEDAI: args.ProposeAAVEDAI || args.ProposeAll,
-		BTCUSD:  args.ProposeBTCUSD || args.ProposeAll,
-		ETHBTC:  args.ProposeETHBTC || args.ProposeAll,
-		TSLA:    args.ProposeTSLA || args.ProposeAll,
-		UNIDAI:  args.ProposeUNIDAI || args.ProposeAll,
-		ETHDAI:  args.ProposeETHDAI || args.ProposeAll,
+		AAPL:                  args.ProposeAAPL || args.ProposeAll,
+		AAVEDAI:               args.ProposeAAVEDAI || args.ProposeAll,
+		BTCUSD:                args.ProposeBTCUSD || args.ProposeAll,
+		ETHBTC:                args.ProposeETHBTC || args.ProposeAll,
+		TSLA:                  args.ProposeTSLA || args.ProposeAll,
+		UNIDAI:                args.ProposeUNIDAI || args.ProposeAll,
+		ETHDAI:                args.ProposeETHDAI || args.ProposeAll,
+		PerpetualBTCUSDGnosis: args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
 	}
 
 	if env == types.NetworkDevnet1 {
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityETHUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
+		result.PerpetualBTCUSDGnosis = false // We do not have L2 setup on devnet
 	}
 
 	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
 		result.PerpetualBTCUSD = args.ProposePerpetualBTCUSD || args.ProposeAll
-		result.PerpetualBTCUSDGnosis = args.ProposePerpetualBTCUSDGnosis || args.ProposeAll
 		result.PerpetualEURUSD = args.ProposePerpetualEURUSD || args.ProposeAll
 		result.PerpetualDAIUSD = args.ProposePerpetualDAIUSD || args.ProposeAll
 		result.PerpetualETHUSD = args.ProposePerpetualETHUSD || args.ProposeAll
