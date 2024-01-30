@@ -57,7 +57,7 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 							Code: "BTCUSDT.GNOSIS.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
-									IndexPriceConfiguration: &vega.CompositePriceConfiguration{
+									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{
 										CompositePriceType:       vega.CompositePriceType_COMPOSITE_PRICE_TYPE_WEIGHTED,
 										DecayWeight:              "1.0",
 										DecayPower:               1,
