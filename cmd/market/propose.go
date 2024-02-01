@@ -133,14 +133,17 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	}
 
 	result := MarketFlags{
-		AAPL:                  args.ProposeAAPL || args.ProposeAll,
-		AAVEDAI:               args.ProposeAAVEDAI || args.ProposeAll,
-		BTCUSD:                args.ProposeBTCUSD || args.ProposeAll,
-		ETHBTC:                args.ProposeETHBTC || args.ProposeAll,
-		TSLA:                  args.ProposeTSLA || args.ProposeAll,
-		UNIDAI:                args.ProposeUNIDAI || args.ProposeAll,
-		ETHDAI:                args.ProposeETHDAI || args.ProposeAll,
-		PerpetualBTCUSDGnosis: args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
+		AAPL:                        args.ProposeAAPL || args.ProposeAll,
+		AAVEDAI:                     args.ProposeAAVEDAI || args.ProposeAll,
+		BTCUSD:                      args.ProposeBTCUSD || args.ProposeAll,
+		ETHBTC:                      args.ProposeETHBTC || args.ProposeAll,
+		TSLA:                        args.ProposeTSLA || args.ProposeAll,
+		UNIDAI:                      args.ProposeUNIDAI || args.ProposeAll,
+		ETHDAI:                      args.ProposeETHDAI || args.ProposeAll,
+		PerpetualBTCUSDGnosis:       args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
+		PerpetualSNXUSDUniswap:      args.ProposePerpetualSNXUSDUniswap || args.ProposeAll,
+		PerpetualINJUSDUniswap:      args.ProposePerpetualINJUSDUniswap || args.ProposeAll,
+		Perpetual1000PEPEUSDUniswap: args.ProposePerpetual1000PEPEUSDUniswap || args.ProposeAll,
 	}
 
 	if env == types.NetworkDevnet1 {
@@ -299,7 +302,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"AAPL", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_AAPL_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_AAPL_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -318,7 +321,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"AAVEDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_AAVEDAI_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_AAVEDAI_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -336,7 +339,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"BTCUSD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_BTCUSD_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_BTCUSD_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -355,7 +358,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"ETHBTC", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_ETHBTC_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_ETHBTC_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -373,7 +376,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"TSLA", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_TSLA_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_TSLA_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -391,7 +394,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"UNIDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_UNIDAI_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_UNIDAI_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -410,7 +413,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"ETHDAI", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				oraclePubKey, closingTime, enactmentTime, MARKET_ETHDAI_MARKER, sub, logger,
+				closingTime, enactmentTime, MARKET_ETHDAI_MARKER, sub, logger,
 			)
 		}()
 	}
@@ -431,7 +434,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityBTCUSD230630MetadataID, sub, logger,
+				closingTime, enactmentTime, market.CommunityBTCUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -452,7 +455,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityETHUSD230630MetadataID, sub, logger,
+				closingTime, enactmentTime, market.CommunityETHUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -473,7 +476,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Community LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.CommunityLinkUSD230630MetadataID, sub, logger,
+				closingTime, enactmentTime, market.CommunityLinkUSD230630MetadataID, sub, logger,
 			)
 		}()
 	}
@@ -494,7 +497,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualBTCUSDOracleAddress, closingTime, enactmentTime, market.PerpetualBTCUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualBTCUSD, sub, logger,
 			)
 		}()
 	}
@@ -515,7 +518,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual BTC USD (gnosis fake oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualBTCUSDGnosis, sub, logger,
+				closingTime, enactmentTime, market.PerpetualBTCUSDGnosis, sub, logger,
 			)
 		}()
 	}
@@ -537,7 +540,7 @@ func RunPropose(args ProposeArgs) error {
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual SNX USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				/* vvvv this vvv                       */
-				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualSNXUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualSNXUSD, sub, logger,
 			)
 		}()
 	}
@@ -555,11 +558,9 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual INJ USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				/* vvvv this vvv                       */
-				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualINJUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualINJUSD, sub, logger,
 			)
 		}()
 	}
@@ -577,11 +578,9 @@ func RunPropose(args ProposeArgs) error {
 				resultsChannel <- err
 				return
 			}
-			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual 1000PEPE USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				/* vvvv this vvv                       */
-				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.Perpetual1000PEPEUSD, sub, logger,
+				closingTime, enactmentTime, market.Perpetual1000PEPEUSD, sub, logger,
 			)
 		}()
 	}
@@ -602,7 +601,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual LINK USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualLINKUSDOracleAddress, closingTime, enactmentTime, market.PerpetualLINKUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualLINKUSD, sub, logger,
 			)
 		}()
 	}
@@ -623,7 +622,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual DAI USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualDAIUSDOracleAddress, closingTime, enactmentTime, market.PerpetualDAIUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualDAIUSD, sub, logger,
 			)
 		}()
 	}
@@ -644,7 +643,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual ETH USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualETHUSDOracleAddress, closingTime, enactmentTime, market.PerpetualETHUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualETHUSD, sub, logger,
 			)
 		}()
 	}
@@ -665,7 +664,7 @@ func RunPropose(args ProposeArgs) error {
 			}
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual EUR USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				market.PerpetualEURUSDOracleAddress, closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
+				closingTime, enactmentTime, market.PerpetualEURUSD, sub, logger,
 			)
 		}()
 	}
@@ -689,7 +688,7 @@ func RunPropose(args ProposeArgs) error {
 				}
 				resultsChannel <- governance.ProposeVoteProvideLP(
 					"Incentive BTC USD", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-					market.IncentiveBTCUSDOracleAddress, closingTime, enactmentTime, market.IncentiveBTCUSD, sub, logger,
+					closingTime, enactmentTime, market.IncentiveBTCUSD, sub, logger,
 				)
 			}()
 		}
@@ -706,7 +705,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"BTC USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetBTCUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.MainnetBTCUSDTMetadataID, sub, logger,
 			)
 		}()
 	}
@@ -722,7 +721,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"DOGE USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetDogeUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.MainnetDogeUSDTMetadataID, sub, logger,
 			)
 		}()
 	}
@@ -738,7 +737,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"ETH USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetETHUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.MainnetETHUSDTMetadataID, sub, logger,
 			)
 		}()
 	}
@@ -754,7 +753,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"LINK USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				CoinBaseOraclePubKey, closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
 			)
 		}()
 	}

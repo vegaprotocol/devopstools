@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"strings"
 	"time"
 
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
@@ -65,10 +64,10 @@ func RunProvideLP(args ProvideLPArgs) error {
 	}
 
 	failed := false
-	for _, marketName := range []string{"AAPL", "AAVEDAI", "BTCUSD", "ETHBTC", "TSLA", "UNIDAI", "ETHDAI"} {
-		market := governance.GetMarket(markets, proposerVegawallet.PublicKey, fmt.Sprintf("auto:%s", strings.ToLower(marketName)), governance.LiveMarketStates)
+	for _, marketCode := range []string{"AAPL.MF21", "AAVEDAI.MF21", "BTCUSD.MF21", "ETHBTC.QM21", "TSLA.QM21", "UNIDAI.MF21", "ETHDAI.MF21"} {
+		market := governance.GetMarket(markets, marketCode, "", governance.LiveMarketStates)
 		if market == nil {
-			logger.Info("market does not exists", zap.String("market", marketName))
+			logger.Info("market does not exists", zap.String("market_code", marketCode))
 		} else {
 			assetId := market.TradableInstrument.Instrument.GetFuture().SettlementAsset
 			if err := topup.DepositAssetToParites(
@@ -77,7 +76,7 @@ func RunProvideLP(args ProvideLPArgs) error {
 				return fmt.Errorf("failed to deposit assets to provider account, %w", err)
 			}
 			time.Sleep(5 * time.Second)
-			if err := provideLiquidity(marketName, network.DataNodeClient, proposerVegawallet, args.Logger, market.Id); err != nil {
+			if err := provideLiquidity(marketCode, network.DataNodeClient, proposerVegawallet, args.Logger, market.Id); err != nil {
 				failed = true
 			}
 		}
