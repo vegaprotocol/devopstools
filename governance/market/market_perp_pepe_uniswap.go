@@ -41,7 +41,7 @@ func New1000PEPEUSDPerpetualMarketProposal(
 						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
 							CompositePriceType: vega.CompositePriceType_COMPOSITE_PRICE_TYPE_LAST_TRADE,
 						},
-						DecimalPlaces:           9,  // up to e.g: 0.000974513
+						DecimalPlaces:           6,  // up to e.g: 0.000974
 						PositionDecimalPlaces:   -3, // min 100
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
