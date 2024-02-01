@@ -23,19 +23,20 @@ const OracleAll = "*"
 
 type ProposeArgs struct {
 	*MarketArgs
-	ProposeAAPL                  bool
-	ProposeAAVEDAI               bool
-	ProposeBTCUSD                bool
-	ProposeETHBTC                bool
-	ProposeTSLA                  bool
-	ProposeUNIDAI                bool
-	ProposeETHDAI                bool
-	ProposePerpetualBTCUSD       bool
-	ProposePerpetualBTCUSDGnosis bool
-	ProposePerpetualLINKUSD      bool
-	ProposePerpetualDAIUSD       bool
-	ProposePerpetualEURUSD       bool
-	ProposePerpetualETHUSD       bool
+	ProposeAAPL                   bool
+	ProposeAAVEDAI                bool
+	ProposeBTCUSD                 bool
+	ProposeETHBTC                 bool
+	ProposeTSLA                   bool
+	ProposeUNIDAI                 bool
+	ProposeETHDAI                 bool
+	ProposePerpetualBTCUSD        bool
+	ProposePerpetualBTCUSDGnosis  bool
+	ProposePerpetualAXLUSDUniswap bool
+	ProposePerpetualLINKUSD       bool
+	ProposePerpetualDAIUSD        bool
+	ProposePerpetualEURUSD        bool
+	ProposePerpetualETHUSD        bool
 
 	ProposeAll       bool
 	ProposeCommunity bool
@@ -82,23 +83,24 @@ func init() {
 type MarketFlags struct {
 	TotalMarkets int
 
-	AAPL                  bool
-	AAVEDAI               bool
-	BTCUSD                bool
-	ETHBTC                bool
-	TSLA                  bool
-	UNIDAI                bool
-	ETHDAI                bool
-	CommunityLinkUSD      bool
-	CommunityETHUSD       bool
-	CommunityBTCUSD       bool
-	PerpetualBTCUSD       bool
-	PerpetualBTCUSDGnosis bool
-	PerpetualDAIUSD       bool
-	PerpetualEURUSD       bool
-	PerpetualLINKUSD      bool
-	PerpetualETHUSD       bool
-	IncentiveBTCUSD       bool
+	AAPL                   bool
+	AAVEDAI                bool
+	BTCUSD                 bool
+	ETHBTC                 bool
+	TSLA                   bool
+	UNIDAI                 bool
+	ETHDAI                 bool
+	CommunityLinkUSD       bool
+	CommunityETHUSD        bool
+	CommunityBTCUSD        bool
+	PerpetualBTCUSD        bool
+	PerpetualBTCUSDGnosis  bool
+	PerpetualAXLUSDUniswap bool
+	PerpetualDAIUSD        bool
+	PerpetualEURUSD        bool
+	PerpetualLINKUSD       bool
+	PerpetualETHUSD        bool
+	IncentiveBTCUSD        bool
 
 	MainnetBTCUSDT  bool
 	MainnetDOGEUSDT bool
@@ -115,11 +117,12 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 			PerpetualBTCUSD: true,
 			PerpetualETHUSD: true,
 
-			MainnetBTCUSDT:        true,
-			MainnetDOGEUSDT:       true,
-			MainnetETHUSDT:        true,
-			MainnetLINKUSDT:       true,
-			PerpetualBTCUSDGnosis: true,
+			MainnetBTCUSDT:         true,
+			MainnetDOGEUSDT:        true,
+			MainnetETHUSDT:         true,
+			MainnetLINKUSDT:        true,
+			PerpetualBTCUSDGnosis:  true,
+			PerpetualAXLUSDUniswap: true,
 		}
 	}
 
@@ -138,7 +141,8 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityETHUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
-		result.PerpetualBTCUSDGnosis = false // We do not have L2 setup on devnet
+		result.PerpetualBTCUSDGnosis = false  // We do not have L2 setup on devnet
+		result.PerpetualAXLUSDUniswap = false // We do not have L2 setup on devnet
 	}
 
 	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
@@ -506,6 +510,28 @@ func RunPropose(args ProposeArgs) error {
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual BTC USD (gnosis fake oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualBTCUSDGnosis, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualAXLUSDUniswap {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewAXLUSDPerpetualMarketProposal(
+				settlementAssetId.MainnetLikeAsset_USDT,
+				closingTime, enactmentTime,
+				[]string{market.PerpetualAXLUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"Perpetual AXL USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				/* vvvv this vvv                       */
+				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualAXLUSD, sub, logger,
 			)
 		}()
 	}
