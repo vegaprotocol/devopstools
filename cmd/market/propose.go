@@ -32,7 +32,7 @@ type ProposeArgs struct {
 	ProposeETHDAI                 bool
 	ProposePerpetualBTCUSD        bool
 	ProposePerpetualBTCUSDGnosis  bool
-	ProposePerpetualAXLUSDUniswap bool
+	ProposePerpetualSNXUSDUniswap bool
 	ProposePerpetualLINKUSD       bool
 	ProposePerpetualDAIUSD        bool
 	ProposePerpetualEURUSD        bool
@@ -95,7 +95,7 @@ type MarketFlags struct {
 	CommunityBTCUSD        bool
 	PerpetualBTCUSD        bool
 	PerpetualBTCUSDGnosis  bool
-	PerpetualAXLUSDUniswap bool
+	PerpetualSNXUSDUniswap bool
 	PerpetualDAIUSD        bool
 	PerpetualEURUSD        bool
 	PerpetualLINKUSD       bool
@@ -122,7 +122,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 			MainnetETHUSDT:         true,
 			MainnetLINKUSDT:        true,
 			PerpetualBTCUSDGnosis:  true,
-			PerpetualAXLUSDUniswap: true,
+			PerpetualSNXUSDUniswap: true,
 		}
 	}
 
@@ -142,7 +142,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		result.CommunityETHUSD = args.ProposeCommunity || args.ProposeAll
 		result.CommunityBTCUSD = args.ProposeCommunity || args.ProposeAll
 		result.PerpetualBTCUSDGnosis = false  // We do not have L2 setup on devnet
-		result.PerpetualAXLUSDUniswap = false // We do not have L2 setup on devnet
+		result.PerpetualSNXUSDUniswap = false // We do not have L2 setup on devnet
 	}
 
 	if env == types.NetworkDevnet1 || env == types.NetworkStagnet1 {
@@ -514,14 +514,14 @@ func RunPropose(args ProposeArgs) error {
 		}()
 	}
 
-	if marketsFlags.PerpetualAXLUSDUniswap {
+	if marketsFlags.PerpetualSNXUSDUniswap {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sub := market.NewAXLUSDPerpetualMarketProposal(
+			sub := market.NewSNXUSDPerpetualMarketProposal(
 				settlementAssetId.MainnetLikeAsset_USDT,
 				closingTime, enactmentTime,
-				[]string{market.PerpetualAXLUSD},
+				[]string{market.PerpetualSNXUSD},
 			)
 			if err != nil {
 				resultsChannel <- err
@@ -529,9 +529,9 @@ func RunPropose(args ProposeArgs) error {
 			}
 			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
 			resultsChannel <- governance.ProposeVoteProvideLP(
-				"Perpetual AXL USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				"Perpetual SNX USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				/* vvvv this vvv                       */
-				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualAXLUSD, sub, logger,
+				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualSNXUSD, sub, logger,
 			)
 		}()
 	}
