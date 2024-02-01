@@ -33,6 +33,7 @@ type ProposeArgs struct {
 	ProposePerpetualBTCUSD        bool
 	ProposePerpetualBTCUSDGnosis  bool
 	ProposePerpetualSNXUSDUniswap bool
+	ProposePerpetualINJUSDUniswap bool
 	ProposePerpetualLINKUSD       bool
 	ProposePerpetualDAIUSD        bool
 	ProposePerpetualEURUSD        bool
@@ -96,6 +97,7 @@ type MarketFlags struct {
 	PerpetualBTCUSD        bool
 	PerpetualBTCUSDGnosis  bool
 	PerpetualSNXUSDUniswap bool
+	PerpetualINJUSDUniswap bool
 	PerpetualDAIUSD        bool
 	PerpetualEURUSD        bool
 	PerpetualLINKUSD       bool
@@ -123,6 +125,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 			MainnetLINKUSDT:        true,
 			PerpetualBTCUSDGnosis:  true,
 			PerpetualSNXUSDUniswap: true,
+			PerpetualINJUSDUniswap: true,
 		}
 	}
 
@@ -532,6 +535,28 @@ func RunPropose(args ProposeArgs) error {
 				"Perpetual SNX USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				/* vvvv this vvv                       */
 				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualSNXUSD, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualINJUSDUniswap {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewINJUSDPerpetualMarketProposal(
+				settlementAssetId.MainnetLikeAsset_USDT,
+				closingTime, enactmentTime,
+				[]string{market.PerpetualINJUSD},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"Perpetual INJ USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				/* vvvv this vvv                       */
+				market.PerpetualBTCUSDOracleGnosisAddress, closingTime, enactmentTime, market.PerpetualINJUSD, sub, logger,
 			)
 		}()
 	}
