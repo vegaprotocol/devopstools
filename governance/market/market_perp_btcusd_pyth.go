@@ -11,9 +11,9 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const PerpetualJUPUSDPyth = "auto:perpetual_jup_usd_pyth"
+const PerpetualBTCUSDPyth = "auto:perpetual_btc_usd_pyth"
 
-func NewJUPUSDPythPerpetualMarketProposal(
+func NewBTCUSDPythPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -21,7 +21,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "JUPUSDT Pyth Perp"
+		name      = "BTCUSDT Pyth Perp"
 	)
 
 	contractABI := `[{
@@ -70,7 +70,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
 			Title:       name,
-			Description: "## Summary\n\nThis proposal requests to list JUPUSDT Pyth Perp as a market with USDT as a settlement asset",
+			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Pyth Perp as a market with USDT as a settlement asset",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -95,11 +95,11 @@ func NewJUPUSDPythPerpetualMarketProposal(
 													Abi:     contractABI,
 													Method:  "getPrice",
 													Args: []*structpb.Value{
-														structpb.NewStringValue("0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996"),
+														structpb.NewStringValue("0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
 													},
 													Normalisers: []*vega.Normaliser{
 														{
-															Name:       "jup.price",
+															Name:       "btc.price",
 															Expression: "$[0].price",
 														},
 													},
@@ -114,7 +114,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 													Filters: []*datav1.Filter{
 														{
 															Key: &datav1.PropertyKey{
-																Name:                "jup.price",
+																Name:                "btc.price",
 																Type:                datav1.PropertyKey_TYPE_INTEGER,
 																NumberDecimalPlaces: ptr.From(uint64(8)),
 															},
@@ -135,7 +135,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 							},
 							DataSourcesSpecBinding: []*vega.SpecBindingForCompositePrice{
 								&vega.SpecBindingForCompositePrice{
-									PriceSourceProperty: "jup.price",
+									PriceSourceProperty: "btc.price",
 								},
 							},
 						},
@@ -145,7 +145,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "JUPUSDT.PYTH.PERP",
+							Code: "BTCUSDT.PYTH.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{
@@ -172,11 +172,11 @@ func NewJUPUSDPythPerpetualMarketProposal(
 														Abi:     contractABI,
 														Method:  "getPrice",
 														Args: []*structpb.Value{
-															structpb.NewStringValue("0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996"),
+															structpb.NewStringValue("0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
 														},
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "jup.price",
+																Name:       "btc.price",
 																Expression: "$[0].price",
 															},
 														},
@@ -191,7 +191,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "jup.price",
+																	Name:                "btc.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(8)),
 																},
@@ -231,7 +231,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "jup.price",
+										SettlementDataProperty:     "btc.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
@@ -239,7 +239,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 						},
 						Metadata: append([]string{
 							"formerly:50657270657475616c",
-							"base:JUP",
+							"base:BTC",
 							"quote:USD",
 							"oracle:pyth",
 							"chain:gnosis",

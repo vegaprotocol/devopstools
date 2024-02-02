@@ -41,6 +41,7 @@ type ProposeArgs struct {
 	ProposePerpetualEURUSD             bool
 	ProposePerpetualETHUSD             bool
 	ProposePerpetualJUPUSDPyth         bool
+	ProposePerpetualBTCUSDPyth         bool
 
 	ProposeAll       bool
 	ProposeCommunity bool
@@ -109,6 +110,7 @@ type MarketFlags struct {
 	IncentiveBTCUSD             bool
 
 	PerpetualJUPUSDPyth bool
+	PerpetualBTCUSDPyth bool
 
 	MainnetBTCUSDT  bool
 	MainnetDOGEUSDT bool
@@ -135,6 +137,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 			Perpetual1000PEPEUSDUniswap: true,
 
 			PerpetualJUPUSDPyth: true,
+			PerpetualBTCUSDPyth: true,
 		}
 	}
 
@@ -608,6 +611,27 @@ func RunPropose(args ProposeArgs) error {
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"Perpetual SNX USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				closingTime, enactmentTime, market.PerpetualJUPUSDPyth, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualBTCUSDPyth {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewBTCUSDPythPerpetualMarketProposal(
+				settlementAssetId.MainnetLikeAsset_USDT,
+				closingTime, enactmentTime,
+				[]string{market.PerpetualBTCUSDPyth},
+			)
+			if err != nil {
+				resultsChannel <- err
+				return
+			}
+			// FIXME: I removed the need for the address because it's the hardcoded uniswap one???
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"Perpetual SNX USD (mainnet uniswap oracle)", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				closingTime, enactmentTime, market.PerpetualBTCUSDPyth, sub, logger,
 			)
 		}()
 	}
