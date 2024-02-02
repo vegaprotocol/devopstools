@@ -116,7 +116,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 															Key: &datav1.PropertyKey{
 																Name:                "jup.price",
 																Type:                datav1.PropertyKey_TYPE_INTEGER,
-																NumberDecimalPlaces: ptr.From(uint64(18)),
+																NumberDecimalPlaces: ptr.From(uint64(8)),
 															},
 															Conditions: []*datav1.Condition{
 																{
