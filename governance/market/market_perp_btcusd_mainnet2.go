@@ -140,8 +140,8 @@ func NewBTCUSDMainnet2MarketProposal(
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
-							Name: "BTC/USD(USDT)-Perp Mainnet",
-							Code: "BTC/USD-PERP-MAINNET",
+							Name: "BTC/USD(USDT)-Perp Mainnet2",
+							Code: "BTC/USD-PERP-MAINNET2",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{

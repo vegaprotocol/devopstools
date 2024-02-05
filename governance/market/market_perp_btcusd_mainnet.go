@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const MainnetAssetID = "bf1e88d19db4b3ca0d1d5bdb73718a01686b18cf731ca26adedf3c8b83802bba"
+const MainnetAssetID = "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d"
 
 func NewBTCUSDMainnetMarketProposal(
 	settlementVegaAssetId string,
@@ -152,6 +152,7 @@ func NewBTCUSDMainnetMarketProposal(
 										DecayWeight:              "1.0",
 										DecayPower:               1,
 										CashAmount:               "50000000",
+										SourceWeights:            []string{"0.0", "1.0", "0.0"},
 										SourceStalenessTolerance: []string{"1m", "1m", "1m"},
 									},
 									FundingRateScalingFactor: ptr.From("0.0625"),
