@@ -43,6 +43,9 @@ type ProposeArgs struct {
 	ProposePerpetualJUPUSDPyth         bool
 	ProposePerpetualBTCUSDPyth         bool
 
+	ProposePerpetualBTCUSDMainnet  bool
+	ProposePerpetualBTCUSDMainnet2 bool
+
 	ProposeAll       bool
 	ProposeCommunity bool
 
@@ -109,8 +112,10 @@ type MarketFlags struct {
 	PerpetualETHUSD             bool
 	IncentiveBTCUSD             bool
 
-	PerpetualJUPUSDPyth bool
-	PerpetualBTCUSDPyth bool
+	PerpetualJUPUSDPyth     bool
+	PerpetualBTCUSDPyth     bool
+	PerpetualBTCUSDMainnet  bool
+	PerpetualBTCUSDMainnet2 bool
 
 	MainnetBTCUSDT  bool
 	MainnetDOGEUSDT bool
@@ -142,17 +147,19 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 	}
 
 	result := MarketFlags{
-		AAPL:                        args.ProposeAAPL || args.ProposeAll,
-		AAVEDAI:                     args.ProposeAAVEDAI || args.ProposeAll,
-		BTCUSD:                      args.ProposeBTCUSD || args.ProposeAll,
-		ETHBTC:                      args.ProposeETHBTC || args.ProposeAll,
-		TSLA:                        args.ProposeTSLA || args.ProposeAll,
-		UNIDAI:                      args.ProposeUNIDAI || args.ProposeAll,
-		ETHDAI:                      args.ProposeETHDAI || args.ProposeAll,
-		PerpetualBTCUSDGnosis:       args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
-		PerpetualSNXUSDUniswap:      args.ProposePerpetualSNXUSDUniswap || args.ProposeAll,
-		PerpetualINJUSDUniswap:      args.ProposePerpetualINJUSDUniswap || args.ProposeAll,
-		Perpetual1000PEPEUSDUniswap: args.ProposePerpetual1000PEPEUSDUniswap || args.ProposeAll,
+		// AAPL:                        args.ProposeAAPL || args.ProposeAll,
+		// AAVEDAI:                     args.ProposeAAVEDAI || args.ProposeAll,
+		// BTCUSD:                      args.ProposeBTCUSD || args.ProposeAll,
+		// ETHBTC:                      args.ProposeETHBTC || args.ProposeAll,
+		// TSLA:                        args.ProposeTSLA || args.ProposeAll,
+		// UNIDAI:                      args.ProposeUNIDAI || args.ProposeAll,
+		// ETHDAI:                      args.ProposeETHDAI || args.ProposeAll,
+		// PerpetualBTCUSDGnosis:       args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
+		// PerpetualSNXUSDUniswap:      args.ProposePerpetualSNXUSDUniswap || args.ProposeAll,
+		// PerpetualINJUSDUniswap:      args.ProposePerpetualINJUSDUniswap || args.ProposeAll,
+		// Perpetual1000PEPEUSDUniswap: args.ProposePerpetual1000PEPEUSDUniswap || args.ProposeAll,
+		PerpetualBTCUSDMainnet:  args.ProposePerpetualBTCUSDMainnet || args.ProposeAll,
+		PerpetualBTCUSDMainnet2: args.ProposePerpetualBTCUSDMainnet2 || args.ProposeAll,
 	}
 
 	if env == types.NetworkDevnet1 {
@@ -804,6 +811,38 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"LINK USDT", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+			)
+		}()
+	}
+
+	// ---
+
+	if marketsFlags.PerpetualBTCUSDMainnet {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewBTCUSDMainnetMarketProposal(
+				settlementAssetId.MainnetLikeAsset_USDT, closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"BTC USD Mainnet", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
+				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+			)
+		}()
+	}
+
+	if marketsFlags.PerpetualBTCUSDMainnet2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sub := market.NewBTCUSDMainnet2MarketProposal(
+				settlementAssetId.MainnetLikeAsset_USDT, closingTime, enactmentTime,
+				[]string{},
+			)
+			resultsChannel <- governance.ProposeVoteProvideLP(
+				"BTC USD Mainnet 2", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
 				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
 			)
 		}()

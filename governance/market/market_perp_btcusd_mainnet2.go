@@ -11,9 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const MainnetAssetID = "bf1e88d19db4b3ca0d1d5bdb73718a01686b18cf731ca26adedf3c8b83802bba"
-
-func NewBTCUSDPythPerpetualMarketProposal(
+func NewBTCUSDMainnet2MarketProposal(
 	settlementVegaAssetId string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -68,7 +66,7 @@ func NewBTCUSDPythPerpetualMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "Update market BTC/USDT Perp",
+			Title:       "Update market BTC/USDT Perp Mainnet",
 			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Pyth Perp as a market with USDT as a settlement asset",
 		},
 		Terms: &vega.ProposalTerms{
@@ -143,8 +141,8 @@ func NewBTCUSDPythPerpetualMarketProposal(
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
-							Name: "BTC/USD(USDT)-Perp",
-							Code: "BTC/USD-PERP",
+							Name: "BTC/USD(USDT)-Perp Mainnet",
+							Code: "BTC/USD-PERP-MAINNET",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{
