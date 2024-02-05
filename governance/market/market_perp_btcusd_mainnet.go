@@ -152,7 +152,6 @@ func NewBTCUSDMainnetMarketProposal(
 										DecayWeight:              "1.0",
 										DecayPower:               1,
 										CashAmount:               "50000000",
-										SourceWeights:            []string{"0.0", "1.0", "0.0"},
 										SourceStalenessTolerance: []string{"1m", "1m", "1m"},
 									},
 									FundingRateScalingFactor: ptr.From("0.0625"),
