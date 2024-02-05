@@ -3,6 +3,7 @@ package main
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
+	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
 	"github.com/vegaprotocol/devopstools/cmd/bot"
 	"github.com/vegaprotocol/devopstools/cmd/erc20token"
@@ -51,4 +52,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(propose.ProposeCmd)
 	rootCmd.RootCmd.AddCommand(bot.BotCmd)
 	rootCmd.RootCmd.AddCommand(incentive.IncentiveCmd)
+	rootCmd.RootCmd.AddCommand(batch.BatchCmd)
 }

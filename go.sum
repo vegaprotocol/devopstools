@@ -18,8 +18,8 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f h1:ivaWSXN7XKESShqYw/QFuT6b2mvThWPQLO7lW5sadHs=
 code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f/go.mod h1:XzX67GsyOHzvytMr0QOHX4CCTdCZDYKUUi88rx40Nt0=
-code.vegaprotocol.io/vega v0.73.1-0.20240130154740-97627d0036ee h1:lMkLSjpCEKnMHsqmaCY9tEUet8u9iAH0wN4Fh3dkXrQ=
-code.vegaprotocol.io/vega v0.73.1-0.20240130154740-97627d0036ee/go.mod h1:taCX5tXcjenslMb7yb5+X6jnd/nYpnjM9Jd4MJyCdmQ=
+code.vegaprotocol.io/vega v0.74.0-preview.10 h1:sdfmL8i2vnacUWNEvo7IpNaLs+3En7XAnLlTTzc+DyE=
+code.vegaprotocol.io/vega v0.74.0-preview.10/go.mod h1:taCX5tXcjenslMb7yb5+X6jnd/nYpnjM9Jd4MJyCdmQ=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/Azure/azure-pipeline-go v0.2.1/go.mod h1:UGSo8XybXnIGZ3epmeBw7Jdz+HiUVpqIlpz/HKHylF4=
