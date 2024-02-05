@@ -14,7 +14,7 @@ func MainnetUpgradeBatchProposal(
 	return NewBatchProposal(
 		"Update Markets and network parameters to support new v0.74.x features",
 		"Update market BTC/USD and ETH/USD and some network parameters",
-		time.Now(),
+		closingTime,
 		[]*commandspb.ProposalSubmission{
 			networkparameters.NewUpdateParametersProposal(
 				"market.liquidity.minimum.probabilityOfTrading.lpOrders", "0.001", closingTime, enactmentTime,
