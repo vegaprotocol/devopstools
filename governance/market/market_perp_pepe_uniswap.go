@@ -11,9 +11,9 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const PerpetualSNXUSD = "auto:perpetual_snx_usd"
+const Perpetual1000PEPEUSD = "auto:perpetual_1000pepe_usd"
 
-func NewSNXUSDPerpetualMarketProposal(
+func New1000PEPEUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -21,16 +21,16 @@ func NewSNXUSDPerpetualMarketProposal(
 ) *commandspb.ProposalSubmission {
 	var (
 		reference = tools.RandAlphaNumericString(40)
-		name      = "SNXUSD Perpetual"
+		name      = "1000PEPEUSDT Perpetual"
 	)
 
-	contractABI := `[{"inputs":[{"internalType":"contract IUniswapV3Pool","name":"pool","type":"address"},{"internalType":"uint32","name":"twapInterval","type":"uint32"}],"name":"priceFromEthPoolInUsdt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`
+	contractABI := `[{"inputs":[{"internalType":"contract IUniswapV3Pool","name":"pool","type":"address"},{"internalType":"uint32","name":"twapInterval","type":"uint32"},{"internalType":"uint256","name":"x","type":"uint256"}],"name":"priceFromEthPoolInUsdt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`
 
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "New SNXUSD perpetual market",
-			Description: "New SNXUSD perpetual market",
+			Title:       "New 1000PEPEUSDT perpetual market",
+			Description: "New 1000PEPEUSDT perpetual market",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -41,13 +41,13 @@ func NewSNXUSDPerpetualMarketProposal(
 						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
 							CompositePriceType: vega.CompositePriceType_COMPOSITE_PRICE_TYPE_LAST_TRADE,
 						},
-						DecimalPlaces:           3,
-						PositionDecimalPlaces:   1,
+						DecimalPlaces:           6,  // up to e.g: 0.000974
+						PositionDecimalPlaces:   -3, // min 100
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
-							Code: "SNXUSD.PERP",
+							Code: "1000PEPEUSDT.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									ClampLowerBound:     "-0.0005",
@@ -61,18 +61,19 @@ func NewSNXUSDPerpetualMarketProposal(
 											External: &vega.DataSourceDefinitionExternal{
 												SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
 													EthOracle: &vega.EthCallSpec{
-														Address: "0x9eb2ebd260d82410592758b3091f74977e4a404c", // Uniswap price source contrat
+														Address: "0xbedbc6302eaffd4032dd1df94e326f7ecb9ff4f9", // Uniswap price source contrat
 														Abi:     contractABI,
 														Method:  "priceFromEthPoolInUsdt",
 														Args: []*structpb.Value{
 															structpb.NewStringValue(
-																"0xede8dd046586d22625ae7ff2708f879ef7bdb8cf", // SNX/USDC pool
+																"0x11950d141ecb863f01007add7d1a342041227b58", // 1000PEPE/ETH pool
 															),
-															structpb.NewNumberValue(float64(300)), // 300 seconds twap
+															structpb.NewNumberValue(float64(300)),  // 300 seconds twap
+															structpb.NewNumberValue(float64(1000)), // 1000x
 														},
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "snx.price",
+																Name:       "1000pepe.price",
 																Expression: "$[0]",
 															},
 														},
@@ -87,7 +88,7 @@ func NewSNXUSDPerpetualMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "snx.price",
+																	Name:                "1000pepe.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(18)), // All prices are 18 decimals on the uniswap contract
 																},
@@ -127,7 +128,7 @@ func NewSNXUSDPerpetualMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "snx.price",
+										SettlementDataProperty:     "1000pepe.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
@@ -135,7 +136,7 @@ func NewSNXUSDPerpetualMarketProposal(
 						},
 						Metadata: append([]string{
 							"formerly:706572706c696e6b757364",
-							"base:SNX",
+							"base:1000PEPE",
 							"quote:USD",
 							"class:fx/crypto",
 							"monthly",

@@ -30,14 +30,19 @@ func ProposeVoteProvideLP(
 	lastBlockData *vegaapipb.LastBlockHeightResponse,
 	markets []*vega.Market,
 	proposerVegawallet *wallet.VegaWallet,
-	oraclePubKey string,
 	closingTime time.Time,
 	enactmentTime time.Time,
 	marketMetadataMarker string,
 	proposal *commandspb.ProposalSubmission,
 	logger *zap.Logger,
 ) error {
-	market := GetMarket(markets, oraclePubKey, marketMetadataMarker, LiveMarketStates)
+	if proposal == nil || proposal.Terms.GetNewMarket() == nil {
+		return fmt.Errorf("invalid new market proposal: missing proposal.terms.newMarket")
+	}
+
+	newMarketCode := proposal.Terms.GetNewMarket().Changes.Instrument.Code
+
+	market := GetMarket(markets, newMarketCode, marketMetadataMarker, LiveMarketStates)
 	if market != nil {
 		logger.Info("market already exist", zap.String("market", market.Id), zap.String("name", name))
 		return nil
@@ -105,9 +110,9 @@ func ProposeVoteProvideLP(
 	if err != nil {
 		return fmt.Errorf("failed to get markets: %w", err)
 	}
-	market = GetMarket(markets, oraclePubKey, marketMetadataMarker, LiveMarketStates)
+	market = GetMarket(markets, newMarketCode, marketMetadataMarker, LiveMarketStates)
 	if market == nil {
-		return fmt.Errorf("failed to find particular market for %s oracle public key", oraclePubKey)
+		return fmt.Errorf("failed to find particular market for %s market code", newMarketCode)
 	}
 
 	// Prepare vegawallet Transaction Request
@@ -130,7 +135,7 @@ func ProposeVoteProvideLP(
 
 const OracleAll = "*"
 
-func GetMarket(markets []*vega.Market, oraclePubKey string, metadataTag string, validStates []vega.Market_State) *vega.Market {
+func GetMarket(markets []*vega.Market, marketCode string, metadataTag string, validStates []vega.Market_State) *vega.Market {
 	for _, market := range markets {
 		if market.TradableInstrument == nil || market.TradableInstrument.Instrument == nil {
 			continue
@@ -141,63 +146,64 @@ func GetMarket(markets []*vega.Market, oraclePubKey string, metadataTag string, 
 			continue
 		}
 
-		future := market.TradableInstrument.Instrument.GetFuture()
-		perpetual := market.TradableInstrument.Instrument.GetPerpetual()
-
-		if future == nil && perpetual == nil {
-			// TODO: Log the unsupported market here?
-			continue
-		}
-
-		stringSigners := []string{OracleAll}
-		if perpetual != nil &&
-			perpetual.DataSourceSpecForSettlementData != nil &&
-			perpetual.DataSourceSpecForSettlementData.GetData() != nil &&
-			perpetual.DataSourceSpecForSettlementData.GetData().GetExternal() != nil {
-			external := perpetual.DataSourceSpecForSettlementData.GetData().GetExternal()
-
-			if external.GetOracle() != nil {
-				for _, signer := range external.GetOracle().Signers {
-					if signer.GetPubKey() != nil {
-						stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
-					}
-					if signer.GetEthAddress() != nil {
-						stringSigners = append(stringSigners, signer.GetEthAddress().Address)
-					}
-				}
-			}
-
-			if external.GetEthOracle() != nil {
-				stringSigners = append(stringSigners, external.GetEthOracle().Address)
-			}
-		}
-
-		if future != nil &&
-			future.DataSourceSpecForSettlementData != nil &&
-			future.DataSourceSpecForSettlementData.GetData() != nil &&
-			future.DataSourceSpecForSettlementData.GetData().GetExternal() != nil &&
-			future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle() != nil {
-			signers := future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle().Signers
-			for _, signer := range signers {
-				if signer.GetPubKey() != nil {
-					stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
-				}
-				if signer.GetEthAddress() != nil {
-					stringSigners = append(stringSigners, signer.GetEthAddress().Address)
-				}
-			}
-		}
-
-		if slices.Contains(
-			stringSigners,
-			oraclePubKey,
-		) && slices.Contains(
+		if len(metadataTag) > 0 && !slices.Contains(
 			market.TradableInstrument.Instrument.Metadata.Tags,
 			metadataTag,
 		) {
-			// TODO check if open
+			continue
+		}
+
+		if market.TradableInstrument.Instrument.Code == marketCode {
 			return market
 		}
+
+		// future := market.TradableInstrument.Instrument.GetFuture()
+		// perpetual := market.TradableInstrument.Instrument.GetPerpetual()
+
+		// if future == nil && perpetual == nil {
+		// 	// TODO: Log the unsupported market here?
+		// 	continue
+		// }
+
+		// stringSigners := []string{OracleAll}
+		// if perpetual != nil &&
+		// 	perpetual.DataSourceSpecForSettlementData != nil &&
+		// 	perpetual.DataSourceSpecForSettlementData.GetData() != nil &&
+		// 	perpetual.DataSourceSpecForSettlementData.GetData().GetExternal() != nil {
+		// 	external := perpetual.DataSourceSpecForSettlementData.GetData().GetExternal()
+
+		// 	if external.GetOracle() != nil {
+		// 		for _, signer := range external.GetOracle().Signers {
+		// 			if signer.GetPubKey() != nil {
+		// 				stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+		// 			}
+		// 			if signer.GetEthAddress() != nil {
+		// 				stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+		// 			}
+		// 		}
+		// 	}
+
+		// 	if external.GetEthOracle() != nil {
+		// 		stringSigners = append(stringSigners, external.GetEthOracle().Address)
+		// 	}
+		// }
+
+		// if future != nil &&
+		// 	future.DataSourceSpecForSettlementData != nil &&
+		// 	future.DataSourceSpecForSettlementData.GetData() != nil &&
+		// 	future.DataSourceSpecForSettlementData.GetData().GetExternal() != nil &&
+		// 	future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle() != nil {
+		// 	signers := future.DataSourceSpecForSettlementData.GetData().GetExternal().GetOracle().Signers
+		// 	for _, signer := range signers {
+		// 		if signer.GetPubKey() != nil {
+		// 			stringSigners = append(stringSigners, signer.GetPubKey().GetKey())
+		// 		}
+		// 		if signer.GetEthAddress() != nil {
+		// 			stringSigners = append(stringSigners, signer.GetEthAddress().Address)
+		// 		}
+		// 	}
+		// }
+
 	}
 	return nil
 }
