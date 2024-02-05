@@ -80,7 +80,7 @@ func NewBTCUSDMainnet2MarketProposal(
 							DecayWeight:              "1.0",
 							DecayPower:               1,
 							CashAmount:               "5000000",
-							SourceStalenessTolerance: []string{"1m", "1m", "1m"},
+							SourceStalenessTolerance: []string{"1m", "1m", "1m", "1m"},
 							DataSourcesSpec: []*vega.DataSourceDefinition{
 								&vega.DataSourceDefinition{
 									SourceType: &vega.DataSourceDefinition_External{
