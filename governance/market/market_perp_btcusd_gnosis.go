@@ -48,8 +48,8 @@ func NewBTCUSDGnosisPerpetualMarketProposal(
 							SourceWeights:            []string{"0.999", "0.001", "0.0"},
 							SourceStalenessTolerance: []string{"1m", "1m", "1m"},
 						},
-						DecimalPlaces:           1,
-						PositionDecimalPlaces:   4,
+						DecimalPlaces:           4,
+						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{

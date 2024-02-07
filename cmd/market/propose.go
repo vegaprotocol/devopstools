@@ -154,7 +154,7 @@ func dispatchMarkets(env string, args ProposeArgs) MarketFlags {
 		// TSLA:                        args.ProposeTSLA || args.ProposeAll,
 		// UNIDAI:                      args.ProposeUNIDAI || args.ProposeAll,
 		// ETHDAI:                      args.ProposeETHDAI || args.ProposeAll,
-		// PerpetualBTCUSDGnosis:       args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
+		PerpetualBTCUSDGnosis: args.ProposePerpetualBTCUSDGnosis || args.ProposeAll,
 		// PerpetualSNXUSDUniswap:      args.ProposePerpetualSNXUSDUniswap || args.ProposeAll,
 		// PerpetualINJUSDUniswap:      args.ProposePerpetualINJUSDUniswap || args.ProposeAll,
 		// Perpetual1000PEPEUSDUniswap: args.ProposePerpetual1000PEPEUSDUniswap || args.ProposeAll,
@@ -828,7 +828,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"BTC USD Mainnet", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.EmptyMetadata, sub, logger,
 			)
 		}()
 	}
@@ -843,7 +843,7 @@ func RunPropose(args ProposeArgs) error {
 			)
 			resultsChannel <- governance.ProposeVoteProvideLP(
 				"BTC USD Mainnet 2", network.DataNodeClient, lastBlockData, markets, proposerVegawallet,
-				closingTime, enactmentTime, market.MainnetLinkUSDTMetadataID, sub, logger,
+				closingTime, enactmentTime, market.EmptyMetadata, sub, logger,
 			)
 		}()
 	}
