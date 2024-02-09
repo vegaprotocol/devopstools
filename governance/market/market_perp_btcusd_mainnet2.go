@@ -136,7 +136,7 @@ func NewBTCUSDMainnet2MarketProposal(
 							},
 						},
 						DecimalPlaces:           4,
-						PositionDecimalPlaces:   -1,
+						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.InstrumentConfiguration{
