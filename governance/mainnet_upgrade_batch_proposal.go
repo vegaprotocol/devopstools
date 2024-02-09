@@ -8,6 +8,28 @@ import (
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 )
 
+func MainnetUpgradeBatchProposal2(
+	closingTime, enactmentTime time.Time,
+) *commandspb.BatchProposalSubmission {
+	return NewBatchProposal(
+		"Update Markets and network parameters to support new v0.74.x features",
+		"Update market BTC/USD and ETH/USD and some network parameters",
+		closingTime,
+		[]*commandspb.ProposalSubmission{
+			networkparameters.NewUpdateParametersProposal(
+				"market.liquidity.minimum.probabilityOfTrading.lpOrders", "0.001", closingTime, enactmentTime,
+			),
+			networkparameters.NewUpdateParametersProposal(
+				"market.liquidity.probabilityOfTrading.tau.scaling", "0.1", closingTime, enactmentTime,
+			),
+			market.UpdateBTCUSDMainnetMarketProposal(
+				closingTime, enactmentTime, []string{},
+			),
+		},
+		nil,
+	)
+}
+
 func MainnetUpgradeBatchProposal(
 	closingTime, enactmentTime time.Time,
 ) *commandspb.BatchProposalSubmission {
