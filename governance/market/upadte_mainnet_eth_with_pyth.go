@@ -52,7 +52,7 @@ func UpdateETHUSDMainnetMarketProposal(
 
 			Change: &vega.ProposalTerms_UpdateMarket{
 				UpdateMarket: &vega.UpdateMarket{
-					MarketId: "00788b763b999ef555ac5da17de155ff4237dd14aa6671a303d1285f27f094f0",
+					MarketId: "ac7fc86bddf26748c6ba32a67037fe13c623cd4b53480aac4eaf29fbbd22ac31",
 					Changes: &vega.UpdateMarketConfiguration{
 						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
 							CompositePriceType:       vega.CompositePriceType_COMPOSITE_PRICE_TYPE_WEIGHTED,
