@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func UpdateBTCUSDMainnetMarketProposal(
+func UpdateETHUSDMainnetMarketProposal(
 	closingTime time.Time,
 	enactmentTime time.Time,
 	extraMetadata []string,
@@ -43,8 +43,8 @@ func UpdateBTCUSDMainnetMarketProposal(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title:       "Update market BTC/USDT Perp Mainnet",
-			Description: "## Summary\n\nThis proposal requests to list BTCUSDT Pyth Perp as a market with USDT as a settlement asset",
+			Title:       "Update market ETH/USDT Perp Mainnet",
+			Description: "## Summary\n\nThis proposal requests to list ETHUSDT Pyth Perp as a market with USDT as a settlement asset",
 		},
 		Terms: &vega.ProposalTerms{
 			ClosingTimestamp:   closingTime.Unix(),
@@ -75,7 +75,7 @@ func UpdateBTCUSDMainnetMarketProposal(
 													},
 													Normalisers: []*vega.Normaliser{
 														{
-															Name:       "btc.price",
+															Name:       "eth.price",
 															Expression: "$[0]",
 														},
 													},
@@ -90,7 +90,7 @@ func UpdateBTCUSDMainnetMarketProposal(
 													Filters: []*datav1.Filter{
 														{
 															Key: &datav1.PropertyKey{
-																Name:                "btc.price",
+																Name:                "eth.price",
 																Type:                datav1.PropertyKey_TYPE_INTEGER,
 																NumberDecimalPlaces: ptr.From(uint64(18)),
 															},
@@ -111,15 +111,15 @@ func UpdateBTCUSDMainnetMarketProposal(
 							},
 							DataSourcesSpecBinding: []*vega.SpecBindingForCompositePrice{
 								&vega.SpecBindingForCompositePrice{
-									PriceSourceProperty: "btc.price",
+									PriceSourceProperty: "eth.price",
 								},
 							},
 						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
 						Instrument: &vega.UpdateInstrumentConfiguration{
-							Name: "BTC/USD(USDT)-Perp-Mainnet",
-							Code: "BTC/USD-PERP-MAINNET",
+							Name: "ETH/USD(USDT)-Perp-Mainnet",
+							Code: "ETH/USD-PERP-MAINNET",
 							Product: &vega.UpdateInstrumentConfiguration_Perpetual{
 								Perpetual: &vega.UpdatePerpetualProduct{
 									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{
@@ -145,11 +145,11 @@ func UpdateBTCUSDMainnetMarketProposal(
 														Abi:     contractABI,
 														Method:  "getPrice",
 														Args: []*structpb.Value{
-															structpb.NewStringValue("0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
+															structpb.NewStringValue("0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"),
 														},
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "btc.price",
+																Name:       "eth.price",
 																Expression: "$[0]",
 															},
 														},
@@ -164,7 +164,7 @@ func UpdateBTCUSDMainnetMarketProposal(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "btc.price",
+																	Name:                "eth.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(18)),
 																},
@@ -204,14 +204,14 @@ func UpdateBTCUSDMainnetMarketProposal(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "btc.price",
+										SettlementDataProperty:     "eth.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 								},
 							},
 						},
 						Metadata: append([]string{
-							"base:BTC",
+							"base:ETH",
 							"quote:USD",
 							"oracle:pyth",
 							"chain:gnosis",

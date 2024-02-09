@@ -25,6 +25,9 @@ func MainnetUpgradeBatchProposal2(
 			market.UpdateBTCUSDMainnetMarketProposal(
 				closingTime, enactmentTime, []string{},
 			),
+			market.UpdateETHUSDMainnetMarketProposal(
+				closingTime, enactmentTime, []string{},
+			),
 		},
 		nil,
 	)
