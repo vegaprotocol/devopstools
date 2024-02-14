@@ -5,3 +5,5 @@ const (
 	GnosisChainID     = 100
 	EthereumMainnetID = 1
 )
+
+const EmptyMetadata = ""
