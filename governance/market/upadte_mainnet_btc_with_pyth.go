@@ -127,8 +127,56 @@ func UpdateBTCUSDMainnetMarketProposal(
 										DecayWeight:              "1.0",
 										DecayPower:               1,
 										CashAmount:               "50000000",
-										SourceWeights:            []string{"0.0", "1.0", "0.0"},
-										SourceStalenessTolerance: []string{"1m", "1m", "1m"},
+										SourceWeights:            []string{"0.0", "0.999", "0.001", "0.0"},
+										SourceStalenessTolerance: []string{"1m", "1m", "10m", "10m"},
+										DataSourcesSpec: []*vega.DataSourceDefinition{
+								&vega.DataSourceDefinition{
+									SourceType: &vega.DataSourceDefinition_External{
+										External: &vega.DataSourceDefinitionExternal{
+											SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
+												EthOracle: &vega.EthCallSpec{
+													Address: "0x719abd606155442c21b7d561426d42bd0e40a776",
+													Abi:     contractABI,
+													Method:  "getPrice",
+													Args: []*structpb.Value{
+														structpb.NewStringValue("0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
+													},
+													Normalisers: []*vega.Normaliser{
+														{
+															Name:       "btc.price",
+															Expression: "$[0]",
+														},
+													},
+													RequiredConfirmations: 3,
+													Trigger: &vega.EthCallTrigger{
+														Trigger: &vega.EthCallTrigger_TimeTrigger{
+															TimeTrigger: &vega.EthTimeTrigger{
+																Every: ptr.From(uint64(60)), // pool prices every minutes
+															},
+														},
+													},
+													Filters: []*datav1.Filter{
+														{
+															Key: &datav1.PropertyKey{
+																Name:                "btc.price",
+																Type:                datav1.PropertyKey_TYPE_INTEGER,
+																NumberDecimalPlaces: ptr.From(uint64(18)),
+															},
+															Conditions: []*datav1.Condition{
+																{
+																	Operator: datav1.Condition_OPERATOR_GREATER_THAN,
+																	Value:    "0",
+																},
+															},
+														},
+													},
+													SourceChainId: GnosisChainID,
+												},
+											},
+										},
+									},
+								},
+											},
 									},
 									FundingRateScalingFactor: ptr.From("0.0625"),
 									ClampLowerBound:          "-0.0005",
