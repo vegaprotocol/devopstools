@@ -17,6 +17,7 @@ func CloneEthereumL2Config(currentParam *vega.EthereumL2Configs) *vega.EthereumL
 			ChainId:       conf.ChainId,
 			Name:          conf.Name,
 			Confirmations: conf.Confirmations,
+			BlockInterval: conf.BlockInterval,
 		})
 	}
 
@@ -51,6 +52,7 @@ func AppendEthereumL2Config(
 				ChainId:       newConfig.ChainId,
 				Name:          newConfig.Name,
 				Confirmations: newConfig.Confirmations,
+				BlockInterval: newConfig.BlockInterval,
 			})
 			continue
 		}
@@ -60,6 +62,7 @@ func AppendEthereumL2Config(
 			ChainId:       conf.ChainId,
 			Name:          conf.Name,
 			Confirmations: conf.Confirmations,
+			BlockInterval: conf.BlockInterval,
 		})
 	}
 
@@ -69,6 +72,7 @@ func AppendEthereumL2Config(
 			ChainId:       newConfig.ChainId,
 			Name:          newConfig.Name,
 			Confirmations: newConfig.Confirmations,
+			BlockInterval: newConfig.BlockInterval,
 		})
 	}
 

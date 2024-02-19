@@ -6,7 +6,7 @@ toolchain go1.21.5
 
 require (
 	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
-	code.vegaprotocol.io/vega v0.74.0-preview.10
+	code.vegaprotocol.io/vega v0.74.3-preview.1
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6

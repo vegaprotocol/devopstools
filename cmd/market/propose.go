@@ -302,6 +302,8 @@ func RunPropose(args ProposeArgs) error {
 		args.Logger.Info("Network parameters updated")
 	}
 
+	return nil
+
 	closingTime = time.Now().Add(time.Second * 20).Add(minClose)
 	enactmentTime = time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 	//

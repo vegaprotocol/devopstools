@@ -46,12 +46,14 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			ChainId:       "100",
 			Name:          "Gnosis Chain",
 			Confirmations: 3,
+			BlockInterval: 3,
 		},
 		&vega.EthereumL2Config{
 			NetworkId:     "1",
 			ChainId:       "1",
 			Name:          "Ethereum Mainnet",
 			Confirmations: 3,
+			BlockInterval: 1,
 		},
 	},
 	types.NetworkStagnet3: {},
@@ -61,6 +63,7 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			ChainId:       "100",
 			Name:          "Gnosis Chain",
 			Confirmations: 3,
+			BlockInterval: 50,
 		},
 	},
 }
