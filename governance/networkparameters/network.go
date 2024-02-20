@@ -9,6 +9,15 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 )
 
+func NewUpdateParameterProposalWithoutTime(k, v string) *commandspb.ProposalSubmission {
+	return NewUpdateParametersProposal(
+		k,
+		v,
+		time.Now().Add(30*time.Second),
+		time.Now().Add(45*time.Second),
+	)
+}
+
 func NewUpdateParametersProposal(key string, newValue string, closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {
 	return &commandspb.ProposalSubmission{
 		Reference: tools.RandAlphaNumericString(40),

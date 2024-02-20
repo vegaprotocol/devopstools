@@ -7,3 +7,7 @@ const (
 )
 
 const EmptyMetadata = ""
+
+var DefaultExtraMetadata []string = []string{
+	"devopstools:true",
+}

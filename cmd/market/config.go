@@ -2,6 +2,8 @@ package market
 
 import (
 	"code.vegaprotocol.io/vega/protos/vega"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	"github.com/vegaprotocol/devopstools/governance/market"
 	"github.com/vegaprotocol/devopstools/types"
 )
 
@@ -33,12 +35,13 @@ type networkAssetsIDs struct {
 
 var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL2Config{
 	types.NetworkDevnet1: {
-		// &vega.EthereumL2Config{
-		// 	NetworkId:     "11155111",
-		// 	ChainId:       "11155111",
-		// 	Name:          "Sepolia Test Network",
-		// 	Confirmations: 3,
-		// },
+		&vega.EthereumL2Config{
+			NetworkId:     "100",
+			ChainId:       "100",
+			Name:          "Gnosis Chain",
+			Confirmations: 3,
+			BlockInterval: 50,
+		},
 	},
 	types.NetworkStagnet1: {
 		&vega.EthereumL2Config{
@@ -125,4 +128,28 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 		SettlementAsset_USDC:  "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		MainnetLikeAsset_USDT: "8ba0b10971f0c4747746cd01ff05a53ae75ca91eba1d4d050b527910c983e27e", // Probably should be fetched dynamicly
 	},
+}
+
+func MarketProposalsForEnvironment(environment string) []*commandspb.ProposalSubmission {
+	switch environment {
+	case types.NetworkDevnet1:
+		return []*commandspb.ProposalSubmission{
+			market.NewMainnetSimulationBitcoinTetherPerpetualWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationEtherTetherPerpetualWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewFutureBTCUSDTWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
+			market.NewFutureETHUSDTWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
+			market.NewMainnetSimulationSNXUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationLDOUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationINJUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+		}
+	case types.NetworkStagnet1:
+		// TODO: Add more markets
+		return []*commandspb.ProposalSubmission{}
+	case types.NetworkFairground:
+		// TODO: Add more markets
+		return []*commandspb.ProposalSubmission{}
+	}
+
+	// unsupported network?
+	return []*commandspb.ProposalSubmission{}
 }
