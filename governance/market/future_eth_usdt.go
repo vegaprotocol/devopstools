@@ -19,8 +19,18 @@ var (
 	MainnetETHUSDTDecimalPlaces         = uint64(2)
 )
 
+func NewFutureETHUSDTWithoutTime(settlementAsset string, oraclePubKey string) *commandspb.ProposalSubmission {
+	return NewFutureETHUSDT(
+		settlementAsset,
+		oraclePubKey,
+		time.Now().Add(30*time.Second),
+		time.Now().Add(45*time.Second),
+		DefaultExtraMetadata,
+	)
+}
+
 // settlementVegaAssetId ideally with 6 decimal places
-func NewMainnetETHUSDT(
+func NewFutureETHUSDT(
 	settlementVegaAssetId string,
 	oraclePubKey string,
 	closingTime time.Time,
@@ -35,7 +45,7 @@ func NewMainnetETHUSDT(
 	return &commandspb.ProposalSubmission{
 		Reference: reference,
 		Rationale: &vega.ProposalRationale{
-			Title: "ETH/USDT Mainnet Copy",
+			Title: "ETH/USDT Future",
 			Description: `# Summary
 
 This proposal requests to list ETH/USDT-231231 as a market with USDT as a settlement asset on the Vega Network as discussed in: https://community.vega.xyz/.
@@ -55,8 +65,8 @@ This proposal requests to list ETH/USDT-231231 as a market with USDT as a settle
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
 						Instrument: &vega.InstrumentConfiguration{
-							Name: "ETH/USDT Mainnet Copy",
-							Code: "ETH/USDT-MAINNET",
+							Name: "ETH/USDT Future",
+							Code: "ETH/USDT-FUTURE",
 							Product: &vega.InstrumentConfiguration_Future{
 								Future: &vega.FutureProduct{
 									SettlementAsset: settlementVegaAssetId,
