@@ -105,6 +105,10 @@ func NewMainnetSimulationINJUSDTPerp(
 											},
 										},
 									},
+									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
+										SettlementDataProperty:     "inj.price",
+										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
+									},
 									DataSourceSpecForSettlementData: &vega.DataSourceDefinition{
 										SourceType: &vega.DataSourceDefinition_External{
 											External: &vega.DataSourceDefinitionExternal{

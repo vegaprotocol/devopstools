@@ -35,12 +35,13 @@ type networkAssetsIDs struct {
 
 var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL2Config{
 	types.NetworkDevnet1: {
-		// &vega.EthereumL2Config{
-		// 	NetworkId:     "11155111",
-		// 	ChainId:       "11155111",
-		// 	Name:          "Sepolia Test Network",
-		// 	Confirmations: 3,
-		// },
+		&vega.EthereumL2Config{
+			NetworkId:     "100",
+			ChainId:       "100",
+			Name:          "Gnosis Chain",
+			Confirmations: 3,
+			BlockInterval: 50,
+		},
 	},
 	types.NetworkStagnet1: {
 		&vega.EthereumL2Config{
