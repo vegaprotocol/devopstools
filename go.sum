@@ -18,8 +18,6 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f h1:ivaWSXN7XKESShqYw/QFuT6b2mvThWPQLO7lW5sadHs=
 code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f/go.mod h1:XzX67GsyOHzvytMr0QOHX4CCTdCZDYKUUi88rx40Nt0=
-code.vegaprotocol.io/vega v0.74.0-preview.10 h1:sdfmL8i2vnacUWNEvo7IpNaLs+3En7XAnLlTTzc+DyE=
-code.vegaprotocol.io/vega v0.74.0-preview.10/go.mod h1:taCX5tXcjenslMb7yb5+X6jnd/nYpnjM9Jd4MJyCdmQ=
 code.vegaprotocol.io/vega v0.74.3-preview.1 h1:9RThXEFn3VrYgPyMS1+LX3G2MFMySa32BNQptqOrjBI=
 code.vegaprotocol.io/vega v0.74.3-preview.1/go.mod h1:naS1364ETvPcidgqmK5TA37O6CsomlsLTOMmxSILZfs=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
