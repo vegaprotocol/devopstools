@@ -1,9 +1,11 @@
 package topup
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -13,19 +15,22 @@ import (
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	v1 "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
 	"github.com/vegaprotocol/devopstools/bots"
+	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"github.com/vegaprotocol/devopstools/wallet"
-	"go.uber.org/zap"
 )
 
 const (
-	DefaultTopUpValue = 10000
 	TraderTopUpFactor = 3.0
 	WhaleTopUpFactor  = 10.0
 )
@@ -45,7 +50,7 @@ var topUpWithTransferCmd = &cobra.Command{
 	Long:  `TopUp parties on network with vega transfer`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := RunTopUpWithTransfer(topUpWithTransferArgs); err != nil {
-			traderbotArgs.Logger.Error("Error", zap.Error(err))
+			topUpWithTransferArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
@@ -578,4 +583,153 @@ func necessaryTopUp(currentBalance, wantedBalance, factor float64) float64 {
 
 	// top up not required
 	return 0
+}
+
+func depositERC20TokenToParties(
+	network *veganetwork.VegaNetwork,
+	tokenHexAddress string,
+	vegaPubKeys []string,
+	humanDepositAmount *big.Float, // in full tokens, i.e. without decimals zeros
+	logger *zap.Logger,
+) error {
+	//
+	// Setup
+	//
+	var (
+		errMsg       = fmt.Sprintf("failed to deposit %s to %d parites on %s network", tokenHexAddress, len(vegaPubKeys), network.Network)
+		minterWallet = network.NetworkMainWallet
+		erc20bridge  = network.SmartContracts.ERC20Bridge
+		flowId       = rand.Int()
+	)
+	token, err := network.SmartContractsManager.GetAssetWithAddress(tokenHexAddress)
+	if err != nil {
+		return fmt.Errorf("failed to get token %s, %s: %w", tokenHexAddress, errMsg, err)
+	}
+	tokenInfo, err := token.GetInfo()
+	if err != nil {
+		return fmt.Errorf("failed to get token info %s, %s: %w", tokenHexAddress, errMsg, err)
+	}
+	logger.Info("deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+		zap.String("token-address", token.Address.Hex()), zap.String("erc20bridge", erc20bridge.Address.Hex()),
+		zap.String("minter", minterWallet.Address.Hex()), zap.String("amount-per-party", humanDepositAmount.String()),
+		zap.Int("party-count", len(vegaPubKeys)), zap.Any("parties", vegaPubKeys))
+
+	//
+	// Mint enough tokens and Increase Allowance
+	//
+	var (
+		humanTotalDepositAmount = new(big.Float).Mul(humanDepositAmount, big.NewFloat(float64(len(vegaPubKeys))))
+		totalDepositAmount      = ethutils.TokenFromFullTokens(humanTotalDepositAmount, tokenInfo.Decimals)
+		balance                 *big.Int
+		allowance               *big.Int
+		mintTx                  *ethTypes.Transaction
+		allowanceTx             *ethTypes.Transaction
+	)
+	balance, err = token.BalanceOf(&bind.CallOpts{}, minterWallet.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get %s balance of minter %s, %s: %w", tokenInfo.Name, minterWallet.Address.Hex(), errMsg, err)
+	}
+	if balance.Cmp(totalDepositAmount) < 0 {
+		diff := new(big.Int).Sub(totalDepositAmount, balance)
+		opts := minterWallet.GetTransactOpts()
+		logger.Info("minting", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+			zap.String("minter", minterWallet.Address.Hex()),
+			zap.String("balance", balance.String()), zap.String("mint-amount", diff.String()),
+			zap.String("required", totalDepositAmount.String()))
+		mintTx, err = token.Mint(opts, minterWallet.Address, diff)
+		if err != nil {
+			return fmt.Errorf("failed to mint, %s: %w", errMsg, err)
+		}
+	} else {
+		logger.Info("no need to mint", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+			zap.String("minter", minterWallet.Address.Hex()),
+			zap.String("balance", balance.String()), zap.String("required", totalDepositAmount.String()))
+	}
+	allowance, err = token.Allowance(&bind.CallOpts{}, minterWallet.Address, erc20bridge.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get allowance, %s: %w", errMsg, err)
+	}
+	if allowance.Cmp(totalDepositAmount) < 0 {
+		diff := new(big.Int).Sub(totalDepositAmount, allowance)
+		opts := minterWallet.GetTransactOpts()
+		logger.Info("increasing allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+			zap.String("minter", minterWallet.Address.Hex()),
+			zap.String("allowance", allowance.String()), zap.String("increasing-by", diff.String()),
+			zap.String("required", totalDepositAmount.String()))
+		allowanceTx, err = token.IncreaseAllowance(opts, erc20bridge.Address, diff)
+		if err != nil {
+			return fmt.Errorf("failed to increase allowance, %s: %w", errMsg, err)
+		}
+	} else {
+		logger.Info("no need to increasing allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+			zap.String("minter", minterWallet.Address.Hex()),
+			zap.String("allowance", allowance.String()), zap.String("required", totalDepositAmount.String()))
+	}
+	// wait
+	if mintTx != nil {
+		if err = ethutils.WaitForTransaction(network.EthClient, mintTx, time.Minute); err != nil {
+			logger.Error("failed to mint", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
+			return fmt.Errorf("transaction failed to mint, %s: %w", errMsg, err)
+		}
+		logger.Info("successfully minted", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name))
+	}
+	if allowanceTx != nil {
+		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx, time.Minute); err != nil {
+			logger.Error("failed to increase allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
+			return fmt.Errorf("transaction failed to increase allowance, %s: %w", errMsg, err)
+		}
+		logger.Info("successfully increased allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name))
+	}
+
+	//
+	// DEPOSIT to ERC20 Bridge
+	//
+	var (
+		depositTxs       = make([]*ethTypes.Transaction, len(vegaPubKeys))
+		depositAmount    = ethutils.TokenFromFullTokens(humanDepositAmount, tokenInfo.Decimals)
+		success, failure int
+	)
+	for i, pubKey := range vegaPubKeys {
+		bytePubKey, err := hex.DecodeString(pubKey)
+		if err != nil {
+			return err
+		}
+		var byte32PubKey [32]byte
+		copy(byte32PubKey[:], bytePubKey)
+
+		opts := minterWallet.GetTransactOpts()
+		logger.Debug("depositing", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+			zap.String("vegaPubKey", pubKey), zap.String("amount", depositAmount.String()))
+		depositTxs[i], err = erc20bridge.DepositAsset(opts, token.Address, depositAmount, byte32PubKey)
+
+		if err != nil {
+			failure += 1
+			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+				zap.String("vegaPubKey", pubKey), zap.String("amount", depositAmount.String()),
+				zap.Error(err))
+		}
+	}
+	// wait
+	for i, tx := range depositTxs {
+		if tx == nil {
+			continue
+		}
+		logger.Debug("waiting", zap.Any("tx", tx))
+		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+			failure += 1
+			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+				zap.Any("tx", tx),
+				zap.String("vegaPubKey", vegaPubKeys[i]), zap.String("amount", depositAmount.String()), zap.Error(err))
+		} else {
+			success += 1
+			logger.Debug("successfully deposited", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+				zap.String("vegaPubKey", vegaPubKeys[i]), zap.String("amount", depositAmount.String()))
+		}
+	}
+	logger.Info("Summary", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
+		zap.Int("success-count", success), zap.Int("fail-count", failure))
+	if failure > 0 {
+		return fmt.Errorf("%s", errMsg)
+	}
+	return nil
 }
