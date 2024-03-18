@@ -6,7 +6,6 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
 	"github.com/vegaprotocol/devopstools/cmd/bot"
-	"github.com/vegaprotocol/devopstools/cmd/erc20token"
 	"github.com/vegaprotocol/devopstools/cmd/helper"
 	"github.com/vegaprotocol/devopstools/cmd/incentive"
 	"github.com/vegaprotocol/devopstools/cmd/live"
@@ -17,7 +16,6 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/cmd/script"
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
-	"github.com/vegaprotocol/devopstools/cmd/smartcontracts"
 	"github.com/vegaprotocol/devopstools/cmd/snapshotcompatibility"
 	"github.com/vegaprotocol/devopstools/cmd/spam"
 	"github.com/vegaprotocol/devopstools/cmd/topup"
@@ -35,9 +33,7 @@ func init() {
 	rootCmd.RootCmd.AddCommand(network.NetworkCmd)
 	rootCmd.RootCmd.AddCommand(live.LiveCmd)
 	rootCmd.RootCmd.AddCommand(secrets.SecretsCmd)
-	rootCmd.RootCmd.AddCommand(smartcontracts.SmartContractsCmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
-	rootCmd.RootCmd.AddCommand(erc20token.ERC20tokenCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)

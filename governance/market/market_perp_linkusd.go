@@ -3,15 +3,18 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualLINKUSD = "auto:perpetual_link_usd"
-const PerpetualLINKUSDOracleAddress = "0xc59E3633BAAC79493d908e63626716e204A45EdF"
+const (
+	PerpetualLINKUSD              = "auto:perpetual_link_usd"
+	PerpetualLINKUSDOracleAddress = "0xc59E3633BAAC79493d908e63626716e204A45EdF"
+)
 
 func NewLINKUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,

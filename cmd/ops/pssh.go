@@ -6,8 +6,9 @@ import (
 	"os"
 	"sort"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/networktools"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -67,7 +68,7 @@ func RunPSSH(args PsshArgs) error {
 	)
 
 	hostNames := make([]string, 0)
-	for host, _ := range sshResults {
+	for host := range sshResults {
 		hostNames = append(hostNames, host)
 	}
 	sort.Strings(hostNames)

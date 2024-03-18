@@ -2,6 +2,7 @@ package smartcontracts
 
 import (
 	"github.com/vegaprotocol/devopstools/ethutils"
+
 	"go.uber.org/zap"
 )
 

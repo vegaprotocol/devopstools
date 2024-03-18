@@ -38,9 +38,7 @@ type NetInfo struct {
 }
 
 func (c *TendermintRESTClient) GetNodeNetInfo(endpoint string) (*NetInfo, error) {
-	var (
-		errMsg = "failed to get Tendermint Node Net Info, %w"
-	)
+	errMsg := "failed to get Tendermint Node Net Info, %w"
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
@@ -77,9 +75,7 @@ type Status struct {
 }
 
 func (c *TendermintRESTClient) GetNodeStatus(endpoint string) (*Status, error) {
-	var (
-		errMsg = "failed to get Tendermint Node Status, %w"
-	)
+	errMsg := "failed to get Tendermint Node Status, %w"
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)

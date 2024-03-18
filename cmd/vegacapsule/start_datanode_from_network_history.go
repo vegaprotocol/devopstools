@@ -10,16 +10,17 @@ import (
 	"strconv"
 	"time"
 
-	v1 "code.vegaprotocol.io/vega/protos/vega/events/v1"
-	"github.com/spf13/cobra"
-	"github.com/tomwright/dasel"
-	"github.com/tomwright/dasel/storage"
-	"go.uber.org/zap"
-
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 	vctools "github.com/vegaprotocol/devopstools/vegacapsule"
+
+	v1 "code.vegaprotocol.io/vega/protos/vega/events/v1"
+
+	"github.com/spf13/cobra"
+	"github.com/tomwright/dasel"
+	"github.com/tomwright/dasel/storage"
+	"go.uber.org/zap"
 )
 
 type StartDataNodeFromNetworkHistoryArgs struct {
@@ -54,7 +55,6 @@ var startDataNodeFromNetworkHistoryCmd = &cobra.Command{
 			startDataNodeFromNetworkHistoryArgs.networkHomePath,
 			startDataNodeFromNetworkHistoryArgs.waitForReplay,
 			startDataNodeFromNetworkHistoryArgs.outFile)
-
 		if err != nil {
 			startDataNodeFromNetworkHistoryArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
@@ -153,7 +153,6 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	newNodeDetails, err := vctools.AddNodes(logger, vegacapsuleBinary, vctools.AddNodesBaseOn{
 		Group: baseOnGroup,
 	}, false, networkHomePath)
-
 	if err != nil {
 		return fmt.Errorf("failed to add new node to the vegacapsule: %w", err)
 	}
@@ -327,8 +326,6 @@ func wait(logger *zap.Logger, ctx context.Context, checker func() error) error {
 }
 
 func checkHistorySegments(logger *zap.Logger, client vegaapi.DataNodeClient) func() error {
-	const minHistorySegments = 1
-
 	return func() error {
 		segment, err := client.LastNetworkHistorySegment()
 		if err != nil {
@@ -370,7 +367,6 @@ func checkSnapshots(client vegaapi.DataNodeClient, minimumSnapshotBlock uint64) 
 
 		// We do not have minimum number of snapshots
 		if len(snapshots) < requiredSnapshots {
-
 			return fmt.Errorf("not enough snapshots, %d required, %d at the moment", requiredSnapshots, len(snapshots))
 		}
 
@@ -457,7 +453,6 @@ func DescribeDataNode(logger *zap.Logger, nodeDetails vctools.NodeDetails, outFi
 	result.GRPCURL = fmt.Sprintf("127.0.0.1:%s", grpcPort)
 
 	data, err := json.Marshal(result)
-
 	if err != nil {
 		return fmt.Errorf("failed to marshal new data-node details: %w", err)
 	}

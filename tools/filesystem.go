@@ -63,15 +63,16 @@ func CopyDir(src, dst string) error {
 
 		// handle irregular files
 		if !info.Mode().IsRegular() {
-			switch info.Mode().Type() & os.ModeType {
+			switch info.Mode().Type() & os.ModeType { //nolint:exhaustive
 			case os.ModeSymlink:
 				link, err := os.Readlink(path)
 				if err != nil {
 					return fmt.Errorf("failed to read link: %w", err)
 				}
 				return os.Symlink(link, outpath)
+			default:
+				return nil
 			}
-			return nil
 		}
 
 		// copy contents of regular file efficiently

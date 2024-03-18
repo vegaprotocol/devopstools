@@ -3,11 +3,13 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
+
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -86,7 +88,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 							SourceWeights:            []string{"0.0", "0.0", "0.0", "1.0"},
 							SourceStalenessTolerance: []string{"1m", "1m", "1m", "1m"},
 							DataSourcesSpec: []*vega.DataSourceDefinition{
-								&vega.DataSourceDefinition{
+								{
 									SourceType: &vega.DataSourceDefinition_External{
 										External: &vega.DataSourceDefinitionExternal{
 											SourceType: &vega.DataSourceDefinitionExternal_EthOracle{
@@ -134,7 +136,7 @@ func NewJUPUSDPythPerpetualMarketProposal(
 								},
 							},
 							DataSourcesSpecBinding: []*vega.SpecBindingForCompositePrice{
-								&vega.SpecBindingForCompositePrice{
+								{
 									PriceSourceProperty: "jup.price",
 								},
 							},

@@ -9,6 +9,7 @@ import (
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/core"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
+
 	"go.uber.org/zap"
 )
 

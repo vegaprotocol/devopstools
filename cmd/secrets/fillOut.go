@@ -4,11 +4,13 @@ import (
 	"log"
 	"os"
 
-	"code.vegaprotocol.io/vega/wallet/wallet"
-	"github.com/ipfs/kubo/config"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
 	"github.com/vegaprotocol/devopstools/secrets"
+
+	"code.vegaprotocol.io/vega/wallet/wallet"
+
+	"github.com/ipfs/kubo/config"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -45,9 +47,7 @@ func init() {
 }
 
 func RunFillOut(args FillOutArgs) error {
-	var (
-		nodes map[string]*secrets.VegaNodePrivate
-	)
+	var nodes map[string]*secrets.VegaNodePrivate
 	secretStore, err := args.GetNodeSecretStore()
 	if err != nil {
 		return err
@@ -85,9 +85,7 @@ func RunFillOut(args FillOutArgs) error {
 }
 
 func fillOutNodeData(nodeSecrets *secrets.VegaNodePrivate) (updatedFields map[string]string, err error) {
-	var (
-		vegaWallet *wallet.HDWallet
-	)
+	var vegaWallet *wallet.HDWallet
 	updatedFields = map[string]string{}
 
 	vegaWallet, err = wallet.ImportHDWallet("my wallet", nodeSecrets.VegaRecoveryPhrase, wallet.LatestVersion)

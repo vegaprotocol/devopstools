@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/vegaprotocol/devopstools/secrets"
+
 	"github.com/cosmos/go-bip39"
 	"github.com/ethereum/go-ethereum/crypto"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/vegaprotocol/devopstools/secrets"
 )
 
 func GenerateNewEthereumWallet() (*secrets.EthereumWalletPrivate, error) {

@@ -3,11 +3,11 @@ package claimcodes
 import (
 	"fmt"
 
+	ClaimCodes_V1 "github.com/vegaprotocol/devopstools/smartcontracts/claimcodes/v1"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
-
-	ClaimCodes_V1 "github.com/vegaprotocol/devopstools/smartcontracts/claimcodes/v1"
 )
 
 func DeployClaimCodes(

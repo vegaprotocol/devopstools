@@ -11,16 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"code.vegaprotocol.io/vega/protos/vega"
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	v1 "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/hashicorp/go-multierror"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/governance"
@@ -28,6 +18,17 @@ import (
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	"code.vegaprotocol.io/vega/protos/vega"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	v1 "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/hashicorp/go-multierror"
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 const (
@@ -219,7 +220,6 @@ func prepareNetworkForTransfer(logger *zap.Logger, network *veganetwork.VegaNetw
 	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
 		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to propose and vote on network parameters: %w", err)
 	}
@@ -340,7 +340,6 @@ func transferMoneyFromWhaleToBots(
 					},
 				},
 			}, lastBlockData)
-
 			if err != nil {
 				logger.Error(
 					"failed to sign transaction with PoW",
@@ -365,7 +364,6 @@ func transferMoneyFromWhaleToBots(
 				Tx:   signedTransaction,
 				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
 			})
-
 			if err != nil {
 				logger.Error(
 					"failed to send the signed transaction",

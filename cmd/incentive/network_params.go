@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/exp/slices"
-
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/veganetwork"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
 type NetworkParamsArgs struct {
@@ -105,7 +105,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	}
 	defer network.Disconnect()
 
-	toUpdate, err := checkNetworkParams(network)
+	toUpdate := checkNetworkParams(network)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 				return err
 			}
 		}
-		_, err = checkNetworkParams(network)
+		_ = checkNetworkParams(network)
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	return nil
 }
 
-func checkNetworkParams(network *veganetwork.VegaNetwork) (map[string]string, error) {
+func checkNetworkParams(network *veganetwork.VegaNetwork) map[string]string {
 	yellowText := "\033[1;33m%s\033[0m"
 	greenText := "\033[1;32m%s\033[0m"
 	redText := "\033[1;31m%s\033[0m"
@@ -152,5 +152,5 @@ func checkNetworkParams(network *veganetwork.VegaNetwork) (map[string]string, er
 		}
 	}
 
-	return toUpdate, nil
+	return toUpdate
 }

@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
+
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
+
 	"go.uber.org/zap"
 )
 
@@ -113,8 +115,8 @@ func ProposeAndVote(
 	logger *zap.Logger,
 	proposerVegawallet *wallet.VegaWallet,
 	dataNodeClient vegaapi.DataNodeClient,
-	proposal *commandspb.ProposalSubmission) error {
-
+	proposal *commandspb.ProposalSubmission,
+) error {
 	reference := proposal.Reference
 
 	//
@@ -163,7 +165,6 @@ func ProposeAndVote(
 
 		return proposalId, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to get proposal ID for reference: %s: %w", reference, err)
 	}

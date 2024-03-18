@@ -3,29 +3,29 @@ package erc20bridge
 import (
 	"math/big"
 
+	ERC20Bridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge/v1"
+	ERC20Bridge_V2 "github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge/v2"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	ERC20Bridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge/v1"
-	ERC20Bridge_V2 "github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge/v2"
 )
 
 type ERC20BridgeCommon interface {
 	GetAssetSource(opts *bind.CallOpts, vega_asset_id [32]byte) (common.Address, error)
-	//GetDepositMaximum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
-	//GetDepositMinimum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
+	// GetDepositMaximum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
+	// GetDepositMinimum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
 	GetMultisigControlAddress(opts *bind.CallOpts) (common.Address, error)
 	GetVegaAssetId(opts *bind.CallOpts, asset_source common.Address) ([32]byte, error)
 	IsAssetListed(opts *bind.CallOpts, asset_source common.Address) (bool, error)
 
 	DepositAsset(opts *bind.TransactOpts, asset_source common.Address, amount *big.Int, vega_public_key [32]byte) (*types.Transaction, error)
-	//ListAsset(opts *bind.TransactOpts, asset_source common.Address, vega_asset_id [32]byte, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
+	// ListAsset(opts *bind.TransactOpts, asset_source common.Address, vega_asset_id [32]byte, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
 	RemoveAsset(opts *bind.TransactOpts, asset_source common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error)
-	//SetDepositMaximum(opts *bind.TransactOpts, asset_source common.Address, maximum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
-	//SetDepositMinimum(opts *bind.TransactOpts, asset_source common.Address, minimum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
-	//WithdrawAsset(opts *bind.TransactOpts, asset_source common.Address, amount *big.Int, target common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
+	// SetDepositMaximum(opts *bind.TransactOpts, asset_source common.Address, maximum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
+	// SetDepositMinimum(opts *bind.TransactOpts, asset_source common.Address, minimum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
+	// WithdrawAsset(opts *bind.TransactOpts, asset_source common.Address, amount *big.Int, target common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
 }
 
 type ERC20BridgeNewInV2 interface {

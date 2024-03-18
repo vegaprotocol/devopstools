@@ -80,7 +80,6 @@ func (wm *WalletManager) getEthereumWallet(
 		}
 		return ethWallet, nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new eth wallet: %w", err)
 	}

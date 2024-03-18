@@ -3,12 +3,12 @@ package claimcodes
 import (
 	"math/big"
 
+	ClaimCodes_V1 "github.com/vegaprotocol/devopstools/smartcontracts/claimcodes/v1"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	ClaimCodes_V1 "github.com/vegaprotocol/devopstools/smartcontracts/claimcodes/v1"
 )
 
 type ClaimCodesCommon interface {

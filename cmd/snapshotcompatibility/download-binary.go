@@ -6,14 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/tools"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -92,7 +92,7 @@ func getStatistics(endpoint string) (*statisticsResponse, error) {
 		}
 		defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read response body for statistics: %w", err)
 		}
@@ -173,7 +173,7 @@ func downloadVegaBinary(logger *zap.Logger, repository, version, destinationFile
 	}
 	defer binFile.Close()
 
-	err = os.Chmod(destinationFile, 0755)
+	err = os.Chmod(destinationFile, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to change permission for file %q: %w", destinationFile, err)
 	}

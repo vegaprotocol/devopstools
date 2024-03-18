@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	e "github.com/vegaprotocol/devopstools/errors"
+
+	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+
 	"google.golang.org/grpc/connectivity"
 )
 
