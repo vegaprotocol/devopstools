@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/vegaprotocol/devopstools/tools"
+
 	"go.uber.org/zap"
 )
 

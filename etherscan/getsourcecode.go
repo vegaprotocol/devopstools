@@ -7,9 +7,7 @@ import (
 	"net/http"
 )
 
-//
 // API: contract -> getsourcecode
-//
 type EtherscanGetSourcecodeResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`

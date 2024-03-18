@@ -5,14 +5,13 @@ go 1.21
 toolchain go1.21.5
 
 require (
-	code.vegaprotocol.io/shared v0.0.0-20221010085458-55c50711135f
-	code.vegaprotocol.io/vega v0.75.1
+	code.vegaprotocol.io/vega v0.74.3-preview.1
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/ipfs/kubo v0.23.0
-	github.com/libp2p/go-libp2p-core v0.20.1
+	github.com/libp2p/go-libp2p v0.31.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/spf13/cobra v1.8.0
@@ -124,7 +123,6 @@ require (
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.31.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect

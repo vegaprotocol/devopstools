@@ -1,8 +1,9 @@
 package validator
 
 import (
-	"github.com/spf13/cobra"
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+
+	"github.com/spf13/cobra"
 )
 
 type ValidatorArgs struct {

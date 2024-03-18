@@ -6,17 +6,18 @@ import (
 	"os"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/governance/networkparameters"
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/veganetwork"
+
 	"code.vegaprotocol.io/vega/core/netparams"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/governance"
-	"github.com/vegaprotocol/devopstools/governance/networkparameters"
-	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/types"
-	"github.com/vegaprotocol/devopstools/veganetwork"
 	"go.uber.org/zap"
 )
 
@@ -178,7 +179,6 @@ func preMarketDeployProposals(environment string, currentNetworkParams *types.Ne
 		if err != nil {
 			return nil, fmt.Errorf("failed to append ethereum sepolia config to the l2 config: %w", err)
 		}
-
 	}
 
 	if len(l2Configs[environment]) > 0 {

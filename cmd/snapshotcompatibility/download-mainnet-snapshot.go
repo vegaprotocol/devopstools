@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/ssh"
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	sshlib "golang.org/x/crypto/ssh"
-
-	"github.com/vegaprotocol/devopstools/ssh"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 var (

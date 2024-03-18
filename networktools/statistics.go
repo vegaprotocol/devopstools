@@ -48,7 +48,6 @@ func (network *NetworkTools) GetRunningStatisticsForAllDataNodes() map[string]St
 }
 
 func (network *NetworkTools) GetRunningStatisticsForHosts(hosts []string, tlsOnly bool) map[string]Statistics {
-
 	type hostStats struct {
 		Host       string
 		Statistics *Statistics
@@ -95,7 +94,6 @@ func (network *NetworkTools) GetRunningStatisticsForHost(host string, tlsOnly bo
 		Timeout: network.restTimeout,
 	}
 	for _, statsURL := range statsURLs {
-
 		req, err := http.NewRequest(http.MethodGet, statsURL, nil)
 		if err != nil {
 			network.logger.Debug("failed to create new request", zap.String("url", statsURL), zap.Error(err))

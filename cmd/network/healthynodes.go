@@ -3,16 +3,17 @@ package network
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/networktools"
 	toolslib "github.com/vegaprotocol/devopstools/tools"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -169,7 +170,7 @@ func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
 	}
 	defer resp.Body.Close()
 
-	responseBytes, err := ioutil.ReadAll(resp.Body)
+	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Sugar().Debugf("Failed to read response body for node %s: %s", host, err.Error())
 		return false

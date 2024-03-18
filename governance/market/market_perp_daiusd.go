@@ -3,15 +3,18 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualDAIUSD = "auto:perpetual_dai_usd"
-const PerpetualDAIUSDOracleAddress = "0x14866185B1962B63C3Ea9E03Bc1da838bab34C19"
+const (
+	PerpetualDAIUSD              = "auto:perpetual_dai_usd"
+	PerpetualDAIUSDOracleAddress = "0x14866185B1962B63C3Ea9E03Bc1da838bab34C19"
+)
 
 func NewDAIUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,

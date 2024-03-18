@@ -9,13 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/exp/slices"
-
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/generate"
@@ -23,7 +16,15 @@ import (
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
 const waitTimeout = 5 * time.Minute
@@ -166,8 +167,8 @@ func runReferral(args ReferralArgs) error {
 	logger.Info("Teams created")
 
 	logger.Info("Waiting for referral set to be created")
-	if err := waitForReferralSets(logger, teams, network.DataNodeClient, !args.SetupBotsInReferralProgram, waitTimeout); err != nil {
-		return fmt.Errorf("failed to wait for referral sets: %w")
+	if err := waitForReferralSets(logger, teams, network.DataNodeClient, waitTimeout); err != nil {
+		return fmt.Errorf("failed to wait for referral sets: %w", err)
 	}
 	logger.Info("All referral sets are ready")
 
@@ -180,13 +181,7 @@ func runReferral(args ReferralArgs) error {
 	return nil
 }
 
-func waitForReferralSets(
-	logger *zap.Logger,
-	teams []Team,
-	dataNodeClient vegaapi.DataNodeClient,
-	dryRun bool,
-	timeout time.Duration,
-) error {
+func waitForReferralSets(logger *zap.Logger, teams []Team, dataNodeClient vegaapi.DataNodeClient, timeout time.Duration) error {
 	wantedTeamsLeaderPubKeys := make([]string, len(teams))
 	for _, team := range teams {
 		wantedTeamsLeaderPubKeys = append(wantedTeamsLeaderPubKeys, team.Leader.Wallet.PublicKey)
@@ -236,8 +231,6 @@ func waitForReferralSets(
 			return fmt.Errorf("timeout exceeded")
 		}
 	}
-
-	return nil
 }
 
 // prepareTeams should generate deterministic teams based on the response from the /traders endpoint
@@ -389,7 +382,6 @@ func joinMemberTeams(
 	dataNodeClient vegaapi.DataNodeClient,
 	dryRun bool,
 ) error {
-
 	logger.Info("Join Referral Sets (teams)")
 	referralSets, err := dataNodeClient.GetReferralSets()
 	if err != nil {
@@ -475,7 +467,7 @@ func stakeToTeamLeaders(
 	for _, team := range teams {
 		currentStake, err := dataNodeClient.GetPartyTotalStake(team.Leader.Wallet.PublicKey)
 		if err != nil {
-			return fmt.Errorf("failed to create referral sets, failed to get stake for %: %w", team.Leader.Wallet.PublicKey, err)
+			return fmt.Errorf("failed to create referral sets, failed to get stake for %q: %w", team.Leader.Wallet.PublicKey, err)
 		}
 		if currentStake.Cmp(minStake) < 0 {
 			// rand stake
@@ -662,7 +654,6 @@ func doStake(
 		}
 		logger.Info("successfully increased allowance", zap.String("ethWallet", wallet.Address.Hex()),
 			zap.String("tokenAddress", vegaToken.Address.Hex()))
-
 	} else {
 		logger.Info("no need to increase allowance", zap.String("tokenAddress", vegaToken.Address.Hex()),
 			zap.String("ethWallet", wallet.Address.Hex()),

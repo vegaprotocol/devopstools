@@ -3,13 +3,13 @@ package vegaapi
 import (
 	"math/big"
 
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
+
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
-
-	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 )
 
 type VegaCoreClient interface {

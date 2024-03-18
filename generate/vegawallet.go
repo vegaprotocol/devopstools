@@ -3,8 +3,9 @@ package generate
 import (
 	"fmt"
 
-	"code.vegaprotocol.io/vega/wallet/wallet"
 	"github.com/vegaprotocol/devopstools/secrets"
+
+	"code.vegaprotocol.io/vega/wallet/wallet"
 )
 
 func GenerateVegaWallet() (*secrets.VegaWalletPrivate, error) {
@@ -29,7 +30,6 @@ func ValidateVegawalletIdAndPubKeyAndPrivKeyWithRecoveryPhrase(
 	id string, publicKey string, privateKey string, recoveryPhrase string,
 ) error {
 	vegaWallet, err := wallet.ImportHDWallet("my wallet", recoveryPhrase, wallet.LatestVersion)
-
 	if err != nil {
 		return fmt.Errorf("failed to get vegawallet with recovery phrase %w", err)
 	}
