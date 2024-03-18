@@ -4,11 +4,13 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
+
 	vgcrypto "code.vegaprotocol.io/vega/libs/crypto"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
+
 	"go.uber.org/zap"
 )
 

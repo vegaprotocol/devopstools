@@ -3,11 +3,11 @@ package erc20assetpool
 import (
 	"fmt"
 
+	ERC20AssetPool_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20assetpool/v1"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
-
-	ERC20AssetPool_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20assetpool/v1"
 )
 
 func DeployERC20AssetPool(

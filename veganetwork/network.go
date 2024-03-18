@@ -3,8 +3,6 @@ package veganetwork
 import (
 	"fmt"
 
-	"code.vegaprotocol.io/vega/protos/vega"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/smartcontracts"
@@ -12,6 +10,10 @@ import (
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetworksmartcontracts"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	"code.vegaprotocol.io/vega/protos/vega"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
 )
 

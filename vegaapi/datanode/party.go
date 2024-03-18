@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
-	e "github.com/vegaprotocol/devopstools/errors"
+
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -126,7 +128,6 @@ func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetI
 			AssetId:      assetIdFilter,
 		},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to list accounts: %w", err)
 	}

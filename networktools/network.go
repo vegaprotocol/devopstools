@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/types"
+
 	"go.uber.org/zap"
 )
 
@@ -20,7 +21,7 @@ func NewNetworkTools(
 	name string,
 	logger *zap.Logger,
 ) (*NetworkTools, error) {
-	var network = NetworkTools{
+	network := NetworkTools{
 		Name:        name,
 		logger:      logger,
 		restTimeout: time.Second,

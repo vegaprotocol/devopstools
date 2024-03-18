@@ -1,16 +1,16 @@
 package live
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
 	"sort"
 	"strings"
 
-	"crypto/rand"
+	"github.com/vegaprotocol/devopstools/networktools"
 
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"go.uber.org/zap"
 )
 

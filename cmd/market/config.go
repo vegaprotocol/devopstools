@@ -1,10 +1,11 @@
 package market
 
 import (
-	"code.vegaprotocol.io/vega/protos/vega"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/vegaprotocol/devopstools/governance/market"
 	"github.com/vegaprotocol/devopstools/types"
+
+	"code.vegaprotocol.io/vega/protos/vega"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 )
 
 // The CoinBase Oracle data

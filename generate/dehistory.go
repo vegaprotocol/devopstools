@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 
 	"github.com/ipfs/kubo/config"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 func GenerateDeHistoryIdentity(seed string) (config.Identity, error) {

@@ -5,10 +5,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
 
@@ -125,7 +126,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 		stakeSuccessCount = 0
 		stakeOKCount      = 0
 	)
-	for partyPubKey, _ := range requiredStakeByParty {
+	for partyPubKey := range requiredStakeByParty {
 		if partyMissingStake, ok := missingStakeByParty[partyPubKey]; !ok {
 			stakeOKCount += 1
 			m.logger.Info("No need to top up", zap.String("partyPubKey", partyPubKey))
@@ -187,7 +188,6 @@ func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *wallet.EthWallet, par
 		} else {
 			m.logger.Sugar().Infoln("success")
 		}
-
 	} else {
 		m.logger.Info("no stake to remove", zap.String("ethWallet", ethWallet.Address.Hex()), zap.String("partyPubKey", partyPubKey))
 	}
