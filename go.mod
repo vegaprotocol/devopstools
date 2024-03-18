@@ -5,7 +5,11 @@ go 1.21
 toolchain go1.21.5
 
 require (
+<<<<<<< HEAD
 	code.vegaprotocol.io/vega v0.75.1
+=======
+	code.vegaprotocol.io/vega v0.74.3-preview.1
+>>>>>>> 9425208 (chore: Basic linting)
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/hashicorp/go-multierror v1.1.1
