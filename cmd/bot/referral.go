@@ -610,9 +610,9 @@ func doStake(
 	//
 	// Prepare source Ethereum wallet
 	//
-	vegaToken := network.SmartContracts.VegaToken
+	vegaToken := network.PrimarySmartContracts.VegaToken
 	wallet := network.NetworkMainWallet
-	stakingBridge := network.SmartContracts.StakingBridge
+	stakingBridge := network.PrimarySmartContracts.StakingBridge
 
 	// TODO - check if there any pending transactions
 
@@ -647,7 +647,7 @@ func doStake(
 			return fmt.Errorf("failed to increase allowance: %w", err)
 		}
 		// WAIT
-		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", wallet.Address.Hex()),
 				zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -697,7 +697,7 @@ func doStake(
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, tx, time.Minute); err != nil {
 			failedCount += 1
 			logger.Error("Stake transaction failed", zap.String("pub key", pubKey),
 				zap.Uint64("nonce", tx.Nonce()), zap.Any("tx", tx), zap.Error(err))

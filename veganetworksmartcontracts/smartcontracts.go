@@ -54,11 +54,10 @@ func NewVegaNetworkSmartContracts(
 
 	// Staking Bridge
 	if len(stakingBridgeHexAddress) == 0 {
-		return nil, fmt.Errorf("missing Staking Bridge address")
-	}
-	result.StakingBridge, err = stakingbridge.NewStakingBridge(result.EthClient, stakingBridgeHexAddress, stakingbridge.StakingBridgeV1)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
+		result.StakingBridge, err = stakingbridge.NewStakingBridge(result.EthClient, stakingBridgeHexAddress, stakingbridge.StakingBridgeV1)
+		if err != nil {
+			return nil, fmt.Errorf(errMsg, err)
+		}
 	}
 
 	// Multisig Control

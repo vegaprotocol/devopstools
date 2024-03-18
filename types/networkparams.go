@@ -37,13 +37,27 @@ func (p *NetworkParams) GetMinimumValidatorStake() (*big.Int, error) {
 	return minimumValidatorStake, nil
 }
 
-func (p *NetworkParams) GetEthereumConfig() (*vega.EthereumConfig, error) {
-	param := netparams.BlockchainsEthereumConfig
+func (p *NetworkParams) GetPrimaryEthereumConfig() (*vega.EthereumConfig, error) {
+	param := netparams.BlockchainsPrimaryEthereumConfig
 	val, ok := p.Params[param]
 	if !ok {
 		return nil, fmt.Errorf("failed to get EthereumConfig, missing '%s' network parameter", param)
 	}
 	result := &vega.EthereumConfig{}
+	if err := json.Unmarshal([]byte(val), result); err != nil {
+		return nil, fmt.Errorf("failed to get EthereumConfig, failed to parse %v, %w", result, err)
+	}
+
+	return result, nil
+}
+
+func (p *NetworkParams) GetSecondaryEthereumConfig() (*vega.EVMChainConfig, error) {
+	param := netparams.BlockchainsEVMChainConfig
+	val, ok := p.Params[param]
+	if !ok {
+		return nil, fmt.Errorf("failed to get EthereumConfig, missing '%s' network parameter", param)
+	}
+	result := &vega.EVMChainConfig{}
 	if err := json.Unmarshal([]byte(val), result); err != nil {
 		return nil, fmt.Errorf("failed to get EthereumConfig, failed to parse %v, %w", result, err)
 	}
