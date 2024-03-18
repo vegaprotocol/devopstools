@@ -1,21 +1,25 @@
 package hcvault
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vegaprotocol/devopstools/types"
+)
 
 const (
 	serviceVaultRoot = "service"
 )
 
-func (c *HCVaultSecretStore) GetInfuraProjectId() (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "infura")
+func (c *HCVaultSecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "infura")
 	if err != nil {
 		return "", err
 	}
 	return secret["projectId"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEthereumNodeURL(environment string) (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "ethereum-node")
+func (c *HCVaultSecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
 	if err != nil {
 		return "", fmt.Errorf("failed to get ethereum node url from the vault: %w", err)
 	}
@@ -33,8 +37,8 @@ func (c *HCVaultSecretStore) GetEthereumNodeURL(environment string) (string, err
 	return secret[environment].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEtherscanApikey() (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "etherscan")
+func (c *HCVaultSecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "etherscan")
 	if err != nil {
 		return "", err
 	}

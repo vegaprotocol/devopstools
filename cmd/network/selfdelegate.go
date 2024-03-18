@@ -59,8 +59,8 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	// STAKE
 	//
 	var (
-		vegaToken              = network.SmartContracts.VegaToken
-		stakingBridge          = network.SmartContracts.StakingBridge
+		vegaToken              = network.PrimarySmartContracts.VegaToken
+		stakingBridge          = network.PrimarySmartContracts.StakingBridge
 		minterWallet           = network.NetworkMainWallet
 		humanMissingStakeTotal = new(big.Float)
 		humanMissingStake      = map[string]*big.Float{}
@@ -156,7 +156,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	}
 	// wait
 	if mintTx != nil {
-		if err = ethutils.WaitForTransaction(network.EthClient, mintTx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, mintTx, time.Minute); err != nil {
 			logger.Error("failed to mint", zap.String("token", vegaTokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mints: %w", err)
 		}
@@ -164,7 +164,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()))
 	}
 	if allowanceTx != nil {
-		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", minterWallet.Address.Hex()),
 				zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -201,7 +201,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, tx, time.Minute); err != nil {
 			stakeFailureCount += 1
 			logger.Error("failed to stake", zap.String("node", name),
 				zap.Any("tx", tx), zap.Error(err))
