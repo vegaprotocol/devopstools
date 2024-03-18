@@ -1,4 +1,4 @@
-package topup
+package bots
 
 import (
 	"encoding/hex"
@@ -36,36 +36,35 @@ const (
 	WhaleTopUpFactor  = 10.0
 )
 
-type TopUpWithTransferArgs struct {
-	*TopUpArgs
+type TopUpArgs struct {
+	*Args
 	VegaNetworkName string
 	TradersURL      string
 }
 
-var topUpWithTransferArgs TopUpWithTransferArgs
+var topUpArgs TopUpArgs
 
-// topUpWithTransferCmd represents the traderbot command
-var topUpWithTransferCmd = &cobra.Command{
-	Use:   "with-transfer",
-	Short: "TopUp parties on network with vega transfer",
-	Long:  `TopUp parties on network with vega transfer`,
+var topUpCmd = &cobra.Command{
+	Use:   "top-up",
+	Short: "Top up bots on network with vega transfer",
+	Long:  "Top up bots on network with vega transfer",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := RunTopUpWithTransfer(topUpWithTransferArgs); err != nil {
-			topUpWithTransferArgs.Logger.Error("Error", zap.Error(err))
+		if err := TopUpBots(topUpArgs); err != nil {
+			topUpArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
-	topUpWithTransferArgs.TopUpArgs = &topUpArgs
+	topUpArgs.Args = &args
 
-	TopUpCmd.AddCommand(topUpWithTransferCmd)
-	topUpWithTransferCmd.PersistentFlags().StringVar(&topUpWithTransferArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := topUpWithTransferCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.AddCommand(topUpCmd)
+	topUpCmd.PersistentFlags().StringVar(&topUpArgs.VegaNetworkName, "network", "", "Vega Network name")
+	topUpCmd.PersistentFlags().StringVar(&topUpArgs.TradersURL, "traders-url", "", "Traders URL")
+	if err := topUpCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	topUpWithTransferCmd.PersistentFlags().StringVar(&topUpWithTransferArgs.TradersURL, "traders-url", "", "Traders URL")
 }
 
 type AssetTopUp struct {
@@ -76,7 +75,7 @@ type AssetTopUp struct {
 	Parties         map[string]*big.Float
 }
 
-func RunTopUpWithTransfer(args TopUpWithTransferArgs) error {
+func TopUpBots(args TopUpArgs) error {
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
 		return fmt.Errorf("failed to create vega network object: %w", err)
@@ -428,13 +427,14 @@ func depositToWhale(
 	asset *vega.AssetDetails,
 	amount *big.Float,
 ) error {
-	if asset.GetErc20() == nil {
+	erc20Asset := asset.GetErc20()
+	if erc20Asset == nil {
 		return fmt.Errorf("token %s is not an erc20 token", asset.Symbol)
 	}
 
 	if err := depositERC20TokenToParties(
 		network,
-		asset.GetErc20().ContractAddress,
+		erc20Asset,
 		[]string{partyId},
 		amount,
 		logger,
@@ -585,7 +585,7 @@ func necessaryTopUp(currentBalance, wantedBalance, factor float64) float64 {
 
 func depositERC20TokenToParties(
 	network *veganetwork.VegaNetwork,
-	tokenHexAddress string,
+	asset *vega.ERC20,
 	vegaPubKeys []string,
 	humanDepositAmount *big.Float, // in full tokens, i.e. without decimals zeros
 	logger *zap.Logger,
@@ -593,13 +593,13 @@ func depositERC20TokenToParties(
 	//
 	// Setup
 	//
-	var (
-		errMsg       = fmt.Sprintf("failed to deposit %s to %d parites on %s network", tokenHexAddress, len(vegaPubKeys), network.Network)
-		minterWallet = network.NetworkMainWallet
-		erc20bridge  = network.SmartContracts.ERC20Bridge
-		flowId       = rand.Int()
-	)
-	token, err := network.SmartContractsManager.GetAssetWithAddress(tokenHexAddress)
+	tokenHexAddress := asset.ContractAddress
+	errMsg := fmt.Sprintf("failed to deposit %s to %d parites on %s network", tokenHexAddress, len(vegaPubKeys), network.Network)
+	minterWallet := network.NetworkMainWallet
+	erc20bridge := network.SmartContractForChainID(asset.ChainId).ERC20Bridge
+	flowId := rand.Int()
+
+	token, err := network.SmartContractManagerForChainID(asset.ChainId).GetAssetWithAddress(tokenHexAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get token %s, %s: %w", tokenHexAddress, errMsg, err)
 	}
@@ -616,13 +616,15 @@ func depositERC20TokenToParties(
 	// Mint enough tokens and Increase Allowance
 	//
 	var (
-		humanTotalDepositAmount = new(big.Float).Mul(humanDepositAmount, big.NewFloat(float64(len(vegaPubKeys))))
-		totalDepositAmount      = ethutils.TokenFromFullTokens(humanTotalDepositAmount, tokenInfo.Decimals)
-		balance                 *big.Int
-		allowance               *big.Int
-		mintTx                  *ethTypes.Transaction
-		allowanceTx             *ethTypes.Transaction
+		balance     *big.Int
+		allowance   *big.Int
+		mintTx      *ethTypes.Transaction
+		allowanceTx *ethTypes.Transaction
 	)
+
+	humanTotalDepositAmount := new(big.Float).Mul(humanDepositAmount, big.NewFloat(float64(len(vegaPubKeys))))
+	totalDepositAmount := ethutils.TokenFromFullTokens(humanTotalDepositAmount, tokenInfo.Decimals)
+
 	balance, err = token.BalanceOf(&bind.CallOpts{}, minterWallet.Address)
 	if err != nil {
 		return fmt.Errorf("failed to get %s balance of minter %s, %s: %w", tokenInfo.Name, minterWallet.Address.Hex(), errMsg, err)
@@ -664,15 +666,17 @@ func depositERC20TokenToParties(
 			zap.String("allowance", allowance.String()), zap.String("required", totalDepositAmount.String()))
 	}
 	// wait
+	ethClient := network.EthClientForChainID(asset.ChainId)
+
 	if mintTx != nil {
-		if err = ethutils.WaitForTransaction(network.EthClient, mintTx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(ethClient, mintTx, time.Minute); err != nil {
 			logger.Error("failed to mint", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mint, %s: %w", errMsg, err)
 		}
 		logger.Info("successfully minted", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name))
 	}
 	if allowanceTx != nil {
-		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(ethClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance, %s: %w", errMsg, err)
 		}
@@ -682,11 +686,9 @@ func depositERC20TokenToParties(
 	//
 	// DEPOSIT to ERC20 Bridge
 	//
-	var (
-		depositTxs       = make([]*ethTypes.Transaction, len(vegaPubKeys))
-		depositAmount    = ethutils.TokenFromFullTokens(humanDepositAmount, tokenInfo.Decimals)
-		success, failure int
-	)
+	var success, failure int
+	depositTxs := make([]*ethTypes.Transaction, len(vegaPubKeys))
+	depositAmount := ethutils.TokenFromFullTokens(humanDepositAmount, tokenInfo.Decimals)
 	for i, pubKey := range vegaPubKeys {
 		bytePubKey, err := hex.DecodeString(pubKey)
 		if err != nil {
@@ -713,7 +715,7 @@ func depositERC20TokenToParties(
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+		if err = ethutils.WaitForTransaction(ethClient, tx, time.Minute); err != nil {
 			failure += 1
 			logger.Error("failed to deposit", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
 				zap.Any("tx", tx),
