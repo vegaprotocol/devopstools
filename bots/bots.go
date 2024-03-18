@@ -29,12 +29,6 @@ type BotTrader struct {
 
 type BotTraders map[string]BotTrader
 
-func GetBotTraders(
-	network string,
-) (BotTraders, error) {
-	return GetBotTradersWithURL(network, "")
-}
-
 func GetBotTradersWithURL(
 	network string,
 	botsURL string,
