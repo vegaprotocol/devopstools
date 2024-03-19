@@ -13,6 +13,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/market"
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
+	"github.com/vegaprotocol/devopstools/cmd/parties"
 	"github.com/vegaprotocol/devopstools/cmd/party"
 	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/cmd/script"
@@ -33,6 +34,7 @@ func init() {
 	rootCmd.RootCmd.AddCommand(network.NetworkCmd)
 	rootCmd.RootCmd.AddCommand(live.LiveCmd)
 	rootCmd.RootCmd.AddCommand(secrets.SecretsCmd)
+	rootCmd.RootCmd.AddCommand(parties.Cmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(bots.Cmd)
