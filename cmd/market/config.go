@@ -40,7 +40,7 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			ChainId:       "100",
 			Name:          "Gnosis Chain",
 			Confirmations: 3,
-			BlockInterval: 50,
+			BlockInterval: 3,
 		},
 	},
 	types.NetworkStagnet1: {
@@ -58,6 +58,13 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			Confirmations: 3,
 			BlockInterval: 1,
 		},
+		&vega.EthereumL2Config{
+			NetworkId:     "5",
+			ChainId:       "5",
+			Name:          "Goerli",
+			Confirmations: 3,
+			BlockInterval: 3,
+		},
 	},
 	types.NetworkStagnet3: {},
 	types.NetworkFairground: {
@@ -66,7 +73,21 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 			ChainId:       "100",
 			Name:          "Gnosis Chain",
 			Confirmations: 3,
+			BlockInterval: 3,
+		},
+		&vega.EthereumL2Config{
+			NetworkId:     "42161",
+			ChainId:       "42161",
+			Name:          "Arbitrum One",
+			Confirmations: 3,
 			BlockInterval: 50,
+		},
+		&vega.EthereumL2Config{
+			NetworkId:     "5",
+			ChainId:       "5",
+			Name:          "Goerli",
+			Confirmations: 3,
+			BlockInterval: 3,
 		},
 	},
 }
