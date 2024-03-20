@@ -3,6 +3,7 @@ package hcvault
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 //
@@ -21,8 +22,8 @@ func (c *HCVaultSecretStore) GetSecretAsByte(root string, path string) ([]byte, 
 	return secretDataByte, nil
 }
 
-func (c *HCVaultSecretStore) GetSecret(root string, path string) (map[string]interface{}, error) {
-	return c.GetSecretWithPath(fmt.Sprintf("%s/data/%s", root, path))
+func (c *HCVaultSecretStore) GetSecret(path ...string) (map[string]interface{}, error) {
+	return c.GetSecretWithPath(strings.Join(path, "/data/"))
 }
 
 func (c *HCVaultSecretStore) GetSecretWithPath(path string) (map[string]interface{}, error) {

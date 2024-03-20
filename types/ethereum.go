@@ -34,3 +34,14 @@ func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
 	}
 	return "", fmt.Errorf("unknown Ethereum chain id: %s", chainId)
 }
+
+type ETHBridge string
+
+const (
+	PrimaryBridge   ETHBridge = "primary-bridge"
+	SecondaryBridge ETHBridge = "secondary-bridge"
+)
+
+func (b ETHBridge) String() string {
+	return string(b)
+}

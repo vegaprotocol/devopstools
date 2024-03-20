@@ -6,6 +6,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
 	"github.com/vegaprotocol/devopstools/cmd/bot"
+	"github.com/vegaprotocol/devopstools/cmd/bots"
 	"github.com/vegaprotocol/devopstools/cmd/helper"
 	"github.com/vegaprotocol/devopstools/cmd/incentive"
 	"github.com/vegaprotocol/devopstools/cmd/live"
@@ -18,7 +19,6 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/secrets"
 	"github.com/vegaprotocol/devopstools/cmd/snapshotcompatibility"
 	"github.com/vegaprotocol/devopstools/cmd/spam"
-	"github.com/vegaprotocol/devopstools/cmd/topup"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
 	"github.com/vegaprotocol/devopstools/cmd/vegacapsule"
 	"github.com/vegaprotocol/devopstools/cmd/version"
@@ -35,7 +35,7 @@ func init() {
 	rootCmd.RootCmd.AddCommand(secrets.SecretsCmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
-	rootCmd.RootCmd.AddCommand(topup.TopUpCmd)
+	rootCmd.RootCmd.AddCommand(bots.Cmd)
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)
 	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
 	rootCmd.RootCmd.AddCommand(spam.SpamCmd)

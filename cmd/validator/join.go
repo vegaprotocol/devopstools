@@ -141,7 +141,7 @@ func RunJoin(args JoinArgs) error {
 		//
 		// Get Smart Contracts for Network
 		//
-		ethClientManager, err := args.GetEthereumClientManager()
+		ethClientManager, err := args.GetPrimaryEthereumClientManager()
 		if err != nil {
 			return err
 		}

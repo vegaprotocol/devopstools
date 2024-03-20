@@ -17,14 +17,17 @@ type EthereumClientManager struct {
 	serviceSecrets secrets.ServiceSecretStore
 
 	ethClientByNetwork map[types.ETHNetwork]*ethclient.Client
+	bridge             types.ETHBridge
 }
 
 func NewEthereumClientManager(
 	serviceSecrets secrets.ServiceSecretStore,
+	bridge types.ETHBridge,
 ) *EthereumClientManager {
 	return &EthereumClientManager{
 		serviceSecrets:     serviceSecrets,
 		ethClientByNetwork: map[types.ETHNetwork]*ethclient.Client{},
+		bridge:             bridge,
 	}
 }
 
@@ -42,7 +45,7 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 			err             error
 		)
 		if ethNetwork != types.ETHSepolia {
-			infuraProjectId, err = m.serviceSecrets.GetInfuraProjectId()
+			infuraProjectId, err = m.serviceSecrets.GetInfuraProjectId(m.bridge)
 			if err != nil {
 				return "", fmt.Errorf("failed to get Ethereum URL for %s, cannot get Infura Project Id, %w", ethNetwork, err)
 			}
@@ -52,7 +55,7 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 		case types.ETHMainnet:
 			ethereumURL = fmt.Sprintf("https://mainnet.infura.io/v3/%s", infuraProjectId)
 		case types.ETHSepolia:
-			ethereumURL, err = m.serviceSecrets.GetEthereumNodeURL("sepolia")
+			ethereumURL, err = m.serviceSecrets.GetEthereumNodeURL(m.bridge, "sepolia")
 			if err != nil {
 				return "", fmt.Errorf("failed to get sepolia url from the vault: %w", err)
 			}
@@ -96,7 +99,7 @@ func (m *EthereumClientManager) GetEtherscanClient(ethNetwork types.ETHNetwork) 
 		if m.serviceSecrets == nil {
 			return nil, fmt.Errorf("failed to get Etherscan Client for %s, Service Secret Store not provided", ethNetwork)
 		}
-		etherscanApikey, err := m.serviceSecrets.GetEtherscanApikey()
+		etherscanApikey, err := m.serviceSecrets.GetEtherscanApikey(m.bridge)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get Etherscan Client for %s, cannot get Etherscan Apikey, %w", ethNetwork, err)
 		}
