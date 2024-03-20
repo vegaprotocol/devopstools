@@ -126,3 +126,7 @@ func (w *EthWallet) WaitForQueue() []error {
 
 	return result
 }
+
+func (w *EthWallet) Sign(data []byte) ([]byte, error) {
+	return crypto.Sign(data, w.privateKey)
+}
