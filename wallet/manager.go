@@ -34,8 +34,8 @@ func (wm *WalletManager) GetNetworkMainEthWallet(
 	vegaNetwork string,
 ) (*EthWallet, error) {
 	var (
-		secretPath string = fmt.Sprintf("%s/main", vegaNetwork)
-		errMsg            = "failed to get Main Ethereum Wallet for %s network, %w"
+		secretPath = fmt.Sprintf("%s/main", vegaNetwork)
+		errMsg     = "failed to get Main Ethereum Wallet for %s network, %w"
 	)
 	ethWallet, err := wm.getEthereumWallet(ethNetwork, secretPath)
 	if err != nil {

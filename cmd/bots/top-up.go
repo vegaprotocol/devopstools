@@ -1,7 +1,6 @@
 package bots
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -690,12 +689,10 @@ func depositERC20TokenToParties(
 	depositTxs := make([]*ethTypes.Transaction, len(vegaPubKeys))
 	depositAmount := ethutils.TokenFromFullTokens(humanDepositAmount, tokenInfo.Decimals)
 	for i, pubKey := range vegaPubKeys {
-		bytePubKey, err := hex.DecodeString(pubKey)
+		byte32PubKey, err := tools.HexKeyToByte32(pubKey)
 		if err != nil {
 			return err
 		}
-		var byte32PubKey [32]byte
-		copy(byte32PubKey[:], bytePubKey)
 
 		opts := minterWallet.GetTransactOpts()
 		logger.Debug("depositing", zap.Int("flow", flowId), zap.String("token", tokenInfo.Name),
