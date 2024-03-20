@@ -44,6 +44,7 @@ func NewLINKUSDPerpetualMarketProposal(
 						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.01",
 						QuadraticSlippageFactor: "0.0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
 							Code: "LINKUSD.PERP",

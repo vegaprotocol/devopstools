@@ -37,6 +37,7 @@ func NewCommunityETHUSD230630(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "ETH/USDT expiry 2023 June 30th",
 							Code: "ETH/USDT-230630",

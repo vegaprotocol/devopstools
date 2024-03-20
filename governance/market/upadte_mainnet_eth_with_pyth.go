@@ -117,6 +117,7 @@ func UpdateETHUSDMainnetMarketProposal(
 						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
+						TickSize:                "1",
 						Instrument: &vega.UpdateInstrumentConfiguration{
 							Name: "ETH/USD(USDT)-Perp-Mainnet",
 							Code: "ETH/USD-PERP-MAINNET",

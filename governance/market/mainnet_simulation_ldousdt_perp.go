@@ -73,6 +73,7 @@ func NewMainnetSimulationLDOUSDTPerp(
 						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "LDO/USDT-Perp",
 							Code: "LDO/USDT-PERP",

@@ -117,6 +117,7 @@ func UpdateBTCUSDMainnetMarketProposal(
 						},
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
+						TickSize:                "1",
 						Instrument: &vega.UpdateInstrumentConfiguration{
 							Name: "BTC/USD(USDT)-Perp-Mainnet",
 							Code: "BTC/USD-PERP-MAINNET",

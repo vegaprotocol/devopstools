@@ -45,6 +45,7 @@ func New1000PEPEUSDPerpetualMarketProposal(
 						PositionDecimalPlaces:   -3, // min 100
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
 							Code: "1000PEPEUSDT.PERP",

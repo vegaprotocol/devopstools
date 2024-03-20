@@ -37,6 +37,7 @@ func NewCommunityBTCUSD230630(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "BTC/USDT expiry 2023 June 30th",
 							Code: "BTC/USDT-230630",

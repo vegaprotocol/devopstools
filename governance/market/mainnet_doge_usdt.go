@@ -45,6 +45,7 @@ func NewMainnetDogeUSDT(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "DOGE/USDT Mainnet Copy",
 							Code: "DOGE/USDT-MAINNET",
