@@ -3,13 +3,14 @@ package veganetworksmartcontracts
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20assetpool"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
 	"github.com/vegaprotocol/devopstools/smartcontracts/multisigcontrol"
 	"github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
 )
 

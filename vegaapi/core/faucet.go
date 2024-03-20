@@ -16,7 +16,6 @@ func (n *CoreClient) DepositBuiltinAsset(
 	amount string,
 	signAny func([]byte) ([]byte, string, error),
 ) (bool, error) {
-
 	chainEvent := &commandspb.ChainEvent{
 		Nonce: vgrand.NewNonce(),
 		Event: &commandspb.ChainEvent_Builtin{

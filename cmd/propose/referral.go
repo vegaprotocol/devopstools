@@ -6,12 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"code.vegaprotocol.io/vega/core/netparams"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/programs"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/veganetwork"
+
+	"code.vegaprotocol.io/vega/core/netparams"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 

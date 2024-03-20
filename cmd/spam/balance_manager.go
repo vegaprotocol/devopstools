@@ -6,12 +6,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
+
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
 )
 
 const (
@@ -160,7 +161,6 @@ func describeAssets(dataNodeClient vegaapi.DataNodeClient) (map[string]uint64, e
 
 func (bm *BalanceManager) requiredTopup(pair *AssetPartyPair) (*big.Int, error) {
 	funds, err := bm.dataNodeClient.GetFunds(pair.partyId, vegapb.AccountType_ACCOUNT_TYPE_GENERAL, &pair.assetId)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get funds for %s: %w", pair, err)
 	}

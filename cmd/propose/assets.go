@@ -7,17 +7,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/governance"
+	assetsgov "github.com/vegaprotocol/devopstools/governance/assets"
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/types"
+
 	"code.vegaprotocol.io/vega/core/netparams"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
-	"github.com/vegaprotocol/devopstools/governance"
-	assetsgov "github.com/vegaprotocol/devopstools/governance/assets"
-	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/types"
 	"go.uber.org/zap"
 )
 
@@ -247,7 +249,6 @@ func proposeAssetRun(args *ProposeAssetArgs) error {
 
 			return proposalId, nil
 		})
-
 		if err != nil {
 			cError := fmt.Errorf("failed to find proposal for new asset:%w", err)
 
@@ -280,7 +281,7 @@ func proposeAssetRun(args *ProposeAssetArgs) error {
 			},
 		}
 		if err := governance.SubmitTx("vote on asset proposal", network.DataNodeClient, network.VegaTokenWhale, args.Logger, &voteWalletTxReq); err != nil {
-			cError := fmt.Errorf("failet to vote on the asset proposal: %w")
+			cError := fmt.Errorf("failet to vote on the asset proposal: %w", err)
 
 			logger.Error(
 				"failed to propose asset",

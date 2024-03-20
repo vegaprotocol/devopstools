@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+
 	"google.golang.org/grpc/connectivity"
 )
 

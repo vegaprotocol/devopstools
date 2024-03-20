@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	dstypes "code.vegaprotocol.io/vega/core/datasource/common"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 func NewAAPLMarketProposal(

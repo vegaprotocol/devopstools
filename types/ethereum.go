@@ -11,12 +11,11 @@ const (
 	ETHSepolia ETHNetwork = "sepolia"
 	ETHGoerli  ETHNetwork = "goerli"
 	ETHRopsten ETHNetwork = "ropsten"
-	ETHLocal   ETHNetwork = "local"
 )
 
 func (n ETHNetwork) IsValid() error {
 	switch n {
-	case ETHMainnet, ETHSepolia, ETHGoerli, ETHRopsten, ETHLocal:
+	case ETHMainnet, ETHSepolia, ETHGoerli, ETHRopsten:
 		return nil
 	}
 	return fmt.Errorf("Invalid Ethereum network %s", n)

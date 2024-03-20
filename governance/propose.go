@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"code.vegaprotocol.io/vega/core/netparams"
-	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
-	"code.vegaprotocol.io/vega/protos/vega"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	"code.vegaprotocol.io/vega/core/netparams"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+	"code.vegaprotocol.io/vega/protos/vega"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -45,10 +47,7 @@ func SubmitProposal(
 	// Find Proposal
 	//
 	proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
-		proposal, err := fetchProposalByReferenceAndProposer(
-			reference, proposerVegawallet.PublicKey, dataNodeClient,
-		)
-
+		proposal, err := fetchProposalByReferenceAndProposer(reference, dataNodeClient)
 		if err != nil {
 			return "", fmt.Errorf("failed to find proposal: %w", err)
 		}
@@ -98,10 +97,7 @@ func SubmitProposalList(
 		// on test networks there can be a lot of proposals, so fetching one by one can be more efficient
 
 		proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
-			proposal, err := fetchProposalByReferenceAndProposer(
-				proposalConfig.Reference, proposerVegawallet.PublicKey, dataNodeClient,
-			)
-
+			proposal, err := fetchProposalByReferenceAndProposer(proposalConfig.Reference, dataNodeClient)
 			if err != nil {
 				return "", fmt.Errorf("failed to find proposal: %w", err)
 			}
@@ -111,13 +107,11 @@ func SubmitProposalList(
 
 			return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", description, proposalConfig.Reference)
 		})
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to find proposal: %w", err)
 		}
 
 		descriptionToProposalId[description] = proposalId
-
 	}
 
 	if len(descriptionToProposalId) < len(descriptionToProposalConfig) {
@@ -127,17 +121,12 @@ func SubmitProposalList(
 	return descriptionToProposalId, nil
 }
 
-func fetchProposalByReferenceAndProposer(
-	reference string,
-	proposerPartyId string,
-	dataNodeClient vegaapi.DataNodeClient,
-) (*vega.Proposal, error) {
+func fetchProposalByReferenceAndProposer(reference string, dataNodeClient vegaapi.DataNodeClient) (*vega.Proposal, error) {
 	res, err := tools.RetryReturn(6, 10*time.Second, func() (*v2.GetGovernanceDataResponse, error) {
 		return dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
 			Reference: &reference,
 		})
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +139,6 @@ func fetchProposalByReferenceAndProposer(
 			return nil, fmt.Errorf("proposal '%s' is in wrong state %s: %+v", proposal.Rationale.Title, proposal.State.String(), proposal)
 		}
 		return proposal, nil
-
 	}
 	return nil, nil
 }

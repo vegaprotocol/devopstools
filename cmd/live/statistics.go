@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/networktools"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +54,6 @@ func RunStatistics(args StatisticsArgs) error {
 			return fmt.Errorf("failed to parse statistics for network '%s', %w", args.VegaNetworkName, err)
 		}
 		fmt.Println(string(byteStatistics))
-
 	} else {
 		statistics, err := network.GetRunningStatistics()
 		if err != nil {

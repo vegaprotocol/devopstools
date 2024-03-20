@@ -3,15 +3,18 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualETHUSD = "auto:perpetual_eth_usd"
-const PerpetualETHUSDOracleAddress = "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+const (
+	PerpetualETHUSD              = "auto:perpetual_eth_usd"
+	PerpetualETHUSDOracleAddress = "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+)
 
 func NewETHUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,

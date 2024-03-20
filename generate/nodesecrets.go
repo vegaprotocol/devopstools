@@ -7,7 +7,6 @@ import (
 )
 
 func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
-
 	metadata, err := GenerateNodeMetadata()
 	if err != nil {
 		return nil, err

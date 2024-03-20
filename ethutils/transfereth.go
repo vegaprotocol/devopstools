@@ -29,9 +29,7 @@ func TransferEthNoWaitWithNonce(
 	amount *big.Int,
 	nonce uint64,
 ) (*ethTypes.Transaction, error) {
-	var (
-		errMsg = "failed to send ethereum transaction, %w"
-	)
+	errMsg := "failed to send ethereum transaction, %w"
 
 	transactionData, err := GetNextTransactionData(ethClient)
 	if err != nil {
@@ -46,7 +44,7 @@ func TransferEthNoWaitWithNonce(
 		Gas:       uint64(21000),             // gas limit for a standard ETH transfer is 21000 units
 		To:        &toAddress,
 		Value:     amount,
-		//Data:      txData,
+		// Data:      txData,
 	})
 
 	signedTx, err := ethTypes.SignTx(tx, types.NewLondonSigner(transactionData.chainID), fromPrivateKey)

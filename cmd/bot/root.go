@@ -3,8 +3,9 @@ package bot
 import (
 	"log"
 
-	"github.com/spf13/cobra"
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+
+	"github.com/spf13/cobra"
 )
 
 type BotArgs struct {

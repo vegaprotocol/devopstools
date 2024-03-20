@@ -7,13 +7,14 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/vegaprotocol/devopstools/ethutils"
+	"github.com/vegaprotocol/devopstools/secrets"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/vegaprotocol/devopstools/ethutils"
-	"github.com/vegaprotocol/devopstools/secrets"
 )
 
 type EthWallet struct {
@@ -73,7 +74,7 @@ func (w *EthWallet) GetNextNonce() uint64 {
 }
 
 func (w *EthWallet) GetTransactOpts() *bind.TransactOpts {
-	var newTransactOptions = *w.cachedTransactOpts
+	newTransactOptions := *w.cachedTransactOpts
 	newTransactOptions.Nonce = big.NewInt(int64(w.GetNextNonce()))
 
 	return &newTransactOptions

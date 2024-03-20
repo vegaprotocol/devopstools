@@ -3,9 +3,10 @@ package programs
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 func NewUpdateReferralProgramProposal(closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {
@@ -22,7 +23,6 @@ func NewUpdateReferralProgramProposal(closingTime time.Time, enactmentTime time.
 				UpdateReferralProgram: &vega.UpdateReferralProgram{
 					Changes: &vega.ReferralProgramChanges{
 						BenefitTiers: []*vega.BenefitTier{
-
 							{
 								MinimumRunningNotionalTakerVolume: "100000",
 								MinimumEpochs:                     "1",

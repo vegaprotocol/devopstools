@@ -3,16 +3,20 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
+
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const PerpetualBTCUSDGnosis = "auto:perpetual_btc_usd_gnosis"
-const PerpetualBTCUSDOracleGnosisAddress = "0xf72475a8778E2e4b953f99a85f21a2feADbF77B9"
+const (
+	PerpetualBTCUSDGnosis              = "auto:perpetual_btc_usd_gnosis"
+	PerpetualBTCUSDOracleGnosisAddress = "0xf72475a8778E2e4b953f99a85f21a2feADbF77B9"
+)
 
 func NewBTCUSDGnosisPerpetualMarketProposal(
 	settlementVegaAssetId string,

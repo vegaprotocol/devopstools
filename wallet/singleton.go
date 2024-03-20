@@ -3,8 +3,9 @@ package wallet
 import (
 	"fmt"
 
-	"code.vegaprotocol.io/vega/wallet/wallet"
 	"github.com/vegaprotocol/devopstools/secrets"
+
+	"code.vegaprotocol.io/vega/wallet/wallet"
 )
 
 var (

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -56,7 +57,6 @@ func RunList(args ListArgs) error {
 }
 
 func PrettyPrintProposal(proposal *v2.GovernanceDataEdge, details bool) {
-
 	fmt.Printf("Proposal: \"%s\" (%s)\n",
 		proposal.Node.Proposal.Rationale.Title,
 		proposal.Node.Proposal.State.String(),

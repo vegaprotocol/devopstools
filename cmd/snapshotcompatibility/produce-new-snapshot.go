@@ -9,14 +9,15 @@ import (
 	"strconv"
 	"time"
 
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/core"
 	"github.com/vegaprotocol/devopstools/vegacapsule"
+
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 type ProduceNewSnapshotArgs struct {
@@ -204,7 +205,6 @@ func getNetworkHeight(coreClient vegaapi.VegaCoreClient) (int, error) {
 	statistics, err := tools.RetryReturn(3, 3*time.Second, func() (*vegaapipb.StatisticsResponse, error) {
 		return coreClient.Statistics()
 	})
-
 	if err != nil {
 		return 0, fmt.Errorf("failed to get output from the statistic core api: %w", err)
 	}

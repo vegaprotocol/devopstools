@@ -18,5 +18,5 @@ func (n ERC20TokenVersion) IsValid() error {
 	case ERC20TokenBase, ERC20TokenOld, ERC20TokenOther, ERC20TokenMinimal:
 		return nil
 	}
-	return fmt.Errorf("Invalid ERC20 Token Version %s", n)
+	return fmt.Errorf("invalid ERC20 Token Version %s", n)
 }

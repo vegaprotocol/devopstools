@@ -6,11 +6,13 @@ import (
 	"os"
 	"time"
 
-	"code.vegaprotocol.io/vega/core/netparams"
-	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
+
+	"code.vegaprotocol.io/vega/core/netparams"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -98,7 +100,6 @@ func RunNetworkParameter(args NetworkParameterArgs) error {
 		proposalId, err := governance.SubmitProposal(
 			"Update Network Parameter", proposerVegawallet, proposalConfig, network.DataNodeClient, logger,
 		)
-
 		if err != nil {
 			return fmt.Errorf("failed to propose Update Network Paramter %w", err)
 		}

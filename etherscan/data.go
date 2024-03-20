@@ -9,9 +9,7 @@ import (
 	"strings"
 )
 
-//
 // Helper: Get Smart Contract Data
-//
 type SmartContractData struct {
 	SourceCode          map[string]string
 	ABI                 string
@@ -87,7 +85,7 @@ func parseSourceCode(ContractName string, sourceCode string) (map[string]string,
 			}
 			payload = payload2.Sources
 		}
-		var result = map[string]string{}
+		result := map[string]string{}
 
 		for name, data := range payload {
 			name = filepath.Base(name)

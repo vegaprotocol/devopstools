@@ -6,6 +6,7 @@ import (
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
+
 	"google.golang.org/grpc/connectivity"
 )
 

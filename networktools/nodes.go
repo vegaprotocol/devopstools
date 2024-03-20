@@ -8,6 +8,7 @@ import (
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+
 	"golang.org/x/exp/slices"
 )
 
@@ -119,7 +120,6 @@ func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 //
 
 func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
-
 	hosts := []string{}
 	previousMissing := false
 	httpClient := http.Client{

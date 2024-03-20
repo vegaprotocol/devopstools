@@ -3,11 +3,13 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
+
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -26,9 +28,7 @@ func NewMainnetSimulationSNXUSDTPerp(
 	enactmentTime time.Time,
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
-	var (
-		reference = tools.RandAlphaNumericString(40)
-	)
+	reference := tools.RandAlphaNumericString(40)
 	const (
 		contractAddress = "0x9eb2EBD260D82410592758B3091F74977E4A404c"
 		contractABI     = `[{

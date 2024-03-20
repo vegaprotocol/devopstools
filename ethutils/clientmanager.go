@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/vegaprotocol/devopstools/etherscan"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type EthereumClientManager struct {
@@ -31,7 +32,6 @@ func (m *EthereumClientManager) GetEthereumURL(ethNetwork types.ETHNetwork) (str
 	var ethereumURL string
 
 	switch ethNetwork {
-
 	case types.ETHMainnet, types.ETHSepolia, types.ETHGoerli, types.ETHRopsten:
 		if m.serviceSecrets == nil {
 			return "", fmt.Errorf("failed to get Ethereum URL for %s, Service Secret Store not provided", ethNetwork)

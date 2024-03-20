@@ -3,9 +3,10 @@ package programs
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 func NewUpdateVolumeDiscountProgramProposal(closingTime time.Time, enactmentTime time.Time) *commandspb.ProposalSubmission {

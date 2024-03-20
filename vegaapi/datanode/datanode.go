@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/vegaapi/core"
+
 	"go.uber.org/zap"
 )
 

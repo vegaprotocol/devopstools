@@ -105,9 +105,7 @@ func GenerateAvatarURL() (string, error) {
 }
 
 func GenerateRandomWikiURL() (string, error) {
-	var (
-		errMsg = "failed to generate random wiki url"
-	)
+	errMsg := "failed to generate random wiki url"
 	req, err := http.NewRequest(http.MethodGet, "https://en.wikipedia.org/wiki/Special:Random", nil)
 	if err != nil {
 		return "", fmt.Errorf("%s, %w", errMsg, err)
@@ -125,7 +123,7 @@ func GenerateRandomWikiURL() (string, error) {
 		return "", fmt.Errorf("%s, %w", errMsg, err)
 	}
 	defer response.Body.Close()
-	if response.StatusCode == http.StatusFound { //status code 302
+	if response.StatusCode == http.StatusFound { // status code 302
 		url, err := response.Location()
 		if err != nil {
 			return "", fmt.Errorf("%s, %w", errMsg, err)

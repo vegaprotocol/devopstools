@@ -3,9 +3,10 @@ package governance
 import (
 	"time"
 
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	"github.com/vegaprotocol/devopstools/governance/market"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
+
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 )
 
 func MainnetUpgradeBatchProposal2(

@@ -10,14 +10,16 @@ import (
 	"path"
 	"strings"
 
+	"github.com/vegaprotocol/devopstools/secrets"
+
 	"code.vegaprotocol.io/vega/core/nodewallets"
 	"code.vegaprotocol.io/vega/core/nodewallets/registry"
 	"code.vegaprotocol.io/vega/paths"
 	"code.vegaprotocol.io/vega/wallet/wallet"
 	"code.vegaprotocol.io/vega/wallet/wallets"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/vegaprotocol/devopstools/secrets"
 )
 
 func CreateBinaryWallets(
@@ -43,7 +45,7 @@ func CreateBinaryWallets(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("nodewalletPath=%+v\n", nodewalletPath)
+	// fmt.Printf("nodewalletPath=%+v\n", nodewalletPath)
 
 	//
 	// Tendermint Key
@@ -54,7 +56,7 @@ func CreateBinaryWallets(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("ImportTendermintPubkey=%+v\n", data)
+	// fmt.Printf("ImportTendermintPubkey=%+v\n", data)
 
 	//
 	// VegaWallet
@@ -70,9 +72,9 @@ func CreateBinaryWallets(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("ImportVegaWallet=%+v\n", data)
+	// fmt.Printf("ImportVegaWallet=%+v\n", data)
 	vegaWalletPath = data["walletFilePath"]
-	//fmt.Printf("vegaWalletPath=%+v\n", vegaWalletPath)
+	// fmt.Printf("vegaWalletPath=%+v\n", vegaWalletPath)
 
 	//
 	// Ethereum wallet
@@ -89,9 +91,9 @@ func CreateBinaryWallets(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("ImportEthereumWallet=%+v\n", data)
+	// fmt.Printf("ImportEthereumWallet=%+v\n", data)
 	ethWalletPath = data["walletFilePath"]
-	//fmt.Printf("ethWalletPath=%+v\n", ethWalletPath)
+	// fmt.Printf("ethWalletPath=%+v\n", ethWalletPath)
 
 	nodewalletBase64, err := encodeToBase64(nodewalletPath)
 	if err != nil {
@@ -125,7 +127,7 @@ func createNodewallet(
 		return "", err
 	}
 	nodewalletPath := nodewalletRegistry.RegistryFilePath()
-	//fmt.Printf("nodewalletPath=%s\n", nodewalletPath)
+	// fmt.Printf("nodewalletPath=%s\n", nodewalletPath)
 
 	return nodewalletPath, nil
 }
@@ -135,7 +137,6 @@ func createVegawallet(
 	vegaHome string,
 	walletPassphrase string,
 ) (string, error) {
-
 	// create a wallet with name
 	vegaWalletName := "isolatedValidatorWallet"
 	vegaWallet, err := wallet.ImportHDWallet(vegaWalletName, vegaWalletRecoveryPhrase, wallet.LatestVersion)
@@ -161,10 +162,10 @@ func createVegawallet(
 	if err != nil {
 		return "", err
 	}
-	//fmt.Printf("wallet.ID()=%+v\n", wallet)
+	// fmt.Printf("wallet.ID()=%+v\n", wallet)
 	// get path of the new wallet in store
 	vegaWalletPath := vegaWalletStore.GetWalletPath(vegaWalletName)
-	//fmt.Printf("vegaWalletPath=%v\n", vegaWalletPath)
+	// fmt.Printf("vegaWalletPath=%v\n", vegaWalletPath)
 
 	return vegaWalletPath, nil
 }
@@ -174,7 +175,6 @@ func createEthereumWallet(
 	vegaHome string,
 	walletPassphrase string,
 ) (string, error) {
-
 	ethPrivateKey, err := crypto.HexToECDSA(ethereumPrivateKey)
 	if err != nil {
 		return "", err
@@ -198,7 +198,7 @@ func createEthereumWallet(
 	if err := os.Rename(ethWalletOrigPath, ethWalletPath); err != nil {
 		return "", err
 	}
-	//fmt.Printf("ethWalletPath=%v\n", ethWalletPath)
+	// fmt.Printf("ethWalletPath=%v\n", ethWalletPath)
 
 	return ethWalletPath, nil
 }

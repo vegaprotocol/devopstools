@@ -1,8 +1,9 @@
 package topup
 
 import (
-	"github.com/spf13/cobra"
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+
+	"github.com/spf13/cobra"
 )
 
 type TopUpArgs struct {
@@ -11,7 +12,6 @@ type TopUpArgs struct {
 
 var topUpArgs TopUpArgs
 
-// Root Command for OPS
 var TopUpCmd = &cobra.Command{
 	Use:   "topup",
 	Short: "Deposit ERC20 assets to vega pub keys",

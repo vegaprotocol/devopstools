@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/vegaprotocol/devopstools/types"
+
 	"go.uber.org/zap"
 )
 
@@ -26,7 +27,6 @@ func (network *NetworkTools) GetNetworkParams() (*types.NetworkParams, error) {
 }
 
 func (network *NetworkTools) GetNetworkParamsFromHost(host string, tlsOnly bool) (*types.NetworkParams, error) {
-
 	statsURLs := []string{
 		fmt.Sprintf("https://%s/network/parameters", host),
 	}
@@ -38,7 +38,6 @@ func (network *NetworkTools) GetNetworkParamsFromHost(host string, tlsOnly bool)
 		Timeout: network.restTimeout,
 	}
 	for _, statsURL := range statsURLs {
-
 		req, err := http.NewRequest(http.MethodGet, statsURL, nil)
 		if err != nil {
 			network.logger.Debug("failed to create new request", zap.String("url", statsURL), zap.Error(err))

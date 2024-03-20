@@ -5,11 +5,13 @@ import (
 	"log"
 	"time"
 
-	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/spf13/cobra"
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/tools"
+
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
+	"github.com/spf13/cobra"
 )
 
 type BatchArgs struct {

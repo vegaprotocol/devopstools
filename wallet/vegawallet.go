@@ -3,14 +3,15 @@ package wallet
 import (
 	"fmt"
 
-	vgcrypto "code.vegaprotocol.io/shared/libs/crypto"
+	"github.com/vegaprotocol/devopstools/secrets"
+
 	"code.vegaprotocol.io/vega/commands"
+	vgcrypto "code.vegaprotocol.io/vega/libs/crypto"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	wcommands "code.vegaprotocol.io/vega/wallet/commands"
 	"code.vegaprotocol.io/vega/wallet/wallet"
-	"github.com/vegaprotocol/devopstools/secrets"
 )
 
 type VegaWallet struct {

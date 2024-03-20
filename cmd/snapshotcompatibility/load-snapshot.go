@@ -7,14 +7,14 @@ import (
 	"sort"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegacapsule"
+	"github.com/vegaprotocol/devopstools/vegacmd"
+
 	"github.com/spf13/cobra"
 	"github.com/tomwright/dasel"
 	"github.com/tomwright/dasel/storage"
 	"go.uber.org/zap"
-
-	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/vegacapsule"
-	"github.com/vegaprotocol/devopstools/vegacmd"
 )
 
 type LoadSnapshotArgs struct {

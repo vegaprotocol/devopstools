@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/vegaprotocol/devopstools/ethutils"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 type ERC20TokenInfo struct {

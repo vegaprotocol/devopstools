@@ -8,6 +8,7 @@ import (
 	"github.com/vegaprotocol/devopstools/secrets/hcvault"
 	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"github.com/vegaprotocol/devopstools/wallet"
+
 	"go.uber.org/zap"
 )
 
@@ -37,7 +38,6 @@ func (ra *RootArgs) getHCVaultSecretStore() (*hcvault.HCVaultSecretStore, error)
 		}
 	}
 	return ra.hcVaultSecretStore, nil
-
 }
 
 func (ra *RootArgs) GetNodeSecretStore() (secrets.NodeSecretStore, error) {

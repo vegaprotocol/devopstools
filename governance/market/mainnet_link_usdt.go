@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 const MainnetLinkUSDTMetadataID = "auto:mainnet_link_usdt"
@@ -27,7 +28,6 @@ func NewMainnetLinkUSDT(
 	enactmentTime time.Time,
 	extraMetadata []string,
 ) *commandspb.ProposalSubmission {
-
 	reference := tools.RandAlphaNumericString(40)
 
 	nowTime := time.Now()

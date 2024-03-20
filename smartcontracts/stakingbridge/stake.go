@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/vegaprotocol/devopstools/ethutils"
+	StakingBridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge/v1"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/vegaprotocol/devopstools/ethutils"
-	StakingBridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge/v1"
 )
 
 func (sb *StakingBridge) GetStakeBalance(
@@ -55,7 +56,7 @@ func (sb *StakingBridge) GetStakeBalance(
 		return nil, fmt.Errorf("failed to get balance for '%s', failed to Filter Stake Removed events, %w", vegaPubKey, err)
 	}
 	for removedIterator.Next() {
-		//fmt.Printf("remove %#v\n", depositedIterator.Event)
+		// fmt.Printf("remove %#v\n", depositedIterator.Event)
 		balance = balance.Sub(balance, removedIterator.Event.Amount)
 	}
 

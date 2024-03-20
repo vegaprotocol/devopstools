@@ -6,16 +6,18 @@ import (
 	"math/big"
 	"os"
 
-	"code.vegaprotocol.io/vega/protos/vega"
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	"code.vegaprotocol.io/vega/protos/vega"
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 

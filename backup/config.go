@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/pelletier/go-toml"
 	"github.com/vegaprotocol/devopstools/tools"
+
+	"github.com/pelletier/go-toml"
 )
 
 type S3Config struct {
@@ -76,7 +77,6 @@ func LoadConfig(filePath string) (*Config, error) {
 
 func (conf Config) Marshal() (string, error) {
 	str, err := toml.Marshal(conf)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal config: %w", err)
 	}

@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegacapsule"
 	"github.com/vegaprotocol/devopstools/vegacmd"
+
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 type CollectSnapshotArgs struct {

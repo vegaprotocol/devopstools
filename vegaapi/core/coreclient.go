@@ -8,6 +8,7 @@ import (
 	"time"
 
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"

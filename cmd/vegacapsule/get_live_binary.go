@@ -5,9 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/tools"
 	vctools "github.com/vegaprotocol/devopstools/vegacapsule"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -63,7 +64,6 @@ func init() {
 		"If true, binary is removed when exists")
 
 	VegacapsuleCmd.AddCommand(getLiveBInaryCmd)
-
 }
 
 func copyBiinaryTo(logger *zap.Logger, binaryPath, outputFile string, overwrite bool) error {

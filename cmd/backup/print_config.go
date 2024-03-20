@@ -3,8 +3,9 @@ package backup
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/backup"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +22,6 @@ var printConfigCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		conf := backup.DefaultConfig()
 		confStr, err := conf.Marshal()
-
 		if err != nil {
 			printConfigArgs.Logger.Fatal("failed to marshal config", zap.Error(err))
 		}

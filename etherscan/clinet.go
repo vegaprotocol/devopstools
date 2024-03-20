@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/types"
+
 	"golang.org/x/time/rate"
 )
 

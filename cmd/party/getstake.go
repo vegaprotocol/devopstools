@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/networktools"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 

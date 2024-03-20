@@ -3,12 +3,12 @@ package erc20assetpool
 import (
 	"math/big"
 
+	ERC20AssetPool_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20assetpool/v1"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	ERC20AssetPool_V1 "github.com/vegaprotocol/devopstools/smartcontracts/erc20assetpool/v1"
 )
 
 type ERC20AssetPoolCommon interface {

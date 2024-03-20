@@ -5,8 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/generate"
+
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -74,7 +75,6 @@ func RunCreate(args CreateArgs) error {
 			}
 			args.Logger.Info("updated", zap.String("node", nodeId), zap.Any("fields", updates))
 		} else {
-
 			newSecrets, err := generate.GenerateVegaNodeSecrets()
 			if err != nil {
 				return err

@@ -3,15 +3,18 @@ package market
 import (
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const PerpetualBTCUSD = "auto:perpetual_btc_usd"
-const PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+const (
+	PerpetualBTCUSD              = "auto:perpetual_btc_usd"
+	PerpetualBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+)
 
 func NewBTCUSDPerpetualMarketProposal(
 	settlementVegaAssetId string,

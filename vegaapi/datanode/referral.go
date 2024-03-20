@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
-	e "github.com/vegaprotocol/devopstools/errors"
+
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -110,7 +112,6 @@ func (n *DataNode) GetReferralSetReferees() (map[string]v2.ReferralSetReferee, e
 		}
 	}
 	return referralSetReferees, nil
-
 }
 
 func (n *DataNode) ListReferralSetReferees(req *dataapipb.ListReferralSetRefereesRequest) (response *dataapipb.ListReferralSetRefereesResponse, err error) {

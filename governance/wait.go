@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/vegaapi"
+
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
-	"github.com/vegaprotocol/devopstools/vegaapi"
+
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )

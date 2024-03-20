@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
+
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
+
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -203,7 +205,6 @@ func GetMarket(markets []*vega.Market, marketCode string, metadataTag string, va
 		// 		}
 		// 	}
 		// }
-
 	}
 	return nil
 }

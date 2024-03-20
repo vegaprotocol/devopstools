@@ -15,7 +15,7 @@ We want to minimise usage of `bash` and replace it with `Golang`.
 
 We assume that:
 - we have `Go` installed on every machine
-- we run our scripts `go run main.go ...` fashion, ineased of: `tag version`->`complie`->`publish`->`download`->`run`
+- we run our scripts `go run main.go ...` fashion, instead of: `tag version`->`complie`->`publish`->`download`->`run`
 - we use `cobra` to manage all CLI aspects
 
 ### Usual use-case

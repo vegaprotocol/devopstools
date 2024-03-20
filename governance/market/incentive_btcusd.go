@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/libs/ptr"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
-const IncentiveBTCUSD = "auto:incentive_btc_usd"
-const IncentiveBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
-const IncentiveVegaAssetId = "4454ab1ec9d9710b2f8b0f4e24a379c409ef3767e5b2ec90c451873a71fedfa0"
+const (
+	IncentiveBTCUSD              = "auto:incentive_btc_usd"
+	IncentiveBTCUSDOracleAddress = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+	IncentiveVegaAssetId         = "4454ab1ec9d9710b2f8b0f4e24a379c409ef3767e5b2ec90c451873a71fedfa0"
+)
 
 func NewBTCUSDIncentiveMarketProposal(
 	settlementVegaAssetId string,
