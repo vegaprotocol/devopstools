@@ -64,6 +64,7 @@ This proposal requests to list ETH/USDT-231231 as a market with USDT as a settle
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "ETH/USDT Future",
 							Code: "ETH/USDT-FUTURE",

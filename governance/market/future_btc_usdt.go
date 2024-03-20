@@ -64,6 +64,7 @@ This proposal requests to list BTC/USDT-231231 as a market with USDT as a settle
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "BTC/USDT FUTURE",
 							Code: "BTC/USDT-MAINNET",

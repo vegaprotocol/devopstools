@@ -43,6 +43,7 @@ func NewETHUSDPerpetualMarketProposal(
 						PositionDecimalPlaces:   3,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
 							Code: "ETHEREUM.PERP",

@@ -143,6 +143,7 @@ func NewBTCUSDPythPerpetualMarketProposal(
 						PositionDecimalPlaces:   -1,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: name,
 							Code: "BTCUSDT.PYTH.PERP",
