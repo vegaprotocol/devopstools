@@ -524,30 +524,34 @@ func determineTradersTopUpAmount(
 ) (map[string]AssetTopUp, error) {
 	topUpRegistry := map[string]AssetTopUp{}
 
+	wantedTokenEntries := []bots.BotTraderWantedToken{}
+
 	for _, traderDetails := range traders {
-		assetDetails, assetExists := assets[traderDetails.Parameters.SettlementVegaAssetID]
+		wantedTokenEntries = append(wantedTokenEntries, traderDetails.Parameters.WantedTokens...)
+	}
+
+	for _, wantedToken := range wantedTokenEntries {
+		assetDetails, assetExists := assets[wantedToken.VegaAssetId]
 		if !assetExists {
 			return nil, fmt.Errorf(
 				"failed to find asset on network: bot is using the %s asset but it does not exist on the network",
-				traderDetails.Parameters.SettlementVegaAssetID,
+				wantedToken.VegaAssetId,
 			)
 		}
 
-		if _, registryExists := topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID]; !registryExists {
-			topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID] = AssetTopUp{
+		if _, assetRegistryExists := topUpRegistry[wantedToken.VegaAssetId]; !assetRegistryExists {
+			topUpRegistry[wantedToken.VegaAssetId] = AssetTopUp{
 				Symbol:          assetDetails.Symbol,
-				ContractAddress: traderDetails.Parameters.SettlementEthereumContractAddress,
-				VegaAssetId:     traderDetails.Parameters.SettlementVegaAssetID,
+				ContractAddress: wantedToken.AssetERC20Asset,
+				VegaAssetId:     wantedToken.VegaAssetId,
 				TotalAmount:     big.NewFloat(0),
 				Parties:         map[string]*big.Float{},
 			}
 		}
 
-		currentEntry := topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID]
-
 		requiredTopUp := necessaryTopUp(
-			traderDetails.Parameters.CurrentBalance,
-			traderDetails.Parameters.WantedTokens,
+			wantedToken.Balance,
+			wantedToken.WantedTokens,
 			TraderTopUpFactor,
 		)
 
@@ -555,17 +559,23 @@ func determineTradersTopUpAmount(
 			continue
 		}
 
-		currentEntry.Parties[traderDetails.PubKey] = big.NewFloat(requiredTopUp)
+		currentEntry := topUpRegistry[wantedToken.VegaAssetId]
+
+		if _, partyForAssetExist := topUpRegistry[wantedToken.VegaAssetId].Parties[wantedToken.PartyId]; !partyForAssetExist {
+			currentEntry.Parties[wantedToken.PartyId] = big.NewFloat(0)
+		}
+
+		currentEntry.Parties[wantedToken.PartyId] = big.NewFloat(0).Add(big.NewFloat(requiredTopUp), currentEntry.Parties[wantedToken.PartyId])
 		currentEntry.TotalAmount = big.NewFloat(0.0).Add(currentEntry.TotalAmount, big.NewFloat(requiredTopUp))
 
 		logger.Info(
 			"Required top up for party",
-			zap.String("party-id", traderDetails.PubKey),
+			zap.String("party-id", wantedToken.PartyId),
 			zap.Float64("amount", requiredTopUp),
 			zap.String("asset", assetDetails.Name),
 		)
 
-		topUpRegistry[traderDetails.Parameters.SettlementVegaAssetID] = currentEntry
+		topUpRegistry[wantedToken.VegaAssetId] = currentEntry
 	}
 
 	return topUpRegistry, nil
