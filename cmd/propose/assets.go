@@ -1,6 +1,7 @@
 package propose
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"os"
@@ -120,7 +121,7 @@ func proposeAssetRun(args *ProposeAssetArgs) error {
 	}
 	defer network.Disconnect()
 
-	networkAssets, err := network.DataNodeClient.GetAssets()
+	networkAssets, err := network.DataNodeClient.ListAssets(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to get assets already created on the network: %w", err)
 	}

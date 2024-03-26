@@ -1,6 +1,7 @@
 package spam
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -146,7 +147,7 @@ func (bm *BalanceManager) TopUpPair(lastBlockData *vegaapipb.LastBlockHeightResp
 }
 
 func describeAssets(dataNodeClient vegaapi.DataNodeClient) (map[string]uint64, error) {
-	assets, err := dataNodeClient.GetAssets()
+	assets, err := dataNodeClient.ListAssets(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get assets: %w", err)
 	}
@@ -160,7 +161,7 @@ func describeAssets(dataNodeClient vegaapi.DataNodeClient) (map[string]uint64, e
 }
 
 func (bm *BalanceManager) requiredTopup(pair *AssetPartyPair) (*big.Int, error) {
-	funds, err := bm.dataNodeClient.GetFunds(pair.partyId, vegapb.AccountType_ACCOUNT_TYPE_GENERAL, &pair.assetId)
+	funds, err := bm.dataNodeClient.ListAccounts(context.Background(), pair.partyId, vegapb.AccountType_ACCOUNT_TYPE_GENERAL, &pair.assetId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get funds for %s: %w", pair, err)
 	}

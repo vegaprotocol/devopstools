@@ -112,7 +112,7 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	}
 
 	logger.Info("Creating data-node gRPC connection", zap.String("url", fmt.Sprintf("127.0.0.1:%s", grpcPort)))
-	dataNodeClient := datanode.NewDataNode([]string{fmt.Sprintf("127.0.0.1:%s", grpcPort)}, 3*time.Second, logger)
+	dataNodeClient := datanode.New([]string{fmt.Sprintf("127.0.0.1:%s", grpcPort)}, 3*time.Second, logger)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 

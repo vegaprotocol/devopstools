@@ -21,13 +21,12 @@ type VegaWallet struct {
 	keyPair  wallet.KeyPair
 }
 
-func NewVegaWallet(
-	private *secrets.VegaWalletPrivate,
-) (*VegaWallet, error) {
+func NewVegaWallet(private *secrets.VegaWalletPrivate) (*VegaWallet, error) {
 	hdWallet, err := wallet.ImportHDWallet(private.Id, private.RecoveryPhrase, wallet.LatestVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new VegaWallet, %w", err)
 	}
+
 	keyPair, err := hdWallet.GenerateKeyPair(nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key pair %w", err)

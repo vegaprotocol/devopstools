@@ -1,8 +1,10 @@
 package vegaapi
 
 import (
+	"context"
 	"math/big"
 
+	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
@@ -39,18 +41,14 @@ type VegaCoreClient interface {
 
 type DataNodeClient interface {
 	VegaCoreClient
-	GetAllNetworkParameters() (map[string]string, error)
+	GetAllNetworkParameters() (*types.NetworkParams, error)
 	ListNetworkParameters(req *dataapipb.ListNetworkParametersRequest) (response *dataapipb.ListNetworkParametersResponse, err error)
 	GetCurrentEpoch() (*vega.Epoch, error)
-	GetAssets() (map[string]*vega.AssetDetails, error)
+	ListAssets(ctx context.Context) (map[string]*vega.AssetDetails, error)
 	GetAllMarkets() ([]*vega.Market, error)
 	GetMarketById(marketId string) (*vega.Market, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
-	GetFunds(
-		partyID string,
-		accountType vega.AccountType,
-		assetId *string,
-	) ([]datanode.AccountFunds, error)
+	ListAccounts(ctx context.Context, partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
 	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)

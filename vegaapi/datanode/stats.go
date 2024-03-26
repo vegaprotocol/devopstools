@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	e "github.com/vegaprotocol/devopstools/errors"
+	"github.com/vegaprotocol/devopstools/types"
 
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
@@ -12,7 +13,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) GetAllNetworkParameters() (map[string]string, error) {
+func (n *DataNode) GetAllNetworkParameters() (*types.NetworkParams, error) {
 	res, err := n.ListNetworkParameters(&dataapipb.ListNetworkParametersRequest{})
 	if err != nil {
 		return nil, err
@@ -21,27 +22,28 @@ func (n *DataNode) GetAllNetworkParameters() (map[string]string, error) {
 	for _, edge := range res.NetworkParameters.Edges {
 		networkParams[edge.Node.Key] = edge.Node.Value
 	}
-	return networkParams, nil
+	return types.NewNetworkParams(networkParams), nil
 }
 
 func (n *DataNode) GetCurrentEpoch() (*vega.Epoch, error) {
-	res, err := n.GetEpoch(&dataapipb.GetEpochRequest{})
+	res, err := n.getEpoch(&dataapipb.GetEpochRequest{})
 	if err != nil {
 		return nil, err
 	}
 	return res.Epoch, nil
 }
 
-func (n *DataNode) GetAssets() (map[string]*vega.AssetDetails, error) {
-	res, err := n.ListAssets(&dataapipb.ListAssetsRequest{})
+func (n *DataNode) ListAssets(ctx context.Context) (map[string]*vega.AssetDetails, error) {
+	res, err := n.listAssets(ctx, &dataapipb.ListAssetsRequest{})
 	if err != nil {
 		return nil, err
 	}
-	assetList := map[string]*vega.AssetDetails{}
+
+	assets := map[string]*vega.AssetDetails{}
 	for _, edge := range res.Assets.Edges {
-		assetList[edge.Node.Id] = edge.Node.Details
+		assets[edge.Node.Id] = edge.Node.Details
 	}
-	return assetList, nil
+	return assets, nil
 }
 
 func (n *DataNode) ListNetworkParameters(req *dataapipb.ListNetworkParametersRequest) (response *dataapipb.ListNetworkParametersResponse, err error) {
@@ -67,30 +69,7 @@ func (n *DataNode) ListNetworkParameters(req *dataapipb.ListNetworkParametersReq
 	return
 }
 
-func (n *DataNode) GetNetworkParameter(req *dataapipb.GetNetworkParameterRequest) (response *dataapipb.GetNetworkParameterResponse, err error) {
-	msg := "gRPC call failed (data-node): GetNetworkParameter: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
-	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
-	}
-
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
-	defer cancel()
-
-	response, err = c.GetNetworkParameter(ctx, req)
-	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-	}
-	return
-}
-
-func (n *DataNode) GetEpoch(req *dataapipb.GetEpochRequest) (response *dataapipb.GetEpochResponse, err error) {
+func (n *DataNode) getEpoch(req *dataapipb.GetEpochRequest) (response *dataapipb.GetEpochResponse, err error) {
 	msg := "gRPC call failed (data-node): GetEpoch: %w"
 	if n == nil {
 		err = fmt.Errorf(msg, e.ErrNil)
@@ -113,25 +92,19 @@ func (n *DataNode) GetEpoch(req *dataapipb.GetEpochRequest) (response *dataapipb
 	return
 }
 
-func (n *DataNode) ListAssets(req *dataapipb.ListAssetsRequest) (response *dataapipb.ListAssetsResponse, err error) {
-	msg := "gRPC call failed (data-node): ListAssets: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) listAssets(ctx context.Context, req *dataapipb.ListAssetsRequest) (*dataapipb.ListAssetsResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	ctx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err = c.ListAssets(ctx, req)
+	response, err := c.ListAssets(ctx, req)
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
-	return
+
+	return response, nil
 }

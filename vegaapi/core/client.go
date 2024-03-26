@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 
 	"go.uber.org/zap"
@@ -15,8 +17,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// CoreClient stores state for a Vega Core node or Data Node.
-type CoreClient struct {
+// maximumTimeDifference is the maximum
+const maximumTimeDifference = 2 * time.Minute
+
+// Client stores state for a Vega Core node or Data Node.
+type Client struct {
 	hosts       []string // format: host:port
 	CallTimeout time.Duration
 	Conn        *grpc.ClientConn
@@ -26,9 +31,9 @@ type CoreClient struct {
 	logger      *zap.Logger
 }
 
-// NewCoreClient returns a new node.
-func NewCoreClient(hosts []string, callTimeout time.Duration, logger *zap.Logger) *CoreClient {
-	return &CoreClient{
+// NewClient returns a new node.
+func NewClient(hosts []string, callTimeout time.Duration, logger *zap.Logger) *Client {
+	return &Client{
 		hosts:       hosts,
 		CallTimeout: callTimeout,
 		logger:      logger,
@@ -37,15 +42,15 @@ func NewCoreClient(hosts []string, callTimeout time.Duration, logger *zap.Logger
 
 // MustDialConnection tries to establish a connection to one of the nodes from a list of locations.
 // It is idempotent, while it each call will block the caller until a connection is established.
-func (n *CoreClient) MustDialConnection(ctx context.Context) {
+func (n *Client) MustDialConnection(ctx context.Context) {
 	n.mustDialConnection(ctx, false)
 }
 
-func (n *CoreClient) MustDialConnectionIgnoreTime(ctx context.Context) {
+func (n *Client) MustDialConnectionIgnoreTime(ctx context.Context) {
 	n.mustDialConnection(ctx, true)
 }
 
-func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
+func (n *Client) mustDialConnection(ctx context.Context, ignoreTime bool) {
 	n.once.Do(func() {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -58,7 +63,7 @@ func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
 				if err := n.dialNode(ctx, host, ignoreTime); err == nil {
 					cancel()
 				} else {
-					n.logger.Sugar().Debugf("failed to dial node(%s): %s", host, err.Error())
+					n.logger.Debug("Failed to dial node", zap.String("host", host), zap.Error(err))
 				}
 			}(h, ignoreTime)
 		}
@@ -67,7 +72,7 @@ func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
 		defer n.mu.Unlock()
 
 		if n.Conn == nil {
-			log.Fatalf("Failed to connect to DataNode")
+			log.Fatalf("Unable to connect to any configured node")
 		}
 	})
 
@@ -75,8 +80,8 @@ func (n *CoreClient) mustDialConnection(ctx context.Context, ignoreTime bool) {
 	n.once = sync.Once{}
 }
 
-func (n *CoreClient) dialNode(ctx context.Context, host string, ignoreTime bool) error {
-	n.logger.Debug("dialing gRPC node", zap.String("node", host))
+func (n *Client) dialNode(ctx context.Context, host string, ignoreTime bool) error {
+	n.logger.Debug("Dialing gRPC node", zap.String("node", host))
 	conn, err := grpc.DialContext(
 		ctx,
 		host,
@@ -84,21 +89,16 @@ func (n *CoreClient) dialNode(ctx context.Context, host string, ignoreTime bool)
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		if err != context.Canceled {
-			n.logger.Debug("Failed to dial node", zap.String("node", host), zap.Error(err))
-		}
-		return err
+		return fmt.Errorf("failed to dial node: %w", err)
 	}
 	if conn.GetState() != connectivity.Ready {
-		n.logger.Debug("Connection not ready", zap.String("node", host))
-		return fmt.Errorf("connection not ready")
+		return e.ErrConnectionNotReady
 	}
 
 	client := vegaapipb.NewCoreServiceClient(conn)
 	res, err := client.Statistics(ctx, &vegaapipb.StatisticsRequest{})
 	if err != nil {
-		n.logger.Debug("Failed to get statistics", zap.String("node", host))
-		return err
+		return fmt.Errorf("could not get node statistics: %w", err)
 	}
 	currentTime, err := time.Parse(time.RFC3339, res.Statistics.CurrentTime)
 	if err != nil {
@@ -109,14 +109,8 @@ func (n *CoreClient) dialNode(ctx context.Context, host string, ignoreTime bool)
 		return fmt.Errorf("failed to parse vega time from statistics response %w", err)
 	}
 
-	if !ignoreTime && currentTime.Sub(vegaTime) > time.Minute*2 {
-		n.logger.Debug(
-			"node time is too far back",
-			zap.String("node", host),
-			zap.Time("vegaTime", vegaTime),
-			zap.Time("currentTime", currentTime),
-		)
-		return fmt.Errorf("node time is too far back")
+	if !ignoreTime && currentTime.Sub(vegaTime) > maximumTimeDifference {
+		return fmt.Errorf("vega time is more than %s late compared to node time (vega time: %s, node time: %s)", maximumTimeDifference.String(), vegaTime, currentTime)
 	}
 
 	n.mu.Lock()
@@ -125,10 +119,10 @@ func (n *CoreClient) dialNode(ctx context.Context, host string, ignoreTime bool)
 	return nil
 }
 
-func (n *CoreClient) Target() string {
+func (n *Client) Target() string {
 	return n.Conn.Target()
 }
 
-func (n *CoreClient) WaitForStateChange(ctx context.Context, state connectivity.State) bool {
+func (n *Client) WaitForStateChange(ctx context.Context, state connectivity.State) bool {
 	return n.Conn.WaitForStateChange(ctx, state)
 }

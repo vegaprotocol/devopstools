@@ -14,7 +14,7 @@ func (network *NetworkTools) GetEthNetwork() (types.ETHNetwork, error) {
 	if err != nil {
 		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
 	}
-	ethConfig, err := params.GetPrimaryEthereumConfig()
+	ethConfig, err := params.PrimaryEthereumConfig()
 	if err != nil {
 		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
 	}
@@ -33,7 +33,7 @@ func (network *NetworkTools) GetSmartContracts(
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}
-	ethConfig, err := params.GetPrimaryEthereumConfig()
+	ethConfig, err := params.PrimaryEthereumConfig()
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}

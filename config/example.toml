@@ -1,0 +1,43 @@
+[network.wallets.vega_token_whale]
+id = "xxx"
+private_key = "xxx"
+public_key = "xxx"
+recovery_phrase = "xxx"
+
+[bridges.primary]
+client_url = "https://mainnet.infura.io/v3/xxx"
+
+[bridges.primary.etherscan]
+rest_url = "https://api.etherscan.io/api"
+api_key = "xxx"
+
+[bridges.primary.wallets.minter]
+address = "xxx"
+mnemonic = "xxx xxx xxx"
+private_key = "xxx"
+
+[bridges.secondary]
+client_url = "https://mainnet.infura.io/v3/xxx"
+
+[bridges.secondary.etherscan]
+rest_url = "https://api.etherscan.io/api"
+api_key = "xxx"
+
+[bridges.secondary.wallets.minter]
+address = "xxx"
+mnemonic = "xxx xxx xxx"
+private_key = "xxx"
+
+[explorer]
+rest_url = "be.testnet.vega.rocks"
+
+[[nodes]]
+[nodes.api]
+blockchain_rest_url = "api.n00.testnet.vega.rocks:26657"
+vega_grpc_url = "n00.testnet.vega.rocks:3002"
+datanode_rest_url = "api.n00.testnet.vega.rocks"
+datanode_grpc_url = "api.n00.testnet.vega.rocks:3007"
+
+[bots]
+rest_url = "fairground.bots.vega.rocks/traders"
+api_key = "xxx"

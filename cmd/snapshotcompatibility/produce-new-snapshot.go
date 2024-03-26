@@ -117,7 +117,7 @@ func moveNullChainNetworkForward(
 	}
 
 	logger.Info("Crateing Core GRPC client")
-	coreClient := core.NewCoreClient(
+	coreClient := core.NewClient(
 		[]string{fmt.Sprintf("localhost:%s", coreGRPCPort)},
 		5*time.Second,
 		logger,

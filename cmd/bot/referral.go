@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/bots"
+	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/generate"
 	"github.com/vegaprotocol/devopstools/governance"
@@ -338,7 +339,7 @@ func findMarketMarketsForAssets(dataNodeClient vegaapi.DataNodeClient, assetsSym
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all markets: %w", err)
 	}
-	allAssets, err := dataNodeClient.GetAssets()
+	allAssets, err := dataNodeClient.ListAssets(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all assets: %w", err)
 	}
@@ -641,13 +642,13 @@ func doStake(
 			zap.String("ethWallet", wallet.Address.Hex()),
 			zap.String("allowanceBefore", currentAllowance.String()),
 			zap.String("tokenAddress", vegaToken.Address.Hex()))
-		opts := wallet.GetTransactOpts()
+		opts := wallet.GetTransactOpts(context.Background())
 		allowanceTx, err := vegaToken.IncreaseAllowance(opts, stakingBridge.Address, increaseAllowanceAmount)
 		if err != nil {
 			return fmt.Errorf("failed to increase allowance: %w", err)
 		}
 		// WAIT
-		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", wallet.Address.Hex()),
 				zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -671,7 +672,7 @@ func doStake(
 	)
 	logger.Info("Sending stake transactions", zap.Int("count", len(missingStakeByPubKey)))
 	for pubKey, missingStake := range missingStakeByPubKey {
-		opts := wallet.GetTransactOpts()
+		opts := wallet.GetTransactOpts(context.Background())
 		tx, err := stakingBridge.Stake(opts, missingStake, pubKey)
 		if err != nil {
 			failedCount += 1
@@ -697,7 +698,7 @@ func doStake(
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, tx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, tx, time.Minute); err != nil {
 			failedCount += 1
 			logger.Error("Stake transaction failed", zap.String("pub key", pubKey),
 				zap.Uint64("nonce", tx.Nonce()), zap.Any("tx", tx), zap.Error(err))
