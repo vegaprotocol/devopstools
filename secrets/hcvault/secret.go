@@ -23,7 +23,13 @@ func (c *HCVaultSecretStore) GetSecretAsByte(root string, path string) ([]byte, 
 }
 
 func (c *HCVaultSecretStore) GetSecret(path ...string) (map[string]interface{}, error) {
-	return c.GetSecretWithPath(strings.Join(path, "/data/"))
+	if len(path) < 1 {
+		return nil, fmt.Errorf("path cannot be empty")
+	}
+	newPath := []string{path[0], "data"}
+	newPath = append(newPath, path[1:]...)
+
+  return c.GetSecretWithPath(strings.Join(newPath, "/"))
 }
 
 func (c *HCVaultSecretStore) GetSecretWithPath(path string) (map[string]interface{}, error) {
