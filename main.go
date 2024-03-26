@@ -2,6 +2,7 @@ package main
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+	"github.com/vegaprotocol/devopstools/cmd/asset"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
@@ -51,4 +52,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(bot.BotCmd)
 	rootCmd.RootCmd.AddCommand(incentive.IncentiveCmd)
 	rootCmd.RootCmd.AddCommand(batch.BatchCmd)
+	rootCmd.RootCmd.AddCommand(asset.Cmd)
 }
