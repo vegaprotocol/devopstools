@@ -29,7 +29,7 @@ func (c *HCVaultSecretStore) GetSecret(path ...string) (map[string]interface{}, 
 	newPath := []string{path[0], "data"}
 	newPath = append(newPath, path[1:]...)
 
-  return c.GetSecretWithPath(strings.Join(newPath, "/"))
+	return c.GetSecretWithPath(strings.Join(newPath, "/"))
 }
 
 func (c *HCVaultSecretStore) GetSecretWithPath(path string) (map[string]interface{}, error) {
