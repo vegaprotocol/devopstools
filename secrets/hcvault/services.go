@@ -19,8 +19,8 @@ func (c *HCVaultSecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string,
 }
 
 func (c *HCVaultSecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
-	// secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
-	secret, err := c.GetSecret("service", "primary-bridge", "ethereum-node")
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
+
 	if err != nil {
 		return "", fmt.Errorf("failed to get ethereum node url from the vault: %w", err)
 	}

@@ -42,6 +42,7 @@ func NewETHDAIMarketProposal(
 						PositionDecimalPlaces:   3,
 						LinearSlippageFactor:    "0.1",
 						QuadraticSlippageFactor: "0.0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: Name,
 							Code: "ETHDAI.MF21",

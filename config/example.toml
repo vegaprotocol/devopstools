@@ -1,0 +1,81 @@
+[network.wallets.vega_token_whale]
+id = "xxx"
+private_key = "xxx"
+public_key = "xxx"
+recovery_phrase = "xxx"
+
+[bridges.primary]
+client_url = "https://mainnet.infura.io/v3/xxx"
+
+[bridges.primary.block_explorer]
+rest_url = "https://api.etherscan.io/api"
+api_key = "xxx"
+
+[bridges.primary.wallets.main]
+address = "xxx"
+mnemonic = "xxx xxx xxx"
+private_key = "xxx"
+
+[[bridges.primary.assets]]
+name = "vUSDC"
+contract_address = "0x00"
+
+[[bridges.primary.assets]]
+name = "vBTC"
+contract_address = "0x01"
+
+[bridges.secondary]
+client_url = "https://mainnet.infura.io/v3/xxx"
+
+[bridges.secondary.block_explorer]
+rest_url = "https://api.etherscan.io/api"
+api_key = "xxx"
+
+[bridges.secondary.wallets.main]
+address = "xxx"
+mnemonic = "xxx xxx xxx"
+private_key = "xxx"
+
+[[bridges.secondary.assets]]
+name = "aUSDC"
+contract_address = "0x00"
+
+[[bridges.secondary.assets]]
+name = "aBTC"
+contract_address = "0x01"
+
+[[nodes.api]]
+blockchain_rest_url = "api1.vega.community:26657"
+vega_grpc_url = "n1.vega.community:3002"
+datanode_rest_url = "api1.vega.community"
+datanode_grcp_url = "api1.vega.community:3007"
+explorer_rest_url = "be1.vega.community"
+[[nodes.ethereum_wallet]]
+address = "xxx"
+private_key = "xxx"
+mnemonic = "xxx xxx xxx"
+[[nodes.vega_wallet]]
+id = "xxx"
+public_key = "xxx"
+private_key = "xxx"
+recovery_phrase = "xxx xxx xxx"
+
+[[nodes.api]]
+blockchain_rest_url = "api2.vega.community:26657"
+vega_grpc_url = "n2.vega.community:3002"
+datanode_rest_url = "api2.vega.community"
+datanode_grcp_url = "api2.vega.community:3007"
+explorer_rest_url = "be2.vega.community"
+[[nodes.ethereum_wallet]]
+address = "xxx"
+private_key = "xxx"
+mnemonic = "xxx xxx xxx"
+[[nodes.vega_wallet]]
+id = "xxx"
+public_key = "xxx"
+private_key = "xxx"
+recovery_phrase = "xxx xxx xxx"
+
+[bots]
+rest_url = "mainnet.bots.vega.rocks"
+api_key = "xxx"
