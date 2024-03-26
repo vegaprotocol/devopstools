@@ -19,18 +19,18 @@ func (c *HCVaultSecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string,
 }
 
 func (c *HCVaultSecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
+	// secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
+	secret, err := c.GetSecret("service", "primary-bridge", "ethereum-node")
 	if err != nil {
 		return "", fmt.Errorf("failed to get ethereum node url from the vault: %w", err)
 	}
 
 	if _, ok := secret[environment]; !ok {
 		return "", fmt.Errorf(
-			"secret for the %s ethereum node is missing under the %s/%s/%s vault secret",
-			environment,
+			"secret for the ethereum rpc is missing under the %s/%s/%s vault secret",
 			serviceVaultRoot,
+			bridge.String(),
 			"ethereum-node",
-			environment,
 		)
 	}
 
@@ -45,6 +45,8 @@ func (c *HCVaultSecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string,
 	return secret["apikey"].(string), nil
 }
 
+// primary-bridge/ethereum-node
+// service/primary-bridge/ethereum-node
 func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, "digitalocean")
 	if err != nil {
