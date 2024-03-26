@@ -55,6 +55,7 @@ This proposal requests to list LINK/USDT-231231 as a market with USDT as a settl
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
+						TickSize: "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "LINK/USDT Mainnet Copy",
 							Code: "LINK/USDT-MAINNET",

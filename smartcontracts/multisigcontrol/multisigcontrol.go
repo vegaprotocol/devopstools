@@ -1,6 +1,8 @@
 package multisigcontrol
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 
 	MultisigControl_V1 "github.com/vegaprotocol/devopstools/smartcontracts/multisigcontrol/v1"
@@ -66,6 +68,90 @@ func NewMultisigControl(
 		}
 		result.MultisigControlCommon = result.v2
 		result.MultisigControlNewInV2 = result.v2
+	}
+
+	return result, nil
+}
+
+func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, error) {
+	latestBlockNumber, err := m.client.BlockNumber(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest block number: %w", err)
+	}
+
+	signerCounter := map[common.Address]int{}
+
+	// Increase counter with every addition
+	switch m.Version {
+	case MultisigControlV1:
+		addedIterator, err := m.v1.FilterSignerAdded(&bind.FilterOpts{
+			Start:   0,
+			End:     &latestBlockNumber,
+			Context: ctx,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Added events, %w", err)
+		}
+		for addedIterator.Next() {
+			signerCounter[addedIterator.Event.NewSigner] += 1
+		}
+	case MultisigControlV2:
+		addedIterator, err := m.v2.FilterSignerAdded(&bind.FilterOpts{
+			Start:   0,
+			End:     &latestBlockNumber,
+			Context: ctx,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Added events, %w", err)
+		}
+		for addedIterator.Next() {
+			signerCounter[addedIterator.Event.NewSigner] += 1
+		}
+	default:
+		return nil, fmt.Errorf("version '%s' is not supported", m.Version)
+	}
+
+	// Decrease counter with every removal
+	switch m.Version {
+	case MultisigControlV1:
+		removedIterator, err := m.v1.FilterSignerRemoved(&bind.FilterOpts{
+			Start:   0,
+			End:     &latestBlockNumber,
+			Context: ctx,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Removed events, %w", err)
+		}
+		for removedIterator.Next() {
+			signerCounter[removedIterator.Event.OldSigner] -= 1
+		}
+	case MultisigControlV2:
+		removedIterator, err := m.v2.FilterSignerRemoved(&bind.FilterOpts{
+			Start:   0,
+			End:     &latestBlockNumber,
+			Context: ctx,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Removed events, %w", err)
+		}
+		for removedIterator.Next() {
+			signerCounter[removedIterator.Event.OldSigner] -= 1
+		}
+	default:
+		return nil, fmt.Errorf("version '%s' is not supported", m.Version)
+	}
+
+	result := []common.Address{}
+
+	for signerAddress, counter := range signerCounter {
+		if counter == 1 {
+			result = append(result, signerAddress)
+		} else if counter != 0 {
+			return nil, fmt.Errorf(
+				"failed to get signers, counter for '%s' signer is '%d'; it should be 0 or 1",
+				signerAddress, counter,
+			)
+		}
 	}
 
 	return result, nil

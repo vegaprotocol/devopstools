@@ -2,6 +2,7 @@ package main
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+	"github.com/vegaprotocol/devopstools/cmd/asset"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
@@ -13,6 +14,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/market"
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/ops"
+	"github.com/vegaprotocol/devopstools/cmd/parties"
 	"github.com/vegaprotocol/devopstools/cmd/party"
 	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/cmd/script"
@@ -33,6 +35,7 @@ func init() {
 	rootCmd.RootCmd.AddCommand(network.NetworkCmd)
 	rootCmd.RootCmd.AddCommand(live.LiveCmd)
 	rootCmd.RootCmd.AddCommand(secrets.SecretsCmd)
+	rootCmd.RootCmd.AddCommand(parties.Cmd)
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(bots.Cmd)
@@ -49,4 +52,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(bot.BotCmd)
 	rootCmd.RootCmd.AddCommand(incentive.IncentiveCmd)
 	rootCmd.RootCmd.AddCommand(batch.BatchCmd)
+	rootCmd.RootCmd.AddCommand(asset.Cmd)
 }

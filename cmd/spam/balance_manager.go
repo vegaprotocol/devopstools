@@ -29,7 +29,7 @@ type AssetPartyPair struct {
 }
 
 func (pair AssetPartyPair) String() string {
-	return fmt.Sprintf(`{"AssetId": "%s", "PartyId": "%s"`, pair.assetId, pair.partyId)
+	return fmt.Sprintf(`{"AssetID": "%s", "PartyId": "%s"`, pair.assetId, pair.partyId)
 }
 
 func NewAssetPartyPair(assetId, partyId string) AssetPartyPair {

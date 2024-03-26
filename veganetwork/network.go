@@ -200,25 +200,28 @@ func (n *VegaNetwork) RefreshNetworkParams() error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve secondary ethereum config from network parameters: %w", err)
 	}
-	n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.SecondaryEthereumConfig.ChainId)
-	if err != nil {
-		return fmt.Errorf("could not resolve secondary ethereum network name from chain ID: %w", err)
-	}
-	n.SecondaryEthClient, err = n.SecondaryEthClientManager.GetEthClient(n.SecondaryEthNetwork)
-	if err != nil {
-		return fmt.Errorf("could not create secondary ethereum client: %w", err)
-	}
-	n.SecondarySmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
-		n.SecondaryEthClient,
-		"", // will be taken from Staking Bridge
-		"", // will be taken from ERC20 Bridge
-		n.SecondaryEthereumConfig.CollateralBridgeContract.Address,
-		n.SecondaryEthereumConfig.MultisigControlContract.Address,
-		"",
-		n.logger.Named("secondary-smart-contracts"),
-	)
-	if err != nil {
-		return fmt.Errorf("could not create secondary smart contract connector: %w", err)
+
+	if len(n.SecondaryEthereumConfig.ChainId) > 0 {
+		n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.SecondaryEthereumConfig.ChainId)
+		if err != nil {
+			return fmt.Errorf("could not resolve secondary ethereum network name from chain ID: %w", err)
+		}
+		n.SecondaryEthClient, err = n.SecondaryEthClientManager.GetEthClient(n.SecondaryEthNetwork)
+		if err != nil {
+			return fmt.Errorf("could not create secondary ethereum client: %w", err)
+		}
+		n.SecondarySmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
+			n.SecondaryEthClient,
+			"", // will be taken from Staking Bridge
+			"", // will be taken from ERC20 Bridge
+			n.SecondaryEthereumConfig.CollateralBridgeContract.Address,
+			n.SecondaryEthereumConfig.MultisigControlContract.Address,
+			"",
+			n.logger.Named("secondary-smart-contracts"),
+		)
+		if err != nil {
+			return fmt.Errorf("could not create secondary smart contract connector: %w", err)
+		}
 	}
 	return nil
 }

@@ -73,6 +73,7 @@ func NewMainnetSimulationSNXUSDTPerp(
 						PositionDecimalPlaces:   1,
 						LinearSlippageFactor:    "0.001",
 						QuadraticSlippageFactor: "0.0",
+						TickSize:                "1",
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "SNX/USDT-Perp",
 							Code: "SNX/USDT-PERP",

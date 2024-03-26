@@ -53,7 +53,7 @@ func NewVegaNetworkSmartContracts(
 	}
 
 	// Staking Bridge
-	if len(stakingBridgeHexAddress) == 0 {
+	if len(stakingBridgeHexAddress) > 0 {
 		result.StakingBridge, err = stakingbridge.NewStakingBridge(result.EthClient, stakingBridgeHexAddress, stakingbridge.StakingBridgeV1)
 		if err != nil {
 			return nil, fmt.Errorf(errMsg, err)

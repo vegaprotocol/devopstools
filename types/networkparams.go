@@ -55,7 +55,9 @@ func (p *NetworkParams) GetSecondaryEthereumConfig() (*vega.SecondaryEthereumCon
 	param := netparams.BlockchainsSecondaryEthereumConfig
 	val, ok := p.Params[param]
 	if !ok {
-		return nil, fmt.Errorf("failed to get EthereumConfig, missing '%s' network parameter", param)
+		return &vega.SecondaryEthereumConfig{}, nil
+		// We do not want to have an error to keep backward compatibility
+		// return nil, fmt.Errorf("failed to get EthereumConfig, missing '%s' network parameter", param)
 	}
 	result := &vega.SecondaryEthereumConfig{}
 	if err := json.Unmarshal([]byte(val), result); err != nil {
