@@ -10,7 +10,7 @@ import (
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 )
 
-func (n *CoreClient) DepositBuiltinAsset(
+func (n *Client) DepositBuiltinAsset(
 	vegaAssetId string,
 	partyId string,
 	amount string,
@@ -51,7 +51,7 @@ func (n *CoreClient) DepositBuiltinAsset(
 	return resp.Success, nil
 }
 
-func (n *CoreClient) DepositERC20Asset(
+func (n *Client) DepositERC20Asset(
 	vegaAssetId string,
 	sourceEthereumAddress string,
 	targetPartyId string,

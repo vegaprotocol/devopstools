@@ -5,10 +5,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -94,21 +92,4 @@ func GetNextTransactionData(ethClient *ethclient.Client) (*TransactionData, erro
 	result.gasFeeCap = new(big.Int).Add(suggestedGasPrice.Mul(suggestedGasPrice, big.NewInt(2)), result.gasTipCap)
 
 	return result, nil
-}
-
-func WaitForTransaction(
-	ethClient *ethclient.Client,
-	tx *types.Transaction,
-	timeout time.Duration,
-) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	receipt, err := bind.WaitMined(ctx, ethClient, tx)
-	if err != nil {
-		return fmt.Errorf("transaction failed to mint, %w", err)
-	}
-	if receipt.Status != 1 {
-		return fmt.Errorf("Ethereum transaction failed %+v", receipt)
-	}
-	return nil
 }

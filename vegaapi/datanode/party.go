@@ -104,32 +104,28 @@ type AccountFunds struct {
 	AssetId     string
 }
 
-func (n *DataNode) GetFunds(partyID string, accountType vega.AccountType, assetId *string) ([]AccountFunds, error) {
-	if n == nil {
-		return nil, fmt.Errorf("data node object not constructed: %w", e.ErrNil)
-	}
-
+func (n *DataNode) ListAccounts(ctx context.Context, partyID string, accountType vega.AccountType, assetID *string) ([]AccountFunds, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		return nil, fmt.Errorf("data node rpc connection not ready: %w", e.ErrConnectionNotReady)
+		return nil, e.ErrConnectionNotReady
 	}
 
-	assetIdFilter := ""
-	if assetId != nil {
-		assetIdFilter = *assetId
+	assetIDFilter := ""
+	if assetID != nil {
+		assetIDFilter = *assetID
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	requestCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
-	response, err := c.ListAccounts(ctx, &dataapipb.ListAccountsRequest{
+	response, err := c.ListAccounts(requestCtx, &dataapipb.ListAccountsRequest{
 		Filter: &dataapipb.AccountFilter{
 			PartyIds:     []string{partyID},
 			AccountTypes: []vega.AccountType{accountType},
-			AssetId:      assetIdFilter,
+			AssetId:      assetIDFilter,
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list accounts: %w", err)
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
 	results := []AccountFunds{}

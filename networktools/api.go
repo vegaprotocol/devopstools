@@ -18,7 +18,7 @@ func (network *NetworkTools) GetVegaCoreClient() (vegaapi.VegaCoreClient, error)
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy Vega Core GRPC endpoint for '%s'", network.Name)
 	}
-	node := core.NewCoreClient(addresses, 3*time.Second, network.logger)
+	node := core.NewClient(addresses, 3*time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -44,7 +44,7 @@ func (network *NetworkTools) GetVegaCoreClientForNode(nodeId string) (vegaapi.Ve
 	if len(host) == 0 {
 		return nil, fmt.Errorf("host '%s' is not healthy in '%s' network", nodeId, network.Name)
 	}
-	node := core.NewCoreClient([]string{host}, 3*time.Second, network.logger)
+	node := core.NewClient([]string{host}, 3*time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -60,7 +60,7 @@ func (network *NetworkTools) GetDataNodeClient() (vegaapi.DataNodeClient, error)
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("there is no single healthy Data-Node GRPC endpoint for '%s'", network.Name)
 	}
-	node := datanode.NewDataNode(addresses, 3*time.Second, network.logger)
+	node := datanode.New(addresses, 3*time.Second, network.logger)
 
 	network.logger.Debug("Attempting to connect to Vega gRPC node...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)

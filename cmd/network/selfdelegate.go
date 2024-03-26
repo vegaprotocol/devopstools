@@ -1,12 +1,14 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/wallet"
@@ -112,7 +114,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	requiredTokensTotal := ethutils.VegaTokenFromFullTokens(humanMissingStakeTotal)
 	if minterTokenBalance.Cmp(requiredTokensTotal) < 0 {
 		diff := new(big.Int).Sub(requiredTokensTotal, minterTokenBalance)
-		opts := minterWallet.GetTransactOpts()
+		opts := minterWallet.GetTransactOpts(context.Background())
 		logger.Info("minting Vega Token", zap.String("amount", diff.String()), zap.String("token", vegaTokenInfo.Name),
 			zap.String("ethWallet", minterWallet.Address.Hex()),
 			zap.String("balanceBefore", minterTokenBalance.String()),
@@ -137,7 +139,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	}
 	if minterTokenAllowance.Cmp(requiredTokensTotal) < 0 {
 		diff := new(big.Int).Sub(requiredTokensTotal, minterTokenAllowance)
-		opts := minterWallet.GetTransactOpts()
+		opts := minterWallet.GetTransactOpts(context.Background())
 		logger.Info("increasing allowance", zap.String("amount", diff.String()), zap.String("token", vegaTokenInfo.Name),
 			zap.String("ethWallet", minterWallet.Address.Hex()),
 			zap.String("allowanceBefore", minterTokenAllowance.String()),
@@ -156,7 +158,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	}
 	// wait
 	if mintTx != nil {
-		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, mintTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, mintTx, time.Minute); err != nil {
 			logger.Error("failed to mint", zap.String("token", vegaTokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mints: %w", err)
 		}
@@ -164,7 +166,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()))
 	}
 	if allowanceTx != nil {
-		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", minterWallet.Address.Hex()),
 				zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -183,7 +185,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		var (
 			node        = network.NodeSecrets[name]
 			stakeAmount = ethutils.VegaTokenFromFullTokens(humanStakeAmount)
-			opts        = minterWallet.GetTransactOpts()
+			opts        = minterWallet.GetTransactOpts(context.Background())
 		)
 		logger.Info("staking to node", zap.String("node", name), zap.String("vegaPubKey", node.VegaPubKey),
 			zap.String("amount", humanStakeAmount.String()), zap.String("stakingBridgeAddress", stakingBridge.Address.Hex()))
@@ -201,7 +203,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.PrimaryEthClient, tx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, tx, time.Minute); err != nil {
 			stakeFailureCount += 1
 			logger.Error("failed to stake", zap.String("node", name),
 				zap.Any("tx", tx), zap.Error(err))

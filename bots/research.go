@@ -1,6 +1,7 @@
 package bots
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -10,7 +11,7 @@ import (
 const LeaderWalletIndex = 0
 
 type ResearchBot struct {
-	BotTrader
+	TradingBot
 	WalletData struct {
 		Index          int64   `json:"index"`
 		PublicKey      string  `json:"publicKey"`
@@ -31,7 +32,7 @@ func GetResearchBots(
 	var payload struct {
 		Traders map[string]ResearchBot `json:"traders"`
 	}
-	err := getBots(botsURL, botsAPIToken, &payload)
+	err := getBots(context.Background(), botsURL, botsAPIToken, &payload)
 	if err != nil {
 		return nil, err
 	}
