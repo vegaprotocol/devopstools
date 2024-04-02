@@ -3,15 +3,15 @@ package erc20token
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	ERC20Token_IERC20 "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/IERC20"
 	ERC20Token_TokenBase "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenBase"
 	ERC20Token_TokenOld "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOld"
 	ERC20Token_TokenOther "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOther"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 //

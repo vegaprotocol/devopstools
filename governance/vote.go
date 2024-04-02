@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/wallet"
+
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
+
 	"go.uber.org/zap"
 )
 

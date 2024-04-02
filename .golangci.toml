@@ -1,0 +1,42 @@
+[run]
+allow-parallel-runners = true
+print-linter-name = true
+timeout = '15m0s'
+
+[issues]
+max-issues-per-linter = 0
+max-same-issues = 0
+
+[linters]
+disable-all = true
+enable = [
+    "exhaustive",
+    "gofumpt",
+    "govet",
+    "gci",
+    "ineffassign",
+    "staticcheck",
+    "unconvert",
+    "unparam",
+    "unused",
+    "wastedassign",
+    "whitespace",
+]
+
+[linters-settings.gci]
+custom-order = true
+sections = [
+    "standard", # Standard section: captures all standard packages.
+    "prefix(github.com/vegaprotocol/devopstools)", # Custom section: groups all imports with the specified Prefix.
+    "prefix(code.vegaprotocol.io/vega)", # Custom section: groups all imports with the specified Prefix.
+    "default", # Default section: contains all imports that could not be matched to another section type.
+    "blank", # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
+    "dot",
+]
+
+# protoc doesn't want us copying protobuf messages because they can have some internal state
+# that shouldn't be copied; but we do it a lot. see below for details
+# https://stackoverflow.com/questions/64183794/why-do-the-go-generated-protobuf-files-contain-mutex-locks
+[[issues.exclude-rules]]
+linters = ["govet"]
+text = "impl.MessageState contains sync.Mutex"

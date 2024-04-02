@@ -7,16 +7,17 @@ import (
 	"sync"
 	"time"
 
-	"code.vegaprotocol.io/vega/protos/vega"
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/spf13/cobra"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/wallet"
+
+	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
@@ -175,9 +176,9 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	//
 	// Stake to nodes
 	//
-	var (
-		stakeTxs = map[string]*ethTypes.Transaction{}
-	)
+
+	stakeTxs := map[string]*ethTypes.Transaction{}
+
 	for name, humanStakeAmount := range humanMissingStake {
 		var (
 			node        = network.NodeSecrets[name]
@@ -219,14 +220,9 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	if err != nil {
 		return err
 	}
-	statistics, err := network.DataNodeClient.Statistics()
-	if err != nil {
-		return err
-	}
 
 	resultsChannel := make(chan error, len(network.ValidatorsById))
 	var wg sync.WaitGroup
-	//for id, validator := range network.ValidatorsById {
 	for name, nodeSecrets := range network.NodeSecrets {
 		validator, isValidator := network.ValidatorsById[nodeSecrets.VegaId]
 		if !isValidator {
@@ -250,11 +246,11 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			logger.Warn("party doesn't have visible stake yet - you might need to wait till next epoch", zap.String("node", name),
 				zap.String("partyTotalStake", partyTotalStake.String()))
 			// TODO: write wait functionality
-			//continue
+			// continue
 		}
 
 		wg.Add(1)
-		go func(name string, validator *vega.Node, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, chainID string, hasVisibleStake bool) {
+		go func(name string, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, hasVisibleStake bool) {
 			defer wg.Done()
 			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
 				Id:             nodeSecrets.VegaId,
@@ -312,7 +308,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					return
 				}
 			}
-		}(name, validator, nodeSecrets, lastBlockData, statistics.Statistics.ChainId, partyTotalStake.Cmp(minValidatorStake) >= 0)
+		}(name, nodeSecrets, lastBlockData, partyTotalStake.Cmp(minValidatorStake) >= 0)
 	}
 	wg.Wait()
 	close(resultsChannel)

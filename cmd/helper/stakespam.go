@@ -8,16 +8,16 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge"
+	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
+	"github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
-
-	"github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge"
-	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
-	"github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge"
 )
 
 type StakeSpamArgs struct {
@@ -98,7 +98,10 @@ func increaseAllowance(client *ethclient.Client, fromAddress common.Address, pri
 		return fmt.Errorf("erc20 token instance is invalid")
 	}
 
-	auth := bind.NewKeyedTransactor(privateKey)
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, nil)
+	if err != nil {
+		return err
+	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)     // in wei
 	auth.GasLimit = uint64(300000) // in units
@@ -199,7 +202,6 @@ func executeSpam(client *ethclient.Client,
 	collateralBridgeAddress string,
 	stakingBridgeAddress string,
 ) error {
-
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get pending nonce: %w", err)
@@ -210,7 +212,10 @@ func executeSpam(client *ethclient.Client,
 		return fmt.Errorf("failed to get suggested gas price: %w", err)
 	}
 
-	auth := bind.NewKeyedTransactor(privateKey)
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, nil)
+	if err != nil {
+		return err
+	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)     // in wei
 	auth.GasLimit = uint64(300000) // in units

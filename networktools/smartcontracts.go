@@ -9,9 +9,7 @@ import (
 )
 
 func (network *NetworkTools) GetEthNetwork() (types.ETHNetwork, error) {
-	var (
-		errMsg = fmt.Sprintf("failed to get Eth Network for %s network", network.Name)
-	)
+	errMsg := fmt.Sprintf("failed to get Eth Network for %s network", network.Name)
 	params, err := network.GetNetworkParams()
 	if err != nil {
 		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
@@ -30,9 +28,7 @@ func (network *NetworkTools) GetEthNetwork() (types.ETHNetwork, error) {
 func (network *NetworkTools) GetSmartContracts(
 	ethClientManager *ethutils.EthereumClientManager,
 ) (*veganetworksmartcontracts.VegaNetworkSmartContracts, error) {
-	var (
-		errMsg = fmt.Sprintf("failed to get Smart Contracts for %s network", network.Name)
-	)
+	errMsg := fmt.Sprintf("failed to get Smart Contracts for %s network", network.Name)
 	params, err := network.GetNetworkParams()
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)

@@ -132,7 +132,7 @@ func SubscribeToEvents(endpoints []RPCEndpoint) {
 			evtNoPerBlock := make(map[uint64]int)
 			for _, vLog := range logs {
 				evtNoPerBlock[vLog.BlockNumber] += 1
-				//fmt.Printf("%s: %s: %s\n", time.Now().Format(time.RFC850), endpoint.URL, vLog.TxHash)
+				// fmt.Printf("%s: %s: %s\n", time.Now().Format(time.RFC850), endpoint.URL, vLog.TxHash)
 			}
 
 			sortedBlocks := make([]uint64, 0, len(evtNoPerBlock))

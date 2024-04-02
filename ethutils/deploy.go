@@ -16,7 +16,6 @@ func ConfirmContractDeployed(
 	address common.Address,
 ) error {
 	_, err := bind.WaitDeployed(ctx, client, tx)
-
 	if err != nil {
 		return fmt.Errorf("failed to deploy Smart Contract, %w", err)
 	}

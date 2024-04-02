@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
-	"google.golang.org/grpc/connectivity"
 
-	e "github.com/vegaprotocol/devopstools/errors"
+	"google.golang.org/grpc/connectivity"
 )
 
 // === CoreService ===

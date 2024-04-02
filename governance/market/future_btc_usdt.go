@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/tools"
+
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	datav1 "code.vegaprotocol.io/vega/protos/vega/data/v1"
-	"github.com/vegaprotocol/devopstools/tools"
 )
 
 const MainnetBTCUSDTMetadataID = "auto:mainnet_btc_usdt"

@@ -7,9 +7,7 @@ import (
 	"net/http"
 )
 
-//
 // API: account -> txlist
-//
 type EtherscanGetTxlistResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
