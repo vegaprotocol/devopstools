@@ -10,13 +10,11 @@ import (
 
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
-	"github.com/vegaprotocol/devopstools/ethutils"
+	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
-	"code.vegaprotocol.io/vega/libs/num"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -28,6 +26,7 @@ type ListArgs struct {
 	VegaAssetID       string
 	LifetimeLimit     string
 	WithdrawThreshold string
+	ChainID           string
 }
 
 var listArgs ListArgs
@@ -52,6 +51,7 @@ func init() {
 	listCmd.PersistentFlags().StringVar(&listArgs.VegaAssetID, "vega-asset-id", "", "Vega asset ID")
 	listCmd.PersistentFlags().StringVar(&listArgs.LifetimeLimit, "lifetime-limit", "", "Asset lifetime limit")
 	listCmd.PersistentFlags().StringVar(&listArgs.WithdrawThreshold, "withdraw-threshold", "", "Asset withdraw threshold")
+	listCmd.PersistentFlags().StringVar(&listArgs.ChainID, "chain-id", "", "Chain on which the contract is located")
 
 	if err := listCmd.MarkPersistentFlagRequired("vega-asset-id"); err != nil {
 		log.Fatalf("%v\n", err)
@@ -65,196 +65,105 @@ func init() {
 	if err := listCmd.MarkPersistentFlagRequired("withdraw-threshold"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
+	if err := listCmd.MarkPersistentFlagRequired("chain-id"); err != nil {
+		log.Fatalf("%v\n", err)
+	}
 }
 
 func RunListAssets(args ListArgs) error {
-	ctx := context.Background()
-
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
-	if err != nil {
-		return fmt.Errorf("failed to create vega network object: %w", err)
-	}
-	defer network.Disconnect()
-
-	// parse Lifetime Limit
-	bigLifetimeLimit, ok := new(big.Int).SetString(args.LifetimeLimit, 10)
+	lifetimeLimit, ok := new(big.Int).SetString(args.LifetimeLimit, 10)
 	if !ok {
 		return fmt.Errorf("failed to parse lifetime limit")
 	}
-	// parse Withdraw Threshold
-	bigWithdrawThreshold, ok := new(big.Int).SetString(args.WithdrawThreshold, 10)
+	withdrawThreshold, ok := new(big.Int).SetString(args.WithdrawThreshold, 10)
 	if !ok {
 		return fmt.Errorf("failed to parse withdraw threshold")
 	}
 
-	// TODO: how should we determine whether we should use primary or secondary bridge ?
-	smartContract := network.PrimarySmartContracts
-	ethClient := network.PrimaryEthClient
-	multisigControl := network.PrimarySmartContracts.MultisigControl
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-	fmt.Printf("Listing %q asset to ERC20 Bridge for %q network... ", args.AssetHexAddress, args.VegaNetworkName)
+	logger := args.Logger.Named("command")
 
-	signersAddresses, err := multisigControl.GetSigners(ctx)
+	cfg, err := config.Load(args.NetworkFile)
+	if err != nil {
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
+	}
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
+
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx)
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+	logger.Debug("Network parameters retrieved")
+
+	chainClient, err := ethereum.NewChainClientForID(ctx, cfg, networkParams, args.ChainID, logger)
+	if err != nil {
+		return fmt.Errorf("could not load chain client: %w", err)
+	}
+
+	signersAddresses, err := chainClient.Signers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get signers addresses from multisig control: %w", err)
 	}
 
-	if len(signersAddresses) == 0 {
-		return fmt.Errorf("no signers found for network %q", network.Network)
-	}
-
-	signersWallets := []*ethereum.EthWallet{}
-	for _, node := range network.NodeSecrets {
-		contained := slices.ContainsFunc(signersAddresses, func(address common.Address) bool {
-			return address.Hex() == node.EthereumAddress
-		})
-		if !contained {
-			continue
-		}
-		signerWallet, err := ethereum.NewWallet(context.Background(), ethClient, config.EthereumWallet{
-			Address:    node.EthereumAddress,
-			Mnemonic:   node.EthereumMnemonic,
-			PrivateKey: node.EthereumPrivateKey,
-		})
-		if err != nil {
-			return err
-		}
-		signersWallets = append(signersWallets, signerWallet)
-	}
-
-	assetIDB32, err := ethutils.VegaPubKeyToByte32(args.VegaAssetID)
+	signersWallets, err := loadSignersWallets(ctx, cfg, signersAddresses, chainClient.EthClient())
 	if err != nil {
 		return err
 	}
 
-	assetSource := common.HexToAddress(args.AssetHexAddress)
-	nonce := num.NewUint(ethutils.TimestampNonce()).BigInt()
-
-	msg, err := listAssetMsg(smartContract.ERC20Bridge.Address, assetSource, assetIDB32, bigLifetimeLimit, bigWithdrawThreshold, nonce)
-	if err != nil {
-		return fmt.Errorf("could not generate message to sign: %w", err)
+	if err := chainClient.ListAsset(ctx, signersWallets, args.VegaAssetID, args.AssetHexAddress, lifetimeLimit, withdrawThreshold); err != nil {
+		return fmt.Errorf("failed to list asset: %w", err)
 	}
 
-	signatures, err := generateMultiSignature(signersWallets, msg)
-	if err != nil {
-		return fmt.Errorf("could not generate signatures: %w", err)
-	}
-
-	opts := network.NetworkMainWallet.GetTransactOpts(context.Background())
-	tx, err := smartContract.ERC20Bridge.ListAsset(opts, assetSource, assetIDB32, bigLifetimeLimit, bigWithdrawThreshold, nonce, signatures)
-	if err != nil {
-		return err
-	}
-
-	if err = ethereum.WaitForTransaction(context.Background(), ethClient, tx, time.Minute); err != nil {
-		return err
-	}
-
-	fmt.Printf("Success!\n")
+	logger.Info("Asset listed successfully",
+		zap.String("asset-id", args.VegaAssetID),
+		zap.String("asset-contract-address", args.AssetHexAddress),
+	)
 
 	return nil
 }
 
-func generateMultiSignature(signers []*ethereum.EthWallet, msg []byte) ([]byte, error) {
-	hash := crypto.Keccak256(msg)
-
-	signatures := []byte{}
-	for _, signerKey := range signers {
-		signature, err := signerKey.Sign(hash)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign hash: %w", err)
+func loadSignersWallets(ctx context.Context, cfg config.Config, signersAddresses []common.Address, ethClient *ethclient.Client) ([]*ethereum.Wallet, error) {
+	signersWallets := []*ethereum.Wallet{}
+	for _, node := range cfg.Nodes {
+		if !slices.ContainsFunc(signersAddresses, func(address common.Address) bool {
+			return address.Hex() == node.Secrets.EthereumAddress
+		}) {
+			continue
 		}
 
-		signatures = append(signatures, signature...)
+		signerWallet, err := ethereum.NewWallet(ctx, ethClient, config.EthereumWallet{
+			Address:    node.Secrets.EthereumAddress,
+			Mnemonic:   node.Secrets.EthereumMnemonic,
+			PrivateKey: node.Secrets.EthereumPrivateKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		signersWallets = append(signersWallets, signerWallet)
 	}
-	return signatures, nil
-}
-
-func listAssetMsg(bridgeAddr common.Address, tokenAddress common.Address, assetIDB32 [32]byte, lifetimeLimit *big.Int, withdrawThreshold *big.Int, nonce *big.Int) ([]byte, error) {
-	typAddr, err := abi.NewType("address", "", nil)
-	if err != nil {
-		return nil, err
-	}
-	typBytes32, err := abi.NewType("bytes32", "", nil)
-	if err != nil {
-		return nil, err
-	}
-	typString, err := abi.NewType("string", "", nil)
-	if err != nil {
-		return nil, err
-	}
-	typU256, err := abi.NewType("uint256", "", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	args := abi.Arguments([]abi.Argument{
-		{
-			Name: "address",
-			Type: typAddr,
-		},
-		{
-			Name: "vega_asset_id",
-			Type: typBytes32,
-		},
-		{
-			Name: "lifetime_limit",
-			Type: typU256,
-		},
-		{
-			Name: "withdraw_treshold",
-			Type: typU256,
-		},
-		{
-			Name: "nonce",
-			Type: typU256,
-		},
-		{
-			Name: "func_name",
-			Type: typString,
-		},
-	})
-
-	buf, err := args.Pack([]interface{}{
-		tokenAddress,
-		assetIDB32,
-		lifetimeLimit,
-		withdrawThreshold,
-		nonce,
-		"list_asset",
-	}...)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't pack abi message: %w", err)
-	}
-
-	msg, err := packBufAndSubmitter(buf, bridgeAddr)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't pack abi message: %w", err)
-	}
-
-	return msg, nil
-}
-
-func packBufAndSubmitter(buf []byte, submitter common.Address) ([]byte, error) {
-	typBytes, err := abi.NewType("bytes", "", nil)
-	if err != nil {
-		return nil, err
-	}
-	typAddr, err := abi.NewType("address", "", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	args2 := abi.Arguments([]abi.Argument{
-		{
-			Name: "bytes",
-			Type: typBytes,
-		},
-		{
-			Name: "address",
-			Type: typAddr,
-		},
-	})
-
-	return args2.Pack(buf, submitter)
+	return signersWallets, nil
 }

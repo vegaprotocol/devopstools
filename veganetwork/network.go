@@ -25,8 +25,8 @@ type VegaNetwork struct {
 
 	// wallets
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
-	NetworkMainWallet *ethereum.EthWallet
-	AssetMainWallet   *ethereum.EthWallet
+	NetworkMainWallet *ethereum.Wallet
+	AssetMainWallet   *ethereum.Wallet
 	BotsApiToken      string
 
 	MarketsCreator *secrets.VegaWalletPrivate

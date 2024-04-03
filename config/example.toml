@@ -16,14 +16,14 @@ address = "xxx"
 mnemonic = "xxx xxx xxx"
 private_key = "xxx"
 
-[bridges.secondary]
+[bridges.evm]
 client_url = "https://mainnet.infura.io/v3/xxx"
 
-[bridges.secondary.etherscan]
+[bridges.evm.etherscan]
 rest_url = "https://api.etherscan.io/api"
 api_key = "xxx"
 
-[bridges.secondary.wallets.minter]
+[bridges.evm.wallets.minter]
 address = "xxx"
 mnemonic = "xxx xxx xxx"
 private_key = "xxx"

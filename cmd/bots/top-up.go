@@ -209,8 +209,8 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 		switch erc20Details.ChainId {
 		case chainClients.PrimaryChain.ID():
 			chainClient = chainClients.PrimaryChain
-		case chainClients.SecondaryChain.ID():
-			chainClient = chainClients.SecondaryChain
+		case chainClients.EVMChain.ID():
+			chainClient = chainClients.EVMChain
 		}
 
 		if err := chainClient.DepositERC20AssetToWhale(ctx, whaleClient.PartyID(), erc20Details.ContractAddress, requiredAmount); err != nil {

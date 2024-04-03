@@ -60,7 +60,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 			Context: ctx,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Added events, %w", err)
+			return nil, fmt.Errorf("failed to filter SignerAdded events: %w", err)
 		}
 		for addedIterator.Next() {
 			signerCounter[addedIterator.Event.NewSigner] += 1
@@ -72,13 +72,13 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 			Context: ctx,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Added events, %w", err)
+			return nil, fmt.Errorf(" failed to filter SignerAdded events: %w", err)
 		}
 		for addedIterator.Next() {
 			signerCounter[addedIterator.Event.NewSigner] += 1
 		}
 	default:
-		return nil, fmt.Errorf("version '%s' is not supported", m.Version)
+		return nil, fmt.Errorf("version %q is not supported", m.Version)
 	}
 
 	// Decrease counter with every removal
@@ -90,7 +90,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 			Context: ctx,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Removed events, %w", err)
+			return nil, fmt.Errorf("failed to filter SignerRemoved events: %w", err)
 		}
 		for removedIterator.Next() {
 			signerCounter[removedIterator.Event.OldSigner] -= 1
@@ -102,7 +102,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 			Context: ctx,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get signers, failed to Filter Signer Removed events, %w", err)
+			return nil, fmt.Errorf("failed to filter SignerRemoved events: %w", err)
 		}
 		for removedIterator.Next() {
 			signerCounter[removedIterator.Event.OldSigner] -= 1

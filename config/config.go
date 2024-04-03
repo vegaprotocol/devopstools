@@ -29,9 +29,9 @@ type Bridges struct {
 	// staking, and vesting contracts holder.
 	Primary PrimaryBridge `toml:"primary"`
 
-	// Secondary configures the secondary bridge used by the Vega network, acting
+	// EVM configures the EVM bridge used by the Vega network, acting
 	// as secondary collateral, and multisig contracts holder.
-	Secondary SecondaryBridge `toml:"secondary"`
+	EVM EVMBridge `toml:"evm"`
 }
 
 type PrimaryBridge struct {
@@ -40,7 +40,7 @@ type PrimaryBridge struct {
 	Wallets       BridgeWallets `toml:"wallets"`
 }
 
-type SecondaryBridge struct {
+type EVMBridge struct {
 	ClientURL     string        `toml:"client_url"`
 	BlockExplorer Etherscan     `toml:"block_explorer"`
 	Wallets       BridgeWallets `toml:"wallets"`

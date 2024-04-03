@@ -13,11 +13,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func (m *VegaNetworkSmartContracts) TopUpStakeForOne(minterWallet *ethereum.EthWallet, partyPubKey string, amount *big.Int) error {
+func (m *VegaNetworkSmartContracts) TopUpStakeForOne(minterWallet *ethereum.Wallet, partyPubKey string, amount *big.Int) error {
 	return m.TopUpStake(minterWallet, map[string]*big.Int{partyPubKey: amount})
 }
 
-func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *ethereum.EthWallet, requiredStakeByParty map[string]*big.Int) error {
+func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *ethereum.Wallet, requiredStakeByParty map[string]*big.Int) error {
 	vegaTokenInfo, err := m.VegaToken.GetInfo()
 	if err != nil {
 		return fmt.Errorf("failed to get info about Vega Token, %w", err)
@@ -166,7 +166,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *ethereum.EthWallet,
 	return nil
 }
 
-func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *ethereum.EthWallet, partyPubKey string) error {
+func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *ethereum.Wallet, partyPubKey string) error {
 	fmt.Printf("---- m: %v, ethWallet %v", m, ethWallet)
 	currentStake, err := m.StakingBridge.StakeBalance(&bind.CallOpts{}, ethWallet.Address, partyPubKey)
 	if err != nil {

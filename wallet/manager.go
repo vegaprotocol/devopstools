@@ -35,7 +35,7 @@ func NewWalletManager(
 func (wm *WalletManager) GetNetworkMainEthWallet(
 	ethNetwork types.ETHNetwork,
 	vegaNetwork string,
-) (*ethereum.EthWallet, error) {
+) (*ethereum.Wallet, error) {
 	var (
 		secretPath string = fmt.Sprintf("%s/main", vegaNetwork)
 		errMsg            = "failed to get Main Ethereum Wallet for %s network, %w"
@@ -47,7 +47,7 @@ func (wm *WalletManager) GetNetworkMainEthWallet(
 	return ethWallet, nil
 }
 
-func (wm *WalletManager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*ethereum.EthWallet, error) {
+func (wm *WalletManager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*ethereum.Wallet, error) {
 	wallet, err := wm.getEthereumWallet(ethNetwork, "AssetMain")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Asset Main Ethereum Wallet, %w", err)
@@ -55,7 +55,7 @@ func (wm *WalletManager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*et
 	return wallet, nil
 }
 
-func (wm *WalletManager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*ethereum.EthWallet, error) {
+func (wm *WalletManager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*ethereum.Wallet, error) {
 	wallet, err := wm.getEthereumWallet(ethNetwork, "EthWhale")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Ethereum Whale Wallet, %w", err)
@@ -66,7 +66,7 @@ func (wm *WalletManager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*ethere
 func (wm *WalletManager) getEthereumWallet(
 	ethNetwork types.ETHNetwork,
 	secretPath string,
-) (*ethereum.EthWallet, error) {
+) (*ethereum.Wallet, error) {
 	walletPrivate, err := wm.walletSecretStore.GetEthereumWallet(secretPath)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (wm *WalletManager) getEthereumWallet(
 		return nil, err
 	}
 
-	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*ethereum.EthWallet, error) {
+	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*ethereum.Wallet, error) {
 		ethWallet, err := ethereum.NewWallet(context2.Background(), ethClient, config.EthereumWallet{
 			Address:    walletPrivate.Address,
 			Mnemonic:   walletPrivate.Mnemonic,

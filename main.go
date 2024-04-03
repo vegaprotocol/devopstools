@@ -2,6 +2,7 @@ package main
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
+	"github.com/vegaprotocol/devopstools/cmd/asset"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/batch"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
@@ -38,6 +39,7 @@ func init() {
 	rootCmd.RootCmd.AddCommand(party.PartyCmd)
 	rootCmd.RootCmd.AddCommand(script.ScriptCmd)
 	rootCmd.RootCmd.AddCommand(bots.Cmd)
+	rootCmd.RootCmd.AddCommand(asset.Cmd)
 	rootCmd.RootCmd.AddCommand(market.MarketCmd)
 	rootCmd.RootCmd.AddCommand(validator.ValidatorCmd)
 	rootCmd.RootCmd.AddCommand(spam.SpamCmd)
