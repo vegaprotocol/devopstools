@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
@@ -77,12 +76,7 @@ func (wm *WalletManager) getEthereumWallet(
 	}
 
 	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*ethereum.Wallet, error) {
-		ethWallet, err := ethereum.NewWallet(context2.Background(), ethClient, config.EthereumWallet{
-			Address:    walletPrivate.Address,
-			Mnemonic:   walletPrivate.Mnemonic,
-			PrivateKey: walletPrivate.PrivateKey,
-			Seed:       walletPrivate.Seed,
-		})
+		ethWallet, err := ethereum.NewWallet(context2.Background(), ethClient, walletPrivate.PrivateKey)
 		if err != nil {
 			return nil, err
 		}

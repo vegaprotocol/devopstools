@@ -22,7 +22,7 @@ import (
 
 type ListArgs struct {
 	*Args
-	AssetHexAddress   string
+	ERC20TokenAddress string
 	VegaAssetID       string
 	LifetimeLimit     string
 	WithdrawThreshold string
@@ -47,7 +47,7 @@ func init() {
 	listArgs.Args = &args
 
 	Cmd.AddCommand(listCmd)
-	listCmd.PersistentFlags().StringVar(&listArgs.AssetHexAddress, "address", "", "Asset Hex Address")
+	listCmd.PersistentFlags().StringVar(&listArgs.ERC20TokenAddress, "erc20-token-address", "", "Asset Hex Address")
 	listCmd.PersistentFlags().StringVar(&listArgs.VegaAssetID, "vega-asset-id", "", "Vega asset ID")
 	listCmd.PersistentFlags().StringVar(&listArgs.LifetimeLimit, "lifetime-limit", "", "Asset lifetime limit")
 	listCmd.PersistentFlags().StringVar(&listArgs.WithdrawThreshold, "withdraw-threshold", "", "Asset withdraw threshold")
@@ -56,7 +56,7 @@ func init() {
 	if err := listCmd.MarkPersistentFlagRequired("vega-asset-id"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	if err := listCmd.MarkPersistentFlagRequired("address"); err != nil {
+	if err := listCmd.MarkPersistentFlagRequired("erc20-token-address"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	if err := listCmd.MarkPersistentFlagRequired("lifetime-limit"); err != nil {
@@ -134,13 +134,13 @@ func RunListAssets(args ListArgs) error {
 		return err
 	}
 
-	if err := chainClient.ListAsset(ctx, signersWallets, args.VegaAssetID, args.AssetHexAddress, lifetimeLimit, withdrawThreshold); err != nil {
+	if err := chainClient.ListAsset(ctx, signersWallets, args.VegaAssetID, args.ERC20TokenAddress, lifetimeLimit, withdrawThreshold); err != nil {
 		return fmt.Errorf("failed to list asset: %w", err)
 	}
 
 	logger.Info("Asset listed successfully",
 		zap.String("asset-id", args.VegaAssetID),
-		zap.String("asset-contract-address", args.AssetHexAddress),
+		zap.String("asset-contract-address", args.ERC20TokenAddress),
 	)
 
 	return nil
@@ -155,11 +155,7 @@ func loadSignersWallets(ctx context.Context, cfg config.Config, signersAddresses
 			continue
 		}
 
-		signerWallet, err := ethereum.NewWallet(ctx, ethClient, config.EthereumWallet{
-			Address:    node.Secrets.EthereumAddress,
-			Mnemonic:   node.Secrets.EthereumMnemonic,
-			PrivateKey: node.Secrets.EthereumPrivateKey,
-		})
+		signerWallet, err := ethereum.NewWallet(ctx, ethClient, node.Secrets.EthereumPrivateKey)
 		if err != nil {
 			return nil, err
 		}

@@ -2,6 +2,7 @@ package datanode
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	e "github.com/vegaprotocol/devopstools/errors"
@@ -12,6 +13,8 @@ import (
 
 	"google.golang.org/grpc/connectivity"
 )
+
+var ErrAssetNotFound = errors.New("asset not found")
 
 func (n *DataNode) GetAllNetworkParameters() (*types.NetworkParams, error) {
 	res, err := n.ListNetworkParameters(&dataapipb.ListNetworkParametersRequest{})
@@ -44,6 +47,25 @@ func (n *DataNode) ListAssets(ctx context.Context) (map[string]*vega.AssetDetail
 		assets[edge.Node.Id] = edge.Node.Details
 	}
 	return assets, nil
+}
+
+func (n *DataNode) ERC20AssetWithAddress(ctx context.Context, address string) (*vega.AssetDetails, *vega.ERC20, error) {
+	assets, err := n.ListAssets(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, asset := range assets {
+		erc20Token := asset.GetErc20()
+		if erc20Token == nil {
+			continue
+		}
+		if erc20Token.ContractAddress == address {
+			return asset, erc20Token, nil
+		}
+	}
+
+	return nil, nil, ErrAssetNotFound
 }
 
 func (n *DataNode) ListNetworkParameters(req *dataapipb.ListNetworkParametersRequest) (response *dataapipb.ListNetworkParametersResponse, err error) {

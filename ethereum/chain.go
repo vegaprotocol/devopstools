@@ -114,7 +114,7 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 	}
 
 	minterWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*Wallet, error) {
-		w, err := NewWallet(ctx, client, cfg.Wallets.Minter)
+		w, err := NewWallet(ctx, client, cfg.Wallets.Minter.PrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize Ethereum wallet: %w", err)
 		}
@@ -148,7 +148,7 @@ func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *veg
 	}
 
 	minterWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*Wallet, error) {
-		w, err := NewWallet(ctx, client, cfg.Wallets.Minter)
+		w, err := NewWallet(ctx, client, cfg.Wallets.Minter.PrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize Ethereum wallet: %w", err)
 		}

@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethutils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -37,13 +36,21 @@ func (w *Wallet) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(data, w.privateKey)
 }
 
-func NewWallet(ctx context.Context, ethClient *ethclient.Client, cfg config.EthereumWallet) (*Wallet, error) {
-	nonce, err := ethClient.NonceAt(ctx, common.HexToAddress(cfg.Address), nil)
+func NewWallet(ctx context.Context, ethClient *ethclient.Client, privateHexKey string) (*Wallet, error) {
+	privateKey, err := crypto.HexToECDSA(privateHexKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode private key from hex: %w", err)
+	}
+
+	publicKey := privateKey.Public().(*ecdsa.PublicKey)
+	address := crypto.PubkeyToAddress(*publicKey)
+
+	nonce, err := ethClient.NonceAt(ctx, address, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account's nonce: %w", err)
 	}
 
-	pendingNonce, err := ethClient.PendingNonceAt(ctx, common.HexToAddress(cfg.Address))
+	pendingNonce, err := ethClient.PendingNonceAt(ctx, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrive pending account's nonce: %w", err)
 	}
@@ -52,18 +59,13 @@ func NewWallet(ctx context.Context, ethClient *ethclient.Client, cfg config.Ethe
 		return nil, fmt.Errorf("account's nonce (%d) mismatches account's pending nonce (%d), wallet might already be in use", nonce, pendingNonce)
 	}
 
-	privateKey, err := crypto.HexToECDSA(cfg.PrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse private key to ECDSA: %w", err)
-	}
-
-	transactOpts, err := ethutils.GetTransactOpts(ethClient, privateKey)
+	transactOpts, err := ethutils.GetTransactOpts(ctx, ethClient, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-loaded trasaction options: %w", err)
 	}
 
 	return &Wallet{
-		Address:            common.HexToAddress(cfg.Address),
+		Address:            address,
 		nonce:              nonce,
 		privateKey:         privateKey,
 		cachedTransactOpts: transactOpts,

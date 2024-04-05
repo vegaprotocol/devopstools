@@ -213,7 +213,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 			chainClient = chainClients.EVMChain
 		}
 
-		if err := chainClient.DepositERC20AssetToWhale(ctx, whaleClient.PartyID(), erc20Details.ContractAddress, requiredAmount); err != nil {
+		if err := chainClient.DepositERC20AssetFromMinter(ctx, erc20Details.ContractAddress, whaleClient.PartyID(), requiredAmount); err != nil {
 			return fmt.Errorf("failed to deposit asset %q on whale %s: %w", asset.Name, whaleClient.PartyID(), err)
 		}
 

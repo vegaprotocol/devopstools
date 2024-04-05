@@ -2,23 +2,20 @@ package parties
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/smartcontracts/communitytoken"
-	"github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge"
+	"github.com/vegaprotocol/devopstools/config"
+	"github.com/vegaprotocol/devopstools/ethereum"
+	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
 	vgfs "code.vegaprotocol.io/vega/libs/fs"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/polydawn/refmt/json"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -26,10 +23,9 @@ import (
 
 type DepositArgs struct {
 	*Args
-	EthereumPrivateKey      string
-	ERC20TokenAddress       string
-	CollateralBridgeAddress string
-	DepositsFile            string
+	EthereumPrivateKey string
+	ERC20TokenAddress  string
+	DepositsFile       string
 }
 
 var depositArgs DepositArgs
@@ -52,161 +48,102 @@ func init() {
 	Cmd.AddCommand(depositCmd)
 	depositCmd.PersistentFlags().StringVar(&depositArgs.EthereumPrivateKey, "ethereum-private-key", "", "The ethereum private key, you want to send transactions from")
 	depositCmd.PersistentFlags().StringVar(&depositArgs.ERC20TokenAddress, "erc20-token-address", "", "The ERC20 token address")
-	depositCmd.PersistentFlags().StringVar(&depositArgs.CollateralBridgeAddress, "collateral-bridge-address", "", "The collateral bridge address")
 	depositCmd.PersistentFlags().StringVar(&depositArgs.DepositsFile, "deposits-file", "deposits.json", "Path to the file containing the deposits as JSON: { \"<party>\": \"<amount>\" }")
+
+	if err := depositCmd.MarkPersistentFlagRequired("ethereum-private-key"); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	if err := depositCmd.MarkPersistentFlagRequired("erc20-token-address"); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	if err := depositCmd.MarkPersistentFlagRequired("deposits-file"); err != nil {
+		log.Fatalf("%v\n", err)
+	}
 }
 
 func RunDepositToParties(args DepositArgs) error {
-	ctx := context.Background()
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
+	logger := args.Logger.Named("command")
+
+	cfg, err := config.Load(args.NetworkFile)
 	if err != nil {
-		return fmt.Errorf("failed to create vega network object: %w", err)
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	defer network.Disconnect()
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
 
-	privateKey, err := crypto.HexToECDSA(args.EthereumPrivateKey)
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx)
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
 	if err != nil {
-		return fmt.Errorf("failed to decode private key from hex: %w", err)
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
+	logger.Debug("Network parameters retrieved")
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("failed casting public key to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-
-	// FIXME: On which criteria the selection should be done?
-	ethClient := network.PrimaryEthClient
-
-	nonce, err := ethClient.PendingNonceAt(ctx, fromAddress)
+	asset, erc20details, err := datanodeClient.ERC20AssetWithAddress(ctx, args.ERC20TokenAddress)
 	if err != nil {
-		return fmt.Errorf("failed to get pending nonce: %w", err)
+		return fmt.Errorf("failed to retrieve ERC20 asset with address %q: %w", args.ERC20TokenAddress, err)
 	}
 
-	gasPrice, err := ethClient.SuggestGasPrice(ctx)
+	chainClient, err := ethereum.NewChainClientForID(ctx, cfg, networkParams, erc20details.ChainId, logger)
 	if err != nil {
-		return fmt.Errorf("failed to get suggested gas price: %w", err)
+		return fmt.Errorf("could not load chain client: %w", err)
 	}
 
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, nil)
+	deposits, err := readDepositsFile(args.DepositsFile, asset.Decimals)
 	if err != nil {
-		return err
-	}
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(800000) // in units
-	auth.GasPrice = big.NewInt(0).Mul(gasPrice, big.NewInt(10))
-
-	tokenAddress := common.HexToAddress(args.ERC20TokenAddress)
-
-	communityTokenInstance, err := communitytoken.NewCommunitytoken(tokenAddress, ethClient)
-	if err != nil {
-		return err
-	}
-	symbol, _ := communityTokenInstance.Symbol(&bind.CallOpts{})
-	name, _ := communityTokenInstance.Name(&bind.CallOpts{})
-	fmt.Printf("TokenName: %s\nSymbol: %s\n", name, symbol)
-	fmt.Printf("Approving")
-	_ = communityTokenInstance
-	collateralBridgeAddress := common.HexToAddress(args.CollateralBridgeAddress)
-	tx, err := communityTokenInstance.Approve(auth, collateralBridgeAddress, big.NewInt(0).Mul(big.NewInt(90000000000), big.NewInt(1000000)))
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Waiting for transaction to be minted: %s\n", tx.Hash().String())
-	_, err = bind.WaitMined(ctx, ethClient, tx)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Transaction sent")
-
-	fmt.Printf("Depositing")
-	collateralBridgeInstance, err := erc20bridge.NewERC20Bridge(ethClient, args.CollateralBridgeAddress, erc20bridge.ERC20BridgeV2)
-	if err != nil {
-		return fmt.Errorf("failed to create instance for collateral bridge: %w", err)
+		return fmt.Errorf("failed to parse deposits file at %q: %w", args.DepositsFile, err)
 	}
 
-	nonce, err = ethClient.PendingNonceAt(ctx, fromAddress)
-	if err != nil {
-		return nil
+	if err := chainClient.DepositERC20AssetFromAddress(ctx, args.EthereumPrivateKey, args.ERC20TokenAddress, deposits); err != nil {
+		return fmt.Errorf("failed to deposit asset: %w", err)
 	}
 
-	deposits, err := readDepositsFile(args.DepositsFile)
-	if err != nil {
-		return fmt.Errorf("could not read deposits file at %q: %w", args.DepositsFile, err)
-	}
-
-	initialNonce := nonce
-	transactions := make([]*types.Transaction, 0, len(deposits))
-	for party, amount := range deposits {
-		tx, err := deposit(ctx, party, amount, privateKey, tokenAddress, ethClient, collateralBridgeInstance, initialNonce)
-		if err != nil {
-			return fmt.Errorf("could not desposit asset to party %q: %w", party, err)
-		}
-		transactions = append(transactions, tx)
-		initialNonce = initialNonce + 1
-	}
-
-	for _, tx := range transactions {
-		fmt.Printf("Waiting for transaction to be minted: %s\n", tx.Hash().String())
-		if _, err := bind.WaitMined(ctx, ethClient, tx); err != nil {
-			return err
-		}
-
-		fmt.Println("Transaction sent")
-	}
+	logger.Info("Assets deposited successfully",
+		zap.String("asset-name", asset.Name),
+		zap.String("asset-symbol", asset.Symbol),
+		zap.String("asset-contract-address", args.ERC20TokenAddress),
+	)
 
 	return nil
 }
 
-func deposit(ctx context.Context, partyId string, amount *big.Int, privateKey *ecdsa.PrivateKey, tokenAddress common.Address, client *ethclient.Client, bridgeInstance *erc20bridge.ERC20Bridge, nonce uint64) (*types.Transaction, error) {
-	amount = amount.Mul(amount, big.NewInt(1000000))
-
-	fmt.Printf("Deposit %s assets to party %s\n", amount.String(), partyId)
-
-	gasPrice, err := client.SuggestGasPrice(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, nil)
-	if err != nil {
-		return nil, err
-	}
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(800000) // in units
-	auth.GasPrice = big.NewInt(0).Mul(gasPrice, big.NewInt(10))
-	bytePubKey, err := hex.DecodeString(partyId)
-	if err != nil {
-		return nil, err
-	}
-
-	var party [32]byte
-	copy(party[:], bytePubKey)
-	tx, err := bridgeInstance.DepositAsset(auth, tokenAddress, amount, party)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("Transaction sent: %v\n", tx)
-	time.Sleep(1 * time.Second)
-
-	return tx, nil
-}
-
-func readDepositsFile(path string) (map[string]*big.Int, error) {
-	deposits := map[string]*big.Int{}
+func readDepositsFile(path string, decimals uint64) (map[string]*types.Amount, error) {
+	depositsAsSubUnit := map[string]*big.Int{}
 
 	content, err := vgfs.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file: %w", err)
 	}
 
-	if err := json.Unmarshal(content, &deposits); err != nil {
+	if err := json.Unmarshal(content, &depositsAsSubUnit); err != nil {
 		return nil, fmt.Errorf("could not deserialize content: %w", err)
+	}
+
+	deposits := map[string]*types.Amount{}
+	for partyID, amountAsSubUnit := range depositsAsSubUnit {
+		deposits[partyID] = types.NewAmountFromSubUnit(amountAsSubUnit, decimals)
 	}
 
 	return deposits, nil

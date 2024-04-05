@@ -31,7 +31,7 @@ func TransferEthNoWaitWithNonce(
 ) (*ethTypes.Transaction, error) {
 	errMsg := "failed to send ethereum transaction, %w"
 
-	transactionData, err := GetNextTransactionData(ethClient)
+	transactionData, err := GetNextTransactionData(context.Background(), ethClient)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

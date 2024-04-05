@@ -78,11 +78,7 @@ type ERC20Token struct {
 	v_TokenBase *ERC20Token_TokenBase.TokenBase
 }
 
-func NewERC20Token(
-	ethClient *ethclient.Client,
-	hexAddress string,
-	version ERC20TokenVersion,
-) (*ERC20Token, error) {
+func NewERC20Token(ethClient *ethclient.Client, hexAddress string, version ERC20TokenVersion) (*ERC20Token, error) {
 	var err error
 	result := &ERC20Token{
 		Address: common.HexToAddress(hexAddress),

@@ -10,6 +10,7 @@ import (
 
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
+	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 
 	"code.vegaprotocol.io/vega/libs/num"
@@ -17,36 +18,142 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 )
 
 var ErrNoSignerFound = errors.New("no signer found")
 
-func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID string, assetContractAddress string, requiredAmount *types.Amount) error {
+func (c *ChainClient) DepositERC20AssetFromMinter(ctx context.Context, assetContractHexAddress string, partyID string, requiredAmount *types.Amount) error {
 	flowID := rand.Int()
-
-	token, err := erc20token.NewERC20Token(c.client, assetContractAddress, erc20token.ERC20TokenBase)
-	if err != nil {
-		return fmt.Errorf("could not initialize ERC20 token contract (%s): %w", assetContractAddress, err)
-	}
 
 	requiredAmountAsSubUnit := requiredAmount.AsSubUnit()
 
 	minterHexAddress := c.minterWallet.Address.Hex()
 	bridgeHexAddress := c.collateralBridge.Address.Hex()
 
-	c.logger.Debug("Retrieving minter's balance...", zap.String("address", minterHexAddress))
+	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress, erc20token.ERC20TokenBase)
+	if err != nil {
+		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", assetContractHexAddress, err)
+	}
+
+	if err := c.mintWallet(ctx, flowID, c.minterWallet, token, requiredAmountAsSubUnit, assetContractHexAddress, minterHexAddress, bridgeHexAddress); err != nil {
+		return err
+	}
+
+	whaleKeyB32, err := ethutils.VegaPubKeyToByte32(partyID)
+	if err != nil {
+		return fmt.Errorf("could not convert party ID to byte32: %w", err)
+	}
+
+	c.logger.Debug("Depositing asset...",
+		zap.Int("flow", flowID),
+		zap.String("asset-contract-address", assetContractHexAddress),
+		zap.String("party-id", partyID),
+		zap.String("amount", requiredAmount.String()),
+	)
+
+	depositTx, err := c.collateralBridge.DepositAsset(c.minterWallet.GetTransactOpts(ctx), token.Address, requiredAmountAsSubUnit, whaleKeyB32)
+	if err != nil {
+		return fmt.Errorf("could not send transaction to deposit asset %q to party ID (%s): %w", assetContractHexAddress, partyID, err)
+	}
+
+	if err := WaitForTransaction(ctx, c.client, depositTx, time.Minute); err != nil {
+		return fmt.Errorf("failed to deposit asset %q to party ID (%s): %w", assetContractHexAddress, partyID, err)
+	}
+
+	c.logger.Info("Asset deposit successful",
+		zap.Int("flow", flowID),
+		zap.String("asset-contract-address", assetContractHexAddress),
+		zap.String("minter", minterHexAddress),
+		zap.String("bridge", bridgeHexAddress),
+		zap.String("required-amount", requiredAmountAsSubUnit.String()),
+	)
+
+	return nil
+}
+
+func (c *ChainClient) DepositERC20AssetFromAddress(ctx context.Context, minterPrivateHexKey string, assetContractHexAddress string, deposits map[string]*types.Amount) error {
+	flowID := rand.Int()
+
+	minterWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*Wallet, error) {
+		w, err := NewWallet(ctx, c.client, minterPrivateHexKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize Ethereum wallet: %w", err)
+		}
+		return w, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	minterHexAddress := minterWallet.Address.Hex()
+	bridgeHexAddress := c.collateralBridge.Address.Hex()
+
+	requiredAmountAsSubUnit := big.NewInt(0)
+	for _, amount := range deposits {
+		requiredAmountAsSubUnit.Add(requiredAmountAsSubUnit, amount.AsSubUnit())
+	}
+
+	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress, erc20token.ERC20TokenBase)
+	if err != nil {
+		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", assetContractHexAddress, err)
+	}
+
+	if err := c.mintWallet(ctx, flowID, minterWallet, token, requiredAmountAsSubUnit, assetContractHexAddress, minterHexAddress, bridgeHexAddress); err != nil {
+		return err
+	}
+
+	depositTxs := map[string]*ethtypes.Transaction{}
+	for partyID, amount := range deposits {
+		partyKeyB32, err := ethutils.VegaPubKeyToByte32(partyID)
+		if err != nil {
+			return fmt.Errorf("could not convert party ID to byte32: %w", err)
+		}
+
+		c.logger.Debug("Depositing asset...",
+			zap.Int("flow", flowID),
+			zap.String("asset-contract-address", assetContractHexAddress),
+			zap.String("party-id", partyID),
+			zap.String("amount", amount.String()),
+		)
+
+		depositTx, err := c.collateralBridge.DepositAsset(minterWallet.GetTransactOpts(ctx), token.Address, amount.AsSubUnit(), partyKeyB32)
+		if err != nil {
+			return fmt.Errorf("could not send transaction to deposit asset %q to party ID (%s): %w", assetContractHexAddress, partyID, err)
+		}
+		depositTxs[partyID] = depositTx
+	}
+
+	for partyID, depositTx := range depositTxs {
+		if err := WaitForTransaction(ctx, c.client, depositTx, time.Minute); err != nil {
+			return fmt.Errorf("failed to deposit asset %q to party ID (%s): %w", assetContractHexAddress, partyID, err)
+		}
+	}
+
+	c.logger.Info("Asset deposit successful",
+		zap.Int("flow", flowID),
+		zap.String("asset-contract-address", assetContractHexAddress),
+		zap.String("minter", minterHexAddress),
+		zap.String("bridge", bridgeHexAddress),
+	)
+
+	return nil
+}
+
+func (c *ChainClient) mintWallet(ctx context.Context, flowID int, minterWallet *Wallet, token *erc20token.ERC20Token, requiredAmountAsSubUnit *big.Int, assetContractHexAddress string, minterHexAddress string, bridgeHexAddress string) error {
+	c.logger.Debug("Retrieving wallet's balance...", zap.Int("flow", flowID), zap.String("address", minterHexAddress))
 	balanceAsSubUnit, err := token.BalanceOf(&bind.CallOpts{}, c.minterWallet.Address)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve balance from minter's wallet %s: %w", minterHexAddress, err)
 	}
-	c.logger.Debug("Minter's balance retrieved", zap.String("balance-su", balanceAsSubUnit.String()))
+	c.logger.Debug("Minter's balance retrieved", zap.Int("flow", flowID), zap.String("balance-su", balanceAsSubUnit.String()))
 
 	if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) > -1 {
 		c.logger.Debug("No minting required",
 			zap.Int("flow", flowID),
-			zap.String("asset-contract-address", assetContractAddress),
+			zap.String("asset-contract-address", assetContractHexAddress),
 			zap.String("minter", minterHexAddress),
 			zap.String("current-balance-su", balanceAsSubUnit.String()),
 			zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
@@ -56,7 +163,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 	amountToMintAsSubUnit := new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit)
 	c.logger.Info("Minting required",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("current-balance-su", balanceAsSubUnit.String()),
 		zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
@@ -65,12 +172,12 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 
 	c.logger.Debug("Minting...",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()),
 	)
 
-	mintTx, err := token.Mint(c.minterWallet.GetTransactOpts(ctx), c.minterWallet.Address, amountToMintAsSubUnit)
+	mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), c.minterWallet.Address, amountToMintAsSubUnit)
 	if err != nil {
 		return fmt.Errorf("could not send transaction to mint wallet %s: %w", minterHexAddress, err)
 	}
@@ -81,7 +188,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 
 	c.logger.Info("Minting successful",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("amount-minted-su", amountToMintAsSubUnit.String()),
 	)
@@ -90,7 +197,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 		zap.String("minter", minterHexAddress),
 		zap.String("bridge", bridgeHexAddress),
 	)
-	allowanceAsSubUnit, err := token.Allowance(&bind.CallOpts{}, c.minterWallet.Address, c.collateralBridge.Address)
+	allowanceAsSubUnit, err := token.Allowance(&bind.CallOpts{}, minterWallet.Address, c.collateralBridge.Address)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve allowance: %w", err)
 	}
@@ -99,7 +206,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 	if allowanceAsSubUnit.Cmp(requiredAmountAsSubUnit) > -1 {
 		c.logger.Debug("No allowance increase required",
 			zap.Int("flow", flowID),
-			zap.String("asset-contract-address", assetContractAddress),
+			zap.String("asset-contract-address", assetContractHexAddress),
 			zap.String("minter", minterHexAddress),
 			zap.String("bridge", bridgeHexAddress),
 			zap.String("current-allowance-su", allowanceAsSubUnit.String()),
@@ -110,7 +217,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 	allowanceToIncrease := new(big.Int).Sub(requiredAmountAsSubUnit, allowanceAsSubUnit)
 	c.logger.Info("Allowance increase required",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("bridge", bridgeHexAddress),
 		zap.String("current-allowance-su", allowanceAsSubUnit.String()),
@@ -120,13 +227,13 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 
 	c.logger.Debug("Increasing allowance...",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("bridge", bridgeHexAddress),
 		zap.String("increase-by-su", allowanceToIncrease.String()),
 	)
 
-	allowanceTx, err := token.IncreaseAllowance(c.minterWallet.GetTransactOpts(ctx), c.collateralBridge.Address, allowanceToIncrease)
+	allowanceTx, err := token.IncreaseAllowance(minterWallet.GetTransactOpts(ctx), c.collateralBridge.Address, allowanceToIncrease)
 	if err != nil {
 		return fmt.Errorf("could not send transaction to increase bridge's allowance %s: %w", bridgeHexAddress, err)
 	}
@@ -137,36 +244,7 @@ func (c *ChainClient) DepositERC20AssetToWhale(ctx context.Context, partyID stri
 
 	c.logger.Info("Allowance increase successful",
 		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
-		zap.String("minter", minterHexAddress),
-		zap.String("bridge", bridgeHexAddress),
-		zap.String("increased-by-su", allowanceToIncrease.String()),
-	)
-
-	whaleKeyB32, err := ethutils.VegaPubKeyToByte32(partyID)
-	if err != nil {
-		return fmt.Errorf("could not convert party ID to byte32: %w", err)
-	}
-
-	c.logger.Debug("Depositing asset...",
-		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
-		zap.String("party-id", partyID),
-		zap.String("amount", requiredAmount.String()),
-	)
-
-	depositTx, err := c.collateralBridge.DepositAsset(c.minterWallet.GetTransactOpts(ctx), token.Address, requiredAmountAsSubUnit, whaleKeyB32)
-	if err != nil {
-		return fmt.Errorf("could not send transaction to deposit asset %q to party ID (%s): %w", assetContractAddress, partyID, err)
-	}
-
-	if err := WaitForTransaction(ctx, c.client, depositTx, time.Minute); err != nil {
-		return fmt.Errorf("failed to deposit asset %q to party ID (%s): %w", assetContractAddress, partyID, err)
-	}
-
-	c.logger.Info("Asset deposit successful",
-		zap.Int("flow", flowID),
-		zap.String("asset-contract-address", assetContractAddress),
+		zap.String("asset-contract-address", assetContractHexAddress),
 		zap.String("minter", minterHexAddress),
 		zap.String("bridge", bridgeHexAddress),
 		zap.String("increased-by-su", allowanceToIncrease.String()),
