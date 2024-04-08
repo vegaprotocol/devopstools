@@ -562,8 +562,7 @@ func createReferralSet(
 			},
 		},
 	}
-	if err := governance.SubmitTx(fmt.Sprintf("create referral team %s", teamName),
-		dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
+	if err := governance.SubmitTx(fmt.Sprintf("create referral team %s", teamName), dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
 	return nil

@@ -144,7 +144,7 @@ func (c *ChainClient) DepositERC20AssetFromAddress(ctx context.Context, minterPr
 
 func (c *ChainClient) mintWallet(ctx context.Context, flowID int, minterWallet *Wallet, token *erc20token.ERC20Token, requiredAmountAsSubUnit *big.Int, assetContractHexAddress string, minterHexAddress string, bridgeHexAddress string) error {
 	c.logger.Debug("Retrieving wallet's balance...", zap.Int("flow", flowID), zap.String("address", minterHexAddress))
-	balanceAsSubUnit, err := token.BalanceOf(&bind.CallOpts{}, c.minterWallet.Address)
+	balanceAsSubUnit, err := token.BalanceOf(&bind.CallOpts{}, minterWallet.Address)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve balance from minter's wallet %s: %w", minterHexAddress, err)
 	}
@@ -177,7 +177,7 @@ func (c *ChainClient) mintWallet(ctx context.Context, flowID int, minterWallet *
 		zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()),
 	)
 
-	mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), c.minterWallet.Address, amountToMintAsSubUnit)
+	mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), minterWallet.Address, amountToMintAsSubUnit)
 	if err != nil {
 		return fmt.Errorf("could not send transaction to mint wallet %s: %w", minterHexAddress, err)
 	}
