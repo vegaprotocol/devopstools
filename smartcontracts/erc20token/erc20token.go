@@ -3,10 +3,7 @@ package erc20token
 import (
 	"math/big"
 
-	ERC20Token_IERC20 "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/IERC20"
 	ERC20Token_TokenBase "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenBase"
-	ERC20Token_TokenOld "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOld"
-	ERC20Token_TokenOther "github.com/vegaprotocol/devopstools/smartcontracts/erc20token/TokenOther"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -65,48 +62,20 @@ type ERC20Token struct {
 	Common
 	Testing
 	Address common.Address
-	Version Version
-	client  *ethclient.Client
 
-	// Minimal implementation
-	v_IERC20 *ERC20Token_IERC20.IERC20
-	// Most common implementation
-	v_TokenOther *ERC20Token_TokenOther.TokenOther
-	// deprecated - don't ever use
-	v_TokenOld *ERC20Token_TokenOld.TokenOld
-	// For our testing implementation
-	v_TokenBase *ERC20Token_TokenBase.TokenBase
+	client *ERC20Token_TokenBase.TokenBase
 }
 
-func NewERC20Token(ethClient *ethclient.Client, hexAddress string, version Version) (*ERC20Token, error) {
-	var err error
-	result := &ERC20Token{
-		Address: common.HexToAddress(hexAddress),
-		Version: version,
-		client:  ethClient,
-	}
-	switch version {
-	case Minimal:
-		result.v_IERC20, err = ERC20Token_IERC20.NewIERC20(result.Address, result.client)
-		if err != nil {
-			return nil, err
-		}
-	case Other:
-		result.v_TokenOther, err = ERC20Token_TokenOther.NewTokenOther(result.Address, result.client)
-		if err != nil {
-			return nil, err
-		}
-	case Old:
-		result.v_TokenOld, err = ERC20Token_TokenOld.NewTokenOld(result.Address, result.client)
-		if err != nil {
-			return nil, err
-		}
-	case Base:
-		result.v_TokenBase, err = ERC20Token_TokenBase.NewTokenBase(result.Address, result.client)
-		if err != nil {
-			return nil, err
-		}
+func NewERC20Token(ethClient *ethclient.Client, hexAddress string) (*ERC20Token, error) {
+	address := common.HexToAddress(hexAddress)
+
+	client, err := ERC20Token_TokenBase.NewTokenBase(address, ethClient)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return &ERC20Token{
+		Address: address,
+		client:  client,
+	}, nil
 }
