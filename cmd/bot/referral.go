@@ -12,7 +12,7 @@ import (
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
-	"github.com/vegaprotocol/devopstools/generate"
+	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
@@ -31,7 +31,7 @@ import (
 const waitTimeout = 5 * time.Minute
 
 type ReferralArgs struct {
-	*BotArgs
+	*Args
 	SetupBotsInReferralProgram bool
 	Assets                     []string
 	NumberOfTeams              uint32
@@ -54,9 +54,9 @@ var referralCmd = &cobra.Command{
 }
 
 func init() {
-	referralArgs.BotArgs = &botArgs
+	referralArgs.Args = &botArgs
 
-	BotCmd.AddCommand(referralCmd)
+	Cmd.AddCommand(referralCmd)
 	referralCmd.PersistentFlags().BoolVar(
 		&referralArgs.SetupBotsInReferralProgram,
 		"setup",
@@ -535,16 +535,16 @@ func createReferralSet(
 	logger *zap.Logger,
 ) error {
 	errorMsg := fmt.Errorf("failed to create referral set by %s", creatorVegawallet.PrivateKey)
-	teamName, err := generate.GenerateName()
+	teamName, err := generation.GenerateName()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
 	teamName = fmt.Sprintf("Bots Team: %s", teamName)
-	teamURL, err := generate.GenerateRandomWikiURL()
+	teamURL, err := generation.GenerateRandomWikiURL()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
-	teamAvatar, err := generate.GenerateAvatarURL()
+	teamAvatar, err := generation.GenerateAvatarURL()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
@@ -636,7 +636,7 @@ func doStake(
 		// increase ALLOWANCE
 		increaseAllowanceAmount := ethutils.VegaTokenFromFullTokens(big.NewFloat(1000000))
 		if increaseAllowanceAmount.Cmp(totalMissingStake) < 0 {
-			return fmt.Errorf("Want to stake more than 1kk tokens total - it is too much")
+			return fmt.Errorf("want to stake more than 1kk tokens total - it is too much")
 		}
 		logger.Info("increasing allowance", zap.String("amount", increaseAllowanceAmount.String()),
 			zap.String("ethWallet", wallet.Address.Hex()),

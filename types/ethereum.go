@@ -18,7 +18,7 @@ func (n ETHNetwork) IsValid() error {
 	case ETHMainnet, ETHSepolia, ETHGoerli, ETHRopsten:
 		return nil
 	}
-	return fmt.Errorf("Invalid Ethereum network %s", n)
+	return fmt.Errorf("invalid Ethereum network %s", n)
 }
 
 func GetEthNetworkForId(chainId string) (ETHNetwork, error) {

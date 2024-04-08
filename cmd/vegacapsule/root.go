@@ -6,17 +6,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type VegacapsuleArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 
 	networkHomePath   string
 	vegacapsuleBinary string
 }
 
-var vegacapsuleArgs VegacapsuleArgs
+var vegacapsuleArgs Args
 
-// Root Command for OPS
-var VegacapsuleCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "vegacapsule",
 	Short: "Set of commands that extends the vegacapsule for a various usecases",
 }
@@ -24,13 +23,13 @@ var VegacapsuleCmd = &cobra.Command{
 func init() {
 	vegacapsuleArgs.RootArgs = &rootCmd.Args
 
-	VegacapsuleCmd.PersistentFlags().StringVar(
+	Cmd.PersistentFlags().StringVar(
 		&vegacapsuleArgs.networkHomePath,
 		"network-home-path",
 		"",
 		"Custom path for the network")
 
-	VegacapsuleCmd.PersistentFlags().StringVar(
+	Cmd.PersistentFlags().StringVar(
 		&vegacapsuleArgs.vegacapsuleBinary,
 		"vegacapsule-bin",
 		"vegacapsule",

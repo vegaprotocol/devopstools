@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-// Helper: Get Smart Contract Data
 type SmartContractData struct {
 	SourceCode          map[string]string
 	ABI                 string
@@ -18,7 +17,7 @@ type SmartContractData struct {
 	DownloadURL         string
 }
 
-func (c *EtherscanClient) GetSmartContractData(
+func (c *Client) GetSmartContractData(
 	ctx context.Context,
 	hexAddress string,
 ) (*SmartContractData, error) {
@@ -27,14 +26,14 @@ func (c *EtherscanClient) GetSmartContractData(
 		return nil, err
 	}
 	if len(response.Result) != 1 {
-		return nil, fmt.Errorf("Only one result is supported from Get Sourcecode response; but it contains %d results", len(response.Result))
+		return nil, fmt.Errorf("only one result is supported from Get Sourcecode response; but it contains %d results", len(response.Result))
 	}
 
 	// Format ABI to pretty json
 	abi := response.Result[0].ABI
 	var prettyJSON bytes.Buffer
 	if err = json.Indent(&prettyJSON, []byte(abi), "", " "); err != nil {
-		return nil, fmt.Errorf("Failed to format ABI for Smart Contract: %s (%s). %w", hexAddress, downloadURL, err)
+		return nil, fmt.Errorf("failed to format ABI for Smart Contract: %s (%s). %w", hexAddress, downloadURL, err)
 	}
 	abi = prettyJSON.String()
 
@@ -44,7 +43,7 @@ func (c *EtherscanClient) GetSmartContractData(
 		response.Result[0].SourceCode,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse Source Code for Smart Contract: %s. %w", hexAddress, err)
+		return nil, fmt.Errorf("failed to parse Source Code for Smart Contract: %s. %w", hexAddress, err)
 	}
 
 	creationCodeResponse, err := c.GetTxlist(ctx, hexAddress)
@@ -81,7 +80,7 @@ func parseSourceCode(ContractName string, sourceCode string) (map[string]string,
 				} `json:"sources"`
 			}
 			if err := json.Unmarshal([]byte(sourceCode), &payload2); err != nil {
-				return nil, fmt.Errorf("Failed to parse Smart Contract %s. %w", ContractName, err)
+				return nil, fmt.Errorf("failed to parse Smart Contract %s. %w", ContractName, err)
 			}
 			payload = payload2.Sources
 		}

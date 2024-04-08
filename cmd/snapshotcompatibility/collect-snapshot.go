@@ -14,7 +14,7 @@ import (
 )
 
 type CollectSnapshotArgs struct {
-	*SnapshotCompatibilityArgs
+	*Args
 
 	VegacapsuleHome    string
 	VegacapsuleBinary  string
@@ -40,7 +40,7 @@ var collectSnapshotCmd = &cobra.Command{
 }
 
 func init() {
-	collectSnapshotArgs.SnapshotCompatibilityArgs = &snapshotCompatibilityArgs
+	collectSnapshotArgs.Args = &snapshotCompatibilityArgs
 	collectSnapshotCmd.PersistentFlags().
 		StringVar(&collectSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	collectSnapshotCmd.PersistentFlags().

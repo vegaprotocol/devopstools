@@ -1,4 +1,4 @@
-package generate
+package generation
 
 import (
 	"encoding/hex"
@@ -7,7 +7,6 @@ import (
 	"github.com/vegaprotocol/devopstools/secrets"
 
 	"github.com/cosmos/go-bip39"
-	"github.com/ethereum/go-ethereum/crypto"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 )
 
@@ -69,16 +68,4 @@ func GenerateEthereumWallet(
 		Seed:       seed,
 		PrivateKey: privKey,
 	}, nil
-}
-
-func ValidateEthereumAddressWithPrivateKey(hexAddress string, hexPrivateKey string) error {
-	privateKey, err := crypto.HexToECDSA(hexPrivateKey)
-	if err != nil {
-		return fmt.Errorf("failed to check if '%s' address matches private key, %w", hexAddress, err)
-	}
-
-	if hexAddress != crypto.PubkeyToAddress(privateKey.PublicKey).Hex() {
-		return fmt.Errorf("ethereum address '%s' does not match its private key", hexAddress)
-	}
-	return nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 type GraphArgs struct {
-	*NetworkArgs
+	*Args
 }
 
 var graphArgs GraphArgs
@@ -29,9 +29,9 @@ var graphCmd = &cobra.Command{
 }
 
 func init() {
-	graphArgs.NetworkArgs = &networkArgs
+	graphArgs.Args = &networkArgs
 
-	NetworkCmd.AddCommand(graphCmd)
+	Cmd.AddCommand(graphCmd)
 }
 
 func RunGraph(args GraphArgs) error {

@@ -22,7 +22,7 @@ import (
 )
 
 type ProposeArgs struct {
-	*MarketArgs
+	*Args
 }
 
 var proposeArgs ProposeArgs
@@ -41,9 +41,9 @@ var proposeCmd = &cobra.Command{
 }
 
 func init() {
-	proposeArgs.MarketArgs = &marketArgs
+	proposeArgs.Args = &marketArgs
 
-	MarketCmd.AddCommand(proposeCmd)
+	Cmd.AddCommand(proposeCmd)
 }
 
 func runPropose(args ProposeArgs) error {
@@ -57,7 +57,7 @@ func runPropose(args ProposeArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to get all markets from the data-node api: %w", err)
 	}
-	missingMarketsProposals := filterMarkets(args.Logger, allMarkets, MarketProposalsForEnvironment(network.Network))
+	missingMarketsProposals := filterMarkets(args.Logger, allMarkets, ProposalsForEnvironment(network.Network))
 
 	defer network.Disconnect()
 

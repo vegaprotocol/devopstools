@@ -8,8 +8,6 @@ import (
 	"github.com/vegaprotocol/devopstools/wallet"
 )
 
-const LeaderWalletIndex = 0
-
 type ResearchBot struct {
 	TradingBot
 	WalletData struct {

@@ -9,11 +9,11 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
-type HCVaultSecretStore struct {
+type SecretStore struct {
 	Client *vault.Client
 }
 
-type HCVaultLoginToken struct {
+type LoginToken struct {
 	VaultToken          string
 	FileWithVaultToken  string
 	GitHubToken         string
@@ -22,8 +22,8 @@ type HCVaultLoginToken struct {
 
 func NewHCVaultSecretStore(
 	vaultURL string,
-	loginToken HCVaultLoginToken,
-) (*HCVaultSecretStore, error) {
+	loginToken LoginToken,
+) (*SecretStore, error) {
 	var token string
 
 	config := vault.DefaultConfig()
@@ -58,7 +58,7 @@ func NewHCVaultSecretStore(
 	}
 
 	client.SetToken(token)
-	return &HCVaultSecretStore{
+	return &SecretStore{
 		Client: client,
 	}, nil
 }

@@ -18,7 +18,7 @@ import (
 )
 
 type DownloadBinaryArgs struct {
-	*SnapshotCompatibilityArgs
+	*Args
 
 	Destination      string
 	CoreRESTEndpoint string
@@ -47,7 +47,7 @@ var downloadBinaryCmd = &cobra.Command{
 }
 
 func init() {
-	downloadBinaryArgs.SnapshotCompatibilityArgs = &snapshotCompatibilityArgs
+	downloadBinaryArgs.Args = &snapshotCompatibilityArgs
 
 	downloadBinaryCmd.PersistentFlags().
 		StringVar(

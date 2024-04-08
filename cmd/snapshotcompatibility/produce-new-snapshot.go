@@ -21,7 +21,7 @@ import (
 )
 
 type ProduceNewSnapshotArgs struct {
-	*SnapshotCompatibilityArgs
+	*Args
 
 	VegacapsuleHome   string
 	VegacapsuleBinary string
@@ -43,7 +43,7 @@ var produceNewSnapshotCmd = &cobra.Command{
 }
 
 func init() {
-	produceNewSnapshotArgs.SnapshotCompatibilityArgs = &snapshotCompatibilityArgs
+	produceNewSnapshotArgs.Args = &snapshotCompatibilityArgs
 	produceNewSnapshotCmd.PersistentFlags().
 		StringVar(&produceNewSnapshotArgs.VegacapsuleHome, "vegacapsule-home", "", "The custom vegacapsule home")
 	produceNewSnapshotCmd.PersistentFlags().

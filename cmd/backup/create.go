@@ -17,7 +17,7 @@ import (
 )
 
 type CreateArgs struct {
-	*BackupArgs
+	*Args
 
 	fullBackup bool
 }
@@ -36,7 +36,7 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
-	createArgs.BackupArgs = &backupArgs
+	createArgs.Args = &backupArgs
 
 	createCmd.PersistentFlags().BoolVar(
 		&createArgs.fullBackup,
@@ -44,7 +44,7 @@ func init() {
 		false,
 		"Create full backup")
 
-	BackupCmd.AddCommand(createCmd)
+	Cmd.AddCommand(createCmd)
 }
 
 func enforceFullBackup(logger *zap.Logger, state *backup.State, conf backup.FullBackupConfig) bool {
@@ -55,7 +55,7 @@ func enforceFullBackup(logger *zap.Logger, state *backup.State, conf backup.Full
 	}
 
 	var (
-		lastFullBackup   *backup.BackupEntry
+		lastFullBackup   *backup.Entry
 		backupsSinceFull int
 	)
 	entries := state.SortedBackups()

@@ -10,7 +10,7 @@ import (
 )
 
 type PrintConfigArgs struct {
-	*BackupArgs
+	*Args
 }
 
 var printConfigArgs PrintConfigArgs
@@ -31,7 +31,7 @@ var printConfigCmd = &cobra.Command{
 }
 
 func init() {
-	printConfigArgs.BackupArgs = &backupArgs
+	printConfigArgs.Args = &backupArgs
 
-	BackupCmd.AddCommand(printConfigCmd)
+	Cmd.AddCommand(printConfigCmd)
 }

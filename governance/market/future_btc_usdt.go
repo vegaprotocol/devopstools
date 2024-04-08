@@ -30,7 +30,6 @@ func NewFutureBTCUSDTWithoutTime(settlementAsset string, oraclePubKey string) *c
 	)
 }
 
-// settlementVegaAssetId ideally with 6 decimal places
 func NewFutureBTCUSDT(
 	settlementVegaAssetId string,
 	oraclePubKey string,

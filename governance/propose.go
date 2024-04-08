@@ -20,46 +20,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func SubmitProposal(
-	proposalDescription string,
-	proposer *wallet.VegaWallet,
-	proposal *commandspb.ProposalSubmission,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (string, error) {
-	reference := proposal.Reference
-	//
-	// Propose
-	//
-	// Prepare vegawallet Transaction Request
-	walletTxReq := walletpb.SubmitTransactionRequest{
-		PubKey: proposer.PublicKey,
-		Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
-			ProposalSubmission: proposal,
-		},
-	}
-	if err := SubmitTx(proposalDescription, dataNodeClient, proposer, logger, &walletTxReq); err != nil {
-		return "", err
-	}
-
-	//
-	// Find Proposal
-	//
-	proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
-		proposal, err := fetchProposalByReferenceAndProposer(reference, dataNodeClient)
-		if err != nil {
-			return "", fmt.Errorf("failed to find proposal: %w", err)
-		}
-		if proposal != nil {
-			return proposal.Id, nil
-		}
-
-		return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", proposalDescription, reference)
-	})
-
-	return proposalId, fmt.Errorf("failed to find proposal: %w", err)
-}
-
 func SubmitProposalList(
 	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
 	proposer *wallet.VegaWallet,

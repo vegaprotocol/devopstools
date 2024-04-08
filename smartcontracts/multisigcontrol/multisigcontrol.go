@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type MultisigControlCommon interface {
+type Common interface {
 	GetCurrentThreshold(opts *bind.CallOpts) (uint16, error)
 	GetValidSignerCount(opts *bind.CallOpts) (uint8, error)
 	IsNonceUsed(opts *bind.CallOpts, nonce *big.Int) (bool, error)
@@ -26,16 +26,16 @@ type MultisigControlCommon interface {
 	VerifySignatures(opts *bind.TransactOpts, signatures []byte, message []byte, nonce *big.Int) (*ethTypes.Transaction, error)
 }
 
-type MultisigControlNewInV2 interface {
+type NewInV2 interface {
 	Signers(opts *bind.CallOpts, arg0 common.Address) (bool, error)
 	BurnNonce(opts *bind.TransactOpts, nonce *big.Int, signatures []byte) (*ethTypes.Transaction, error)
 }
 
 type MultisigControl struct {
-	MultisigControlCommon
-	MultisigControlNewInV2
+	Common
+	NewInV2
 	Address common.Address
-	Version MultisigControlVersion
+	Version Version
 	client  *ethclient.Client
 
 	// Minimal implementation
@@ -53,7 +53,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 
 	// Increase counter with every addition
 	switch m.Version {
-	case MultisigControlV1:
+	case V1:
 		addedIterator, err := m.v1.FilterSignerAdded(&bind.FilterOpts{
 			Start:   0,
 			End:     &latestBlockNumber,
@@ -65,7 +65,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 		for addedIterator.Next() {
 			signerCounter[addedIterator.Event.NewSigner] += 1
 		}
-	case MultisigControlV2:
+	case V2:
 		addedIterator, err := m.v2.FilterSignerAdded(&bind.FilterOpts{
 			Start:   0,
 			End:     &latestBlockNumber,
@@ -83,7 +83,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 
 	// Decrease counter with every removal
 	switch m.Version {
-	case MultisigControlV1:
+	case V1:
 		removedIterator, err := m.v1.FilterSignerRemoved(&bind.FilterOpts{
 			Start:   0,
 			End:     &latestBlockNumber,
@@ -95,7 +95,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 		for removedIterator.Next() {
 			signerCounter[removedIterator.Event.OldSigner] -= 1
 		}
-	case MultisigControlV2:
+	case V2:
 		removedIterator, err := m.v2.FilterSignerRemoved(&bind.FilterOpts{
 			Start:   0,
 			End:     &latestBlockNumber,
@@ -130,7 +130,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 func NewMultisigControl(
 	ethClient *ethclient.Client,
 	hexAddress string,
-	version MultisigControlVersion,
+	version Version,
 ) (*MultisigControl, error) {
 	var err error
 	result := &MultisigControl{
@@ -139,19 +139,19 @@ func NewMultisigControl(
 		client:  ethClient,
 	}
 	switch version {
-	case MultisigControlV1:
+	case V1:
 		result.v1, err = MultisigControl_V1.NewMultisigControl(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.MultisigControlCommon = result.v1
-	case MultisigControlV2:
+		result.Common = result.v1
+	case V2:
 		result.v2, err = MultisigControl_V2.NewMultisigControl(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.MultisigControlCommon = result.v2
-		result.MultisigControlNewInV2 = result.v2
+		result.Common = result.v2
+		result.NewInV2 = result.v2
 	}
 
 	return result, nil

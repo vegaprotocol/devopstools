@@ -24,7 +24,7 @@ import (
 )
 
 type SelfDelegateArgs struct {
-	*NetworkArgs
+	*Args
 }
 
 var selfDelegateArgs SelfDelegateArgs
@@ -44,9 +44,9 @@ var selfDelegateCmd = &cobra.Command{
 }
 
 func init() {
-	selfDelegateArgs.NetworkArgs = &networkArgs
+	selfDelegateArgs.Args = &networkArgs
 
-	NetworkCmd.AddCommand(selfDelegateCmd)
+	Cmd.AddCommand(selfDelegateCmd)
 }
 
 func RunSelfDelegate(args SelfDelegateArgs) error {

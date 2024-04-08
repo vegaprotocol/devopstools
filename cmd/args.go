@@ -21,15 +21,15 @@ type RootArgs struct {
 	FileWithGitHubToken string
 	HCVaultURL          string
 
-	hcVaultSecretStore *hcvault.HCVaultSecretStore
+	hcVaultSecretStore *hcvault.SecretStore
 }
 
-func (ra *RootArgs) getHCVaultSecretStore() (*hcvault.HCVaultSecretStore, error) {
+func (ra *RootArgs) getHCVaultSecretStore() (*hcvault.SecretStore, error) {
 	if ra.hcVaultSecretStore == nil {
 		var err error
 		ra.hcVaultSecretStore, err = hcvault.NewHCVaultSecretStore(
 			ra.HCVaultURL,
-			hcvault.HCVaultLoginToken{
+			hcvault.LoginToken{
 				GitHubToken:         ra.GitHubToken,
 				FileWithGitHubToken: ra.FileWithGitHubToken,
 			},
@@ -85,7 +85,7 @@ func (ra *RootArgs) GetSecondarySmartContractsManager() (*smartcontracts.Manager
 	return smartcontracts.NewManager(ethClientManager, types.SecondaryBridge, ra.Logger), nil
 }
 
-func (ra *RootArgs) GetWalletManager() (*wallet.WalletManager, error) {
+func (ra *RootArgs) GetWalletManager() (*wallet.Manager, error) {
 	ethClientManager, err := ra.GetPrimaryEthereumClientManager()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PrimarySmartContractsManager, %w", err)

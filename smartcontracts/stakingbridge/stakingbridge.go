@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type StakingBridgeCommon interface {
+type Common interface {
 	StakeBalance(opts *bind.CallOpts, target common.Address, vega_public_key [32]byte) (*big.Int, error)
 	StakingToken(opts *bind.CallOpts) (common.Address, error)
 	TotalStaked(opts *bind.CallOpts) (*big.Int, error)
@@ -21,9 +21,9 @@ type StakingBridgeCommon interface {
 }
 
 type StakingBridge struct {
-	StakingBridgeCommon
+	Common
 	Address common.Address
-	Version StakingBridgeVersion
+	Version Version
 	client  *ethclient.Client
 
 	// Minimal implementation
@@ -33,7 +33,7 @@ type StakingBridge struct {
 func NewStakingBridge(
 	ethClient *ethclient.Client,
 	hexAddress string,
-	version StakingBridgeVersion,
+	version Version,
 ) (*StakingBridge, error) {
 	var err error
 	result := &StakingBridge{
@@ -42,12 +42,12 @@ func NewStakingBridge(
 		client:  ethClient,
 	}
 	switch version {
-	case StakingBridgeV1:
+	case V1:
 		result.v1, err = StakingBridge_V1.NewStakingBridge(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.StakingBridgeCommon = result.v1
+		result.Common = result.v1
 	}
 
 	return result, nil

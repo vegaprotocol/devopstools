@@ -1,55 +1,54 @@
-package secrets
+package node
 
 import (
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/vegaprotocol/devopstools/generate"
+	"github.com/vegaprotocol/devopstools/generation"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
-type CreateNodeArgs struct {
-	*SecretsArgs
+type CreateArgs struct {
+	*Args
 	VegaNetworkName string
 	NodeId          string
 	Force           bool
 	Stake           bool
 }
 
-var createNodeArgs CreateNodeArgs
+var createArgs CreateArgs
 
-// createNodeCmd represents the createNode command
-var createNodeCmd = &cobra.Command{
-	Use:   "create-node",
-	Short: "Create New Secrets for Node",
-	Long:  `Create New Secrets for Node`,
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create new node",
+	Long:  "Create new node",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := RunCreateNode(createNodeArgs); err != nil {
-			createNodeArgs.Logger.Error("Error", zap.Error(err))
+		if err := RunCreateNode(createArgs); err != nil {
+			createArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
-	createNodeArgs.SecretsArgs = &secretsArgs
+	createArgs.Args = &args
 
-	SecretsCmd.AddCommand(createNodeCmd)
-	createNodeCmd.PersistentFlags().StringVar(&createNodeArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := createNodeCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.AddCommand(createCmd)
+	createCmd.PersistentFlags().StringVar(&createArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := createCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	createNodeCmd.PersistentFlags().StringVar(&createNodeArgs.NodeId, "node", "", "Node for which create secrets, e.g. n01")
-	if err := createNodeCmd.MarkPersistentFlagRequired("node"); err != nil {
+	createCmd.PersistentFlags().StringVar(&createArgs.NodeId, "node", "", "Node for which create secrets, e.g. n01")
+	if err := createCmd.MarkPersistentFlagRequired("node"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	createNodeCmd.PersistentFlags().BoolVar(&createNodeArgs.Force, "force", false, "Force to push new secrets, even if the secrets already exist")
+	createCmd.PersistentFlags().BoolVar(&createArgs.Force, "force", false, "Force to push new secrets, even if the secrets already exist")
 }
 
-func RunCreateNode(args CreateNodeArgs) error {
+func RunCreateNode(args CreateArgs) error {
 	secretStore, err := args.GetNodeSecretStore()
 	if err != nil {
 		return err
@@ -59,7 +58,7 @@ func RunCreateNode(args CreateNodeArgs) error {
 		return fmt.Errorf("secrets for node %s already exists, use --force to override and put new secrets for it", args.NodeId)
 	}
 
-	newSecrets, err := generate.GenerateVegaNodeSecrets()
+	newSecrets, err := generation.GenerateVegaNodeSecrets()
 	if err != nil {
 		return err
 	}

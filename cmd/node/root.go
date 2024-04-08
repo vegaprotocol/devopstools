@@ -1,4 +1,4 @@
-package validator
+package node
 
 import (
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
@@ -10,14 +10,14 @@ type Args struct {
 	*rootCmd.RootArgs
 }
 
-var validatorArgs Args
+var args Args
 
 var Cmd = &cobra.Command{
-	Use:   "validator",
-	Short: "Manage validators",
-	Long:  `Manage validators`,
+	Use:   "node",
+	Short: "Manage a node on the network",
+	Long:  "Manage a node on the network",
 }
 
 func init() {
-	validatorArgs.RootArgs = &rootCmd.Args
+	args.RootArgs = &rootCmd.Args
 }

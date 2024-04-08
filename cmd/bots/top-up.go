@@ -211,6 +211,8 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 			chainClient = chainClients.PrimaryChain
 		case chainClients.EVMChain.ID():
 			chainClient = chainClients.EVMChain
+		default:
+			return fmt.Errorf("asset with chain ID %q does not match any configured Ethereum chain", erc20Details.ChainId)
 		}
 
 		if err := chainClient.DepositERC20AssetFromMinter(ctx, erc20Details.ContractAddress, whaleClient.PartyID(), requiredAmount); err != nil {

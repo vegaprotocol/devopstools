@@ -52,13 +52,14 @@ func (network *NetworkTools) GetNetworkParamsFromHost(host string, tlsOnly bool)
 			network.logger.Debug("response body is empty for request", zap.String("url", statsURL))
 			continue
 		}
-		defer res.Body.Close()
 
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			network.logger.Debug("failed to read response body", zap.String("url", statsURL), zap.Error(err))
+			_ = res.Body.Close()
 			continue
 		}
+		_ = res.Body.Close()
 
 		params := struct {
 			NetworkParameters []struct {

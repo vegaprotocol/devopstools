@@ -93,7 +93,7 @@ func (m *EthereumClientManager) GetEthClient(ethNetwork types.ETHNetwork) (*ethc
 	return ethClient, nil
 }
 
-func (m *EthereumClientManager) GetEtherscanClient(ethNetwork types.ETHNetwork) (*etherscan.EtherscanClient, error) {
+func (m *EthereumClientManager) GetEtherscanClient(ethNetwork types.ETHNetwork) (*etherscan.Client, error) {
 	switch ethNetwork {
 	case types.ETHMainnet, types.ETHSepolia, types.ETHGoerli, types.ETHRopsten:
 		if m.serviceSecrets == nil {

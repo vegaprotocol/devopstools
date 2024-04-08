@@ -50,7 +50,6 @@ func (n *DataNode) GetAllMarkets() ([]*vega.Market, error) {
 // 	return
 // }
 
-// // GetMarket returns market data for the specified market.
 func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapipb.GetMarketResponse, err error) {
 	msg := "gRPC call failed (data-node): GetMarket: %w"
 	if n == nil {

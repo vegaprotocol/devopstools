@@ -8,15 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type MarketArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 	VegaNetworkName string
 }
 
-var marketArgs MarketArgs
+var marketArgs Args
 
-// Root Command for Market
-var MarketCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "market",
 	Short: "Use template to quickly get what you need",
 	Long: `This section contains multiple built-up templates that you can use to quickly achive what you want.
@@ -26,8 +25,8 @@ var MarketCmd = &cobra.Command{
 func init() {
 	marketArgs.RootArgs = &rootCmd.Args
 
-	MarketCmd.PersistentFlags().StringVar(&marketArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := MarketCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&marketArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

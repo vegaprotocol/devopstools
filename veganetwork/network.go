@@ -52,7 +52,7 @@ type VegaNetwork struct {
 	SecondarySmartContractsManager *smartcontracts.Manager
 	SecondarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
 
-	WalletManager *wallet.WalletManager
+	WalletManager *wallet.Manager
 
 	NodeSecretStore    secrets.NodeSecretStore
 	ServiceSecretStore secrets.ServiceSecretStore
@@ -67,7 +67,7 @@ func NewVegaNetwork(
 	serviceSecretStore secrets.ServiceSecretStore,
 	primaryEthClientManager, secondaryEthClientManager *ethutils.EthereumClientManager,
 	primarySmartContractsManager, secondarySmartContractsManager *smartcontracts.Manager,
-	walletManager *wallet.WalletManager,
+	walletManager *wallet.Manager,
 	logger *zap.Logger,
 ) (*VegaNetwork, error) {
 	var (

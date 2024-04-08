@@ -1,11 +1,11 @@
-package generate
+package generation
 
 import (
 	"crypto/rand"
 	"math/big"
 )
 
-func GeneratePassword() (string, error) {
+func Password() (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-!@#$%^&*()_+="
 	lettersLen := big.NewInt(int64(len(letters)))
 	// randomise password len in range 51-65

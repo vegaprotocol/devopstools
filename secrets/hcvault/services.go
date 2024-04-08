@@ -10,7 +10,7 @@ const (
 	serviceVaultRoot = "service"
 )
 
-func (c *HCVaultSecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string, error) {
+func (c *SecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "infura")
 	if err != nil {
 		return "", err
@@ -18,7 +18,7 @@ func (c *HCVaultSecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string,
 	return secret["projectId"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
+func (c *SecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
 	if err != nil {
 		return "", fmt.Errorf("failed to get ethereum node url from the vault: %w", err)
@@ -37,7 +37,7 @@ func (c *HCVaultSecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environm
 	return secret[environment].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string, error) {
+func (c *SecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "etherscan")
 	if err != nil {
 		return "", err
@@ -45,7 +45,7 @@ func (c *HCVaultSecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string,
 	return secret["apikey"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
+func (c *SecretStore) GetDigitalOceanApiToken() (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, "digitalocean")
 	if err != nil {
 		return "", err
@@ -53,7 +53,7 @@ func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
 	return secret["api_token"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetBotsApiToken() (string, error) {
+func (c *SecretStore) GetBotsApiToken() (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, "bots")
 	if err != nil {
 		return "", err

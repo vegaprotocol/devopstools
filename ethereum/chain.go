@@ -103,12 +103,12 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 		return nil, fmt.Errorf("failed to initialize ethereum client: %w", err)
 	}
 
-	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.CollateralBridgeContract.Address, erc20bridge.ERC20BridgeV2)
+	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.CollateralBridgeContract.Address, erc20bridge.V2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}
 
-	multisigControl, err := multisigcontrol.NewMultisigControl(client, ethConfig.MultisigControlContract.Address, multisigcontrol.MultisigControlV2)
+	multisigControl, err := multisigcontrol.NewMultisigControl(client, ethConfig.MultisigControlContract.Address, multisigcontrol.V2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize multisig control client: %w", err)
 	}
@@ -142,7 +142,7 @@ func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *veg
 		return nil, fmt.Errorf("failed to initialize ethereum client: %w", err)
 	}
 
-	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.CollateralBridgeContract.Address, erc20bridge.ERC20BridgeV2)
+	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.CollateralBridgeContract.Address, erc20bridge.V2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}

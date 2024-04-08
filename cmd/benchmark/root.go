@@ -6,14 +6,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type BenchmarkArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 }
 
-var benchmarkArgs BenchmarkArgs
+var benchmarkArgs Args
 
-// Root Command for Benchmark
-var BenchmarkCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "benchmark",
 	Short: "Benchmark various things",
 	Long:  `Benchmark various things`,

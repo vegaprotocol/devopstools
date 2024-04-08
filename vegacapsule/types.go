@@ -2,7 +2,6 @@ package vegacapsule
 
 const (
 	VegaModeValidator = "validator"
-	VegaModeFull      = "full"
 )
 
 type NodeDetails struct {
@@ -26,4 +25,4 @@ type NodeDetails struct {
 	} `json:"Visor"`
 }
 
-type VegacapsuleNodesListOut map[string]NodeDetails
+type NodesListOut map[string]NodeDetails

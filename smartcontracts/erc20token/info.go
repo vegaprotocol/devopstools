@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
-type ERC20TokenInfo struct {
+type Info struct {
 	Address         string
 	TotalSupply     *big.Float
 	Name            string
@@ -20,14 +20,14 @@ type ERC20TokenInfo struct {
 	FaucetCallLimit *big.Int
 }
 
-func (t *ERC20Token) GetInfo() (result ERC20TokenInfo, err error) {
+func (t *ERC20Token) GetInfo() (result Info, err error) {
 	var (
 		totalSupply  *big.Int
 		faucetAmount *big.Int
 	)
 	result.Address = t.Address.Hex()
 
-	if t.Version != ERC20TokenMinimal {
+	if t.Version != Minimal {
 		result.Name, err = t.Name(&bind.CallOpts{})
 		if err != nil {
 			err = fmt.Errorf("failed to get info about %s, %w", t.Address, err)
@@ -44,7 +44,7 @@ func (t *ERC20Token) GetInfo() (result ERC20TokenInfo, err error) {
 			return
 		}
 	}
-	if t.Version == ERC20TokenBase {
+	if t.Version == Base {
 		result.BurnEnabled, err = t.BurnEnabled(&bind.CallOpts{})
 		if err != nil {
 			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)

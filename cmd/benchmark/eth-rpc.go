@@ -17,7 +17,7 @@ import (
 )
 
 type EthRPCArgs struct {
-	*BenchmarkArgs
+	*Args
 	URLs   []string
 	Repeat uint16
 }
@@ -38,9 +38,9 @@ var ethRPCCmd = &cobra.Command{
 }
 
 func init() {
-	ethRPCArgs.BenchmarkArgs = &benchmarkArgs
+	ethRPCArgs.Args = &benchmarkArgs
 
-	BenchmarkCmd.AddCommand(ethRPCCmd)
+	Cmd.AddCommand(ethRPCCmd)
 
 	ethRPCCmd.PersistentFlags().StringSliceVar(&ethRPCArgs.URLs, "rpc", nil, "Comma separated list of Ethereum RPC endpoints")
 	if err := ethRPCCmd.MarkPersistentFlagRequired("rpc"); err != nil {
@@ -57,7 +57,7 @@ func RunEthRPC(args EthRPCArgs) error {
 		endpoints[i].URL = url
 		endpoints[i].Client, err = ethclient.Dial(url)
 		if err != nil {
-			return fmt.Errorf("Failed to connect to %s: %w", url, err)
+			return fmt.Errorf("failed to connect to %s: %w", url, err)
 		}
 	}
 

@@ -24,7 +24,7 @@ import (
 )
 
 type StartDataNodeFromNetworkHistoryArgs struct {
-	*VegacapsuleArgs
+	*Args
 
 	baseOnGroup   string
 	outFile       string
@@ -63,9 +63,9 @@ var startDataNodeFromNetworkHistoryCmd = &cobra.Command{
 }
 
 func init() {
-	startDataNodeFromNetworkHistoryArgs.VegacapsuleArgs = &vegacapsuleArgs
+	startDataNodeFromNetworkHistoryArgs.Args = &vegacapsuleArgs
 
-	VegacapsuleCmd.AddCommand(startDataNodeFromNetworkHistoryCmd)
+	Cmd.AddCommand(startDataNodeFromNetworkHistoryCmd)
 
 	startDataNodeFromNetworkHistoryCmd.PersistentFlags().StringVar(
 		&startDataNodeFromNetworkHistoryArgs.baseOnGroup,
@@ -216,7 +216,7 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 		return fmt.Errorf("failed to start the %s node: %w", newNodeDetails.Name, err)
 	}
 
-	if err := DescribeDataNode(logger, *newNodeDetails, outFile); err != nil {
+	if err := DescribeDataNode(*newNodeDetails, outFile); err != nil {
 		return fmt.Errorf("failed to write new node details: %w", err)
 	}
 
@@ -429,7 +429,7 @@ type StartDataNodeFromNetworkHistoryInfo struct {
 	GRPCURL    string
 }
 
-func DescribeDataNode(logger *zap.Logger, nodeDetails vctools.NodeDetails, outFile string) error {
+func DescribeDataNode(nodeDetails vctools.NodeDetails, outFile string) error {
 	result := StartDataNodeFromNetworkHistoryInfo{}
 
 	result.CoreConfigFilePath = nodeDetails.Vega.ConfigFilePath

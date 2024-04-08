@@ -180,7 +180,7 @@ func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *ethereum.Wallet, part
 				zap.String("amount", currentStake.String()), zap.Error(err))
 			return fmt.Errorf("failed to remove stake %s by %s from %s , %w", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, err)
 		}
-		m.logger.Sugar().Infof("Wait for remove stake %d by %s from %s transaction  (%s) ... ", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, tx.Hash().Hex())
+		m.logger.Sugar().Infof("Wait for remove stake %s by %s from %s transaction  (%s) ... ", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, tx.Hash().Hex())
 		if err := ethereum.WaitForTransaction(context2.Background(), m.EthClient, tx, time.Minute*2); err != nil {
 			m.logger.Sugar().Infoln("failed")
 			m.logger.Error("failed to remove stake", zap.String("ethWallet", ethWallet.Address.Hex()), zap.String("partyPubKey", partyPubKey),

@@ -4,16 +4,16 @@ import (
 	"fmt"
 )
 
-type StakingBridgeVersion string
+type Version string
 
 const (
-	StakingBridgeV1 StakingBridgeVersion = "v1"
+	V1 Version = "v1"
 )
 
-func (n StakingBridgeVersion) IsValid() error {
+func (n Version) IsValid() error {
 	switch n {
-	case StakingBridgeV1:
+	case V1:
 		return nil
 	}
-	return fmt.Errorf("Invalid Staking Bridge Version %s", n)
+	return fmt.Errorf("invalid Staking Bridge Version %s", n)
 }

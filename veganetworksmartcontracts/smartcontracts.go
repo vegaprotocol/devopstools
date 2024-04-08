@@ -47,14 +47,14 @@ func NewVegaNetworkSmartContracts(
 	if len(erc20BridgeHexAddress) == 0 {
 		return nil, fmt.Errorf("missing ERC20 Bridge address")
 	}
-	result.ERC20Bridge, err = erc20bridge.NewERC20Bridge(result.EthClient, erc20BridgeHexAddress, erc20bridge.ERC20BridgeV2)
+	result.ERC20Bridge, err = erc20bridge.NewERC20Bridge(result.EthClient, erc20BridgeHexAddress, erc20bridge.V2)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
 
 	// Staking Bridge
 	if len(stakingBridgeHexAddress) == 0 {
-		result.StakingBridge, err = stakingbridge.NewStakingBridge(result.EthClient, stakingBridgeHexAddress, stakingbridge.StakingBridgeV1)
+		result.StakingBridge, err = stakingbridge.NewStakingBridge(result.EthClient, stakingBridgeHexAddress, stakingbridge.V1)
 		if err != nil {
 			return nil, fmt.Errorf(errMsg, err)
 		}
@@ -68,7 +68,7 @@ func NewVegaNetworkSmartContracts(
 		}
 		multisigControlHexAddress = multisigControlAddress.Hex()
 	}
-	result.MultisigControl, err = multisigcontrol.NewMultisigControl(result.EthClient, multisigControlHexAddress, multisigcontrol.MultisigControlV2)
+	result.MultisigControl, err = multisigcontrol.NewMultisigControl(result.EthClient, multisigControlHexAddress, multisigcontrol.V2)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -81,7 +81,7 @@ func NewVegaNetworkSmartContracts(
 		}
 		assetPoolHexAddress = assetPoolAddress.Hex()
 	}
-	result.AssetPool, err = erc20assetpool.NewERC20AssetPool(result.EthClient, assetPoolHexAddress, erc20assetpool.ERC20AssetPoolV1)
+	result.AssetPool, err = erc20assetpool.NewERC20AssetPool(result.EthClient, assetPoolHexAddress, erc20assetpool.V1)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -94,7 +94,7 @@ func NewVegaNetworkSmartContracts(
 		}
 		vegaTokenHexAddress = vegaTokenAddress.Hex()
 	}
-	result.VegaToken, err = erc20token.NewERC20Token(result.EthClient, vegaTokenHexAddress, erc20token.ERC20TokenBase)
+	result.VegaToken, err = erc20token.NewERC20Token(result.EthClient, vegaTokenHexAddress, erc20token.Base)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

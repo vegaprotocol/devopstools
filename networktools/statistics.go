@@ -32,7 +32,7 @@ func (network *NetworkTools) GetRunningStatistics() (*Statistics, error) {
 		return result, nil
 	}
 
-	return nil, fmt.Errorf("failed to get statistics for network %s, network might be down.", network.Name)
+	return nil, fmt.Errorf("failed to get statistics for network %s, network might be down", network.Name)
 }
 
 func (network *NetworkTools) GetRunningStatisticsForAllHosts() map[string]Statistics {
@@ -108,13 +108,14 @@ func (network *NetworkTools) GetRunningStatisticsForHost(host string, tlsOnly bo
 			network.logger.Debug("response body is empty for request", zap.String("url", statsURL))
 			continue
 		}
-		defer res.Body.Close()
 
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			network.logger.Debug("failed to read response body", zap.String("url", statsURL), zap.Error(err))
+			_ = res.Body.Close()
 			continue
 		}
+		_ = res.Body.Close()
 
 		stats := struct {
 			Statistics Statistics `json:"statistics"`

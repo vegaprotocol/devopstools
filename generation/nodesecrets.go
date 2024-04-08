@@ -1,4 +1,4 @@
-package generate
+package generation
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
 	tendermintNodeKeys := GenerateTendermintKeys()
 	tendermintValidatorKeys := GenerateTendermintKeys()
 
-	walletBinaryPassphrase, err := GeneratePassword()
+	walletBinaryPassphrase, err := Password()
 	if err != nil {
 		return nil, err
 	}

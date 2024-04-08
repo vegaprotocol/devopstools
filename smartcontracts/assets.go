@@ -12,7 +12,7 @@ type VegaAsset struct {
 	Name       string
 	HexAddress string
 	EthNetwork types.ETHNetwork
-	Version    erc20token.ERC20TokenVersion
+	Version    erc20token.Version
 }
 
 func (m *Manager) GetAssetWithName(name string) (*erc20token.ERC20Token, error) {
@@ -38,7 +38,7 @@ func (m *Manager) GetAssetWithAddress(hexAddress string) (*erc20token.ERC20Token
 func (m *Manager) GetAsset(
 	hexAddress string,
 	ethNetwork types.ETHNetwork,
-	version erc20token.ERC20TokenVersion,
+	version erc20token.Version,
 ) (*erc20token.ERC20Token, error) {
 	client, err := m.ethClientManager.GetEthClient(ethNetwork)
 	if err != nil {
