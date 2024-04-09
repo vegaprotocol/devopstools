@@ -1,21 +1,27 @@
 package incentive
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
-	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
+	"github.com/vegaprotocol/devopstools/wallet"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 type NetworkParamsArgs struct {
 	*Args
 	UpdateParams bool
+	Change       bool
 }
 
 var networkParamsArgs NetworkParamsArgs
@@ -23,8 +29,8 @@ var networkParamsArgs NetworkParamsArgs
 // networkParamsCmd represents the networkParams command
 var networkParamsCmd = &cobra.Command{
 	Use:   "network-params",
-	Short: "get or update (propose & vote) network params",
-	Long:  `get or update (propose & vote) network params`,
+	Short: "Get or update (propose & vote) network params",
+	Long:  "Get or update (propose & vote) network params",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := RunNetworkParams(networkParamsArgs); err != nil {
 			networkParamsArgs.Logger.Error("Error", zap.Error(err))
@@ -34,10 +40,10 @@ var networkParamsCmd = &cobra.Command{
 }
 
 func init() {
-	networkParamsArgs.Args = &incentiveArgs
+	networkParamsArgs.Args = &args
 
 	Cmd.AddCommand(networkParamsCmd)
-	networkParamsCmd.PersistentFlags().BoolVar(&networkParamsArgs.UpdateParams, "update", false, "Update Network Parameter values with propose & vote")
+	networkParamsCmd.PersistentFlags().BoolVar(&networkParamsArgs.UpdateParams, "update", false, "Update network parameter values with propose & vote")
 }
 
 type expectedNetworkParameter struct {
@@ -45,7 +51,7 @@ type expectedNetworkParameter struct {
 	ExpectedValue string
 }
 
-func expectedNetworkParams(env string) []expectedNetworkParameter {
+func expectedNetworkParams() []expectedNetworkParameter {
 	result := []expectedNetworkParameter{
 		{Name: "rewards.vesting.baseRate", ExpectedValue: "0.0055"},
 		{Name: "rewards.vesting.minimumTransfer", ExpectedValue: "10"},
@@ -86,55 +92,94 @@ func expectedNetworkParams(env string) []expectedNetworkParameter {
 		{Name: "governance.proposal.updateAsset.minClose", ExpectedValue: "5s"},
 		{Name: "governance.proposal.updateAsset.minEnact", ExpectedValue: "5s"},
 		{Name: "ethereum.oracles.enabled", ExpectedValue: "1"},
-	}
-
-	if slices.Contains([]string{types.NetworkStagnet1, types.NetworkFairground}, env) {
-		result = append(result, expectedNetworkParameter{
-			Name:          "validators.epoch.length",
-			ExpectedValue: "30m",
-		})
+		{Name: "validators.epoch.length", ExpectedValue: "30m"},
 	}
 
 	return result
 }
 
 func RunNetworkParams(args NetworkParamsArgs) error {
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
-	if err != nil {
-		return err
-	}
-	defer network.Disconnect()
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-	toUpdate := checkNetworkParams(network)
+	logger := args.Logger.Named("command")
+
+	cfg, err := config.Load(args.NetworkFile)
+	if err != nil {
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
+	}
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
+
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx) // blocking
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+	logger.Debug("Network parameters retrieved")
+
+	whaleWallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
+		Id:             cfg.Network.Wallets.VegaTokenWhale.ID,
+		PublicKey:      cfg.Network.Wallets.VegaTokenWhale.PublicKey,
+		PrivateKey:     cfg.Network.Wallets.VegaTokenWhale.PrivateKey,
+		RecoveryPhrase: cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase,
+	})
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+
+	toUpdate := checkNetworkParams(networkParams)
 
 	if args.UpdateParams {
-		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
-			toUpdate, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, args.Logger,
-		)
+		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(toUpdate, whaleWallet, networkParams, datanodeClient, logger)
 		if err != nil {
 			return err
 		}
 		if updateCount > 0 {
-			if err := network.RefreshNetworkParams(); err != nil {
-				return err
+			logger.Debug("Retrieving network parameters...")
+			updatedNetworkParams, err := datanodeClient.GetAllNetworkParameters()
+			if err != nil {
+				return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 			}
+			logger.Debug("Network parameters retrieved")
+			networkParams = updatedNetworkParams
 		}
-		_ = checkNetworkParams(network)
+		_ = checkNetworkParams(networkParams)
 	}
 
 	return nil
 }
 
-func checkNetworkParams(network *veganetwork.VegaNetwork) map[string]string {
+func checkNetworkParams(netParams *types.NetworkParams) map[string]string {
 	yellowText := "\033[1;33m%s\033[0m"
 	greenText := "\033[1;32m%s\033[0m"
 	redText := "\033[1;31m%s\033[0m"
 	toUpdate := map[string]string{}
-	expectedParameters := expectedNetworkParams(network.Network)
+	expectedParameters := expectedNetworkParams()
 
 	for _, param := range expectedParameters {
 		fmt.Printf(" - %s = ", param.Name)
-		if value, ok := network.NetworkParams.Params[param.Name]; ok {
+		if value, ok := netParams.Params[param.Name]; ok {
 			if value == param.ExpectedValue {
 				fmt.Printf(greenText, fmt.Sprintf("%s (ok)\n", value))
 			} else {
