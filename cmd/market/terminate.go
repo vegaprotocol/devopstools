@@ -1,6 +1,7 @@
 package market
 
 import (
+	context2 "context"
 	"fmt"
 	"os"
 	"time"
@@ -62,7 +63,7 @@ type marketDetails struct {
 func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
 	result := []marketDetails{}
 
-	markets, err := dataNodeClient.GetAllMarkets()
+	markets, err := dataNodeClient.GetAllMarkets(context2.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all markets")
 	}

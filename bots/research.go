@@ -1,54 +1,39 @@
 package bots
 
 import (
-	"context"
 	"fmt"
-	"log"
 
 	"github.com/vegaprotocol/devopstools/wallet"
+)
+
+const (
+	// marketMakerWalletIndex defines index of the market marker wallet. This is
+	// hardcoded in the vega-market-sim.
+	marketMakerWalletIndex = 3
 )
 
 type ResearchBot struct {
 	TradingBot
 	WalletData struct {
-		Index          int64   `json:"index"`
-		PublicKey      string  `json:"publicKey"`
-		RecoveryPhrase *string `json:"recoveryPhrase"`
+		Index          int64  `json:"index"`
+		PublicKey      string `json:"publicKey"`
+		RecoveryPhrase string `json:"recoveryPhrase"`
 	} `json:"wallet"`
 
 	wallet *wallet.VegaWallet
 }
 
-type ResearchBots map[string]ResearchBot
-
-func GetResearchBots(
-	network string,
-	botsAPIToken string,
-) (ResearchBots, error) {
-	botsURL := fmt.Sprintf("https://%s.bots.vega.rocks/traders", network)
-	log.Printf("Getting research bot traders from: %s", botsURL)
-	var payload struct {
-		Traders map[string]ResearchBot `json:"traders"`
-	}
-	err := getBots(context.Background(), botsURL, botsAPIToken, &payload)
-	if err != nil {
-		return nil, err
-	}
-	return payload.Traders, nil
+func (b *ResearchBot) IsMarketMaker() bool {
+	return b.WalletData.Index != marketMakerWalletIndex
 }
 
 func (b *ResearchBot) GetWallet() (*wallet.VegaWallet, error) {
-	var err error
 	if b.wallet == nil {
-		if b.WalletData.RecoveryPhrase == nil {
-			return nil, fmt.Errorf("failed to get wallet for bot %s, recovery phrase is missing", b.Name)
-		}
-		b.wallet, err = wallet.GetVegaWalletSingleton(
-			*b.WalletData.RecoveryPhrase, uint32(b.WalletData.Index),
-		)
+		w, err := wallet.GetVegaWalletSingleton(b.WalletData.RecoveryPhrase, uint32(b.WalletData.Index))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get wallet for bot %s, %w", b.Name, err)
+			return nil, fmt.Errorf("could not retrieve wallet: %w", err)
 		}
+		b.wallet = w
 	}
 	return b.wallet, nil
 }

@@ -20,8 +20,16 @@ func (a *Amount) AsSubUnit() *big.Int {
 	return FloatAsSubUnit(a.amount, a.decimals)
 }
 
+func (a *Amount) AsMainUnit() *big.Float {
+	return new(big.Float).Copy(a.amount)
+}
+
 func (a *Amount) Add(toAdd *big.Float) {
 	a.amount = big.NewFloat(0).Add(a.amount, toAdd)
+}
+
+func (a *Amount) Sub(toSub *big.Float) {
+	a.amount = big.NewFloat(0).Add(a.amount, toSub)
 }
 
 func (a *Amount) Mul(toMul *big.Float) {

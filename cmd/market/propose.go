@@ -1,6 +1,7 @@
 package market
 
 import (
+	context2 "context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -53,7 +54,7 @@ func runPropose(args ProposeArgs) error {
 		return fmt.Errorf("failed to create vega network manager: %w", err)
 	}
 
-	allMarkets, err := network.DataNodeClient.GetAllMarkets()
+	allMarkets, err := network.DataNodeClient.GetAllMarkets(context2.Background())
 	if err != nil {
 		return fmt.Errorf("failed to get all markets from the data-node api: %w", err)
 	}
