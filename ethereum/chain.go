@@ -8,6 +8,7 @@ import (
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20bridge"
 	"github.com/vegaprotocol/devopstools/smartcontracts/multisigcontrol"
+	"github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 
@@ -25,10 +26,13 @@ type ChainsClient struct {
 type ChainClient struct {
 	logger *zap.Logger
 
-	minterWallet     *Wallet
+	client *ethclient.Client
+
+	minterWallet *Wallet
+
 	collateralBridge *erc20bridge.ERC20Bridge
 	multisigControl  *multisigcontrol.MultisigControl
-	client           *ethclient.Client
+	stakingBridge    *stakingbridge.StakingBridge
 
 	chainID string
 }
@@ -118,6 +122,11 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 		return nil, fmt.Errorf("failed to initialize multisig control client: %w", err)
 	}
 
+	stakingBridge, err := stakingbridge.NewStakingBridge(client, ethConfig.StakingBridgeContract.Address, stakingbridge.V1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
+	}
+
 	minterWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*Wallet, error) {
 		w, err := NewWallet(ctx, client, cfg.Wallets.Minter.PrivateKey)
 		if err != nil {
@@ -132,10 +141,13 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 	return &ChainClient{
 		logger: logger,
 
-		client:           client,
+		client: client,
+
+		minterWallet: minterWallet,
+
 		collateralBridge: collateralBridge,
 		multisigControl:  multisigControl,
-		minterWallet:     minterWallet,
+		stakingBridge:    stakingBridge,
 
 		chainID: ethConfig.ChainId,
 	}, nil

@@ -5,7 +5,6 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/asset"
 	"github.com/vegaprotocol/devopstools/cmd/backup"
 	"github.com/vegaprotocol/devopstools/cmd/benchmark"
-	"github.com/vegaprotocol/devopstools/cmd/bot"
 	"github.com/vegaprotocol/devopstools/cmd/bots"
 	"github.com/vegaprotocol/devopstools/cmd/incentive"
 	"github.com/vegaprotocol/devopstools/cmd/market"
@@ -37,6 +36,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(snapshotcompatibility.Cmd)
 	rootCmd.RootCmd.AddCommand(version.Cmd)
 	rootCmd.RootCmd.AddCommand(propose.Cmd)
-	rootCmd.RootCmd.AddCommand(bot.Cmd)
 	rootCmd.RootCmd.AddCommand(incentive.Cmd)
 }
