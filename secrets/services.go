@@ -11,5 +11,4 @@ type ServiceSecretStore interface {
 	GetEthereumNodeURL(types.ETHBridge, string) (string, error)
 	GetEtherscanApikey(types.ETHBridge) (string, error)
 	GetDigitalOceanApiToken() (string, error)
-	GetBotsApiToken() (string, error)
 }
