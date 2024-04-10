@@ -10,23 +10,23 @@ import (
 
 type Args struct {
 	*rootCmd.RootArgs
-	VegaNetworkName string
+	NetworkFile string
 }
 
-var marketArgs Args
+var args Args
 
 var Cmd = &cobra.Command{
 	Use:   "market",
-	Short: "Use template to quickly get what you need",
-	Long: `This section contains multiple built-up templates that you can use to quickly achive what you want.
-	If you see that the command you created might be useful, the move it elsewhere, and leave the template in an original state.`,
+	Short: "Manage a market on the network",
+	Long:  "Manage a market on the network",
 }
 
 func init() {
-	marketArgs.RootArgs = &rootCmd.Args
+	args.RootArgs = &rootCmd.Args
 
-	Cmd.PersistentFlags().StringVar(&marketArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&args.NetworkFile, "network-file", "./network.toml", "Path the the network file")
+
+	if err := Cmd.MarkPersistentFlagRequired("network-file"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

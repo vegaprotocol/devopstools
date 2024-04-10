@@ -13,6 +13,7 @@ import (
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/generation"
+	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
@@ -350,11 +351,7 @@ func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, 
 	filteredTraders := bots.ResearchBots{}
 	for traderID, trader := range traders {
 		for _, marketId := range includedMarkets {
-<<<<<<< HEAD
 			if strings.Contains(trader.Name, marketId) {
-=======
-			if strings.Contains(traderID, marketId) {
->>>>>>> a83e278 (chore: Replace custom wallet by official implementation)
 				filteredTraders[traderID] = trader
 				break
 			}
@@ -462,7 +459,7 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
 
-	allAssets, err := dataNodeClient.ListAssets(ctx)
+	allAssets, err := datanodeClient.ListAssets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve assets from datanode: %w", err)
 	}

@@ -71,7 +71,7 @@ func RunDepositToParties(args DepositArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {

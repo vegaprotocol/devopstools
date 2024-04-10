@@ -2,7 +2,7 @@ package config
 
 type Config struct {
 	// Name of the configuration file used. It's extracted from the filename.
-	Name string
+	Name NetworkName
 
 	// Bridges lists the Ethereum bridges used by the Vega network.
 	Bridges Bridges `toml:"bridges"`

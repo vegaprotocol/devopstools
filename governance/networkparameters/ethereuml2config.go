@@ -30,7 +30,7 @@ func AppendEthereumL2Config(
 	updateExisting bool,
 ) (*vega.EthereumL2Configs, error) {
 	if newConfig.ChainId == "" || newConfig.NetworkId == "" || newConfig.Name == "" {
-		return nil, fmt.Errorf("ChainId, NetworkId and Name must not be empty")
+		return nil, fmt.Errorf("fields ChainId, NetworkId and Name must not be empty")
 	}
 
 	result := &vega.EthereumL2Configs{
