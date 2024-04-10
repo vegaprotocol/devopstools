@@ -6,7 +6,6 @@ import (
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
-	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetworksmartcontracts"
@@ -26,9 +25,7 @@ type VegaNetwork struct {
 	// wallets
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *ethereum.Wallet
-	AssetMainWallet   *ethereum.Wallet
 
-	MarketsCreator *secrets.VegaWalletPrivate
 	VegaTokenWhale *wallet.VegaWallet
 
 	// network params/config
@@ -53,34 +50,17 @@ type VegaNetwork struct {
 
 	WalletManager *wallet.Manager
 
-	NodeSecretStore    secrets.NodeSecretStore
-	ServiceSecretStore secrets.ServiceSecretStore
-
 	logger *zap.Logger
 }
 
-func NewVegaNetwork(
-	network string,
-	dataNodeClient vegaapi.DataNodeClient,
-	nodeSecretStore secrets.NodeSecretStore,
-	serviceSecretStore secrets.ServiceSecretStore,
-	primaryEthClientManager, secondaryEthClientManager *ethutils.EthereumClientManager,
-	primarySmartContractsManager, secondarySmartContractsManager *smartcontracts.Manager,
-	walletManager *wallet.Manager,
-	logger *zap.Logger,
-) (*VegaNetwork, error) {
+func NewVegaNetwork(network string, dataNodeClient vegaapi.DataNodeClient, nodeSecretStore secrets.NodeSecretStore, primaryEthClientManager *ethutils.EthereumClientManager, walletManager *wallet.Manager, logger *zap.Logger) (*VegaNetwork, error) {
 	var (
 		n = &VegaNetwork{
-			Network:                        network,
-			DataNodeClient:                 dataNodeClient,
-			PrimaryEthClientManager:        primaryEthClientManager,
-			PrimarySmartContractsManager:   primarySmartContractsManager,
-			SecondaryEthClientManager:      secondaryEthClientManager,
-			SecondarySmartContractsManager: secondarySmartContractsManager,
-			WalletManager:                  walletManager,
-			NodeSecretStore:                nodeSecretStore,
-			ServiceSecretStore:             serviceSecretStore,
-			logger:                         logger,
+			Network:                 network,
+			DataNodeClient:          dataNodeClient,
+			PrimaryEthClientManager: primaryEthClientManager,
+			WalletManager:           walletManager,
+			logger:                  logger,
 		}
 		errMsg = "failed to create VegaNetwork for: %w"
 		err    error
@@ -91,7 +71,7 @@ func NewVegaNetwork(
 	}
 
 	// Node Secrets
-	n.NodeSecrets, err = n.NodeSecretStore.GetAllVegaNode(n.Network)
+	n.NodeSecrets, err = nodeSecretStore.GetAllVegaNode(n.Network)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -107,10 +87,6 @@ func NewVegaNetwork(
 	}
 
 	// Wallets
-	n.AssetMainWallet, err = n.WalletManager.GetAssetMainEthWallet(n.PrimaryEthNetwork)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
 	n.NetworkMainWallet, err = n.WalletManager.GetNetworkMainEthWallet(n.PrimaryEthNetwork, n.Network)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
