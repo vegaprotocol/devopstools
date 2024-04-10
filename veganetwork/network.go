@@ -6,7 +6,6 @@ import (
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
-	"github.com/vegaprotocol/devopstools/smartcontracts"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetworksmartcontracts"
@@ -26,9 +25,7 @@ type VegaNetwork struct {
 	// wallets
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *ethereum.Wallet
-	AssetMainWallet   *ethereum.Wallet
 
-	MarketsCreator *secrets.VegaWalletPrivate
 	VegaTokenWhale *wallet.VegaWallet
 
 	// network params/config
@@ -37,50 +34,25 @@ type VegaNetwork struct {
 	// clients
 	DataNodeClient vegaapi.DataNodeClient
 
-	PrimaryEthereumConfig        *vega.EthereumConfig
-	PrimaryEthNetwork            types.ETHNetwork
-	PrimaryEthClientManager      *ethutils.EthereumClientManager
-	PrimaryEthClient             *ethclient.Client
-	PrimarySmartContractsManager *smartcontracts.Manager
-	PrimarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
-
-	EVMChainConfig                 *vega.EVMChainConfig
-	SecondaryEthNetwork            types.ETHNetwork
-	SecondaryEthClientManager      *ethutils.EthereumClientManager
-	SecondaryEthClient             *ethclient.Client
-	SecondarySmartContractsManager *smartcontracts.Manager
-	SecondarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
+	PrimaryEthereumConfig   *vega.EthereumConfig
+	PrimaryEthNetwork       types.ETHNetwork
+	PrimaryEthClientManager *ethutils.EthereumClientManager
+	PrimaryEthClient        *ethclient.Client
+	PrimarySmartContracts   *veganetworksmartcontracts.VegaNetworkSmartContracts
 
 	WalletManager *wallet.Manager
-
-	NodeSecretStore    secrets.NodeSecretStore
-	ServiceSecretStore secrets.ServiceSecretStore
 
 	logger *zap.Logger
 }
 
-func NewVegaNetwork(
-	network string,
-	dataNodeClient vegaapi.DataNodeClient,
-	nodeSecretStore secrets.NodeSecretStore,
-	serviceSecretStore secrets.ServiceSecretStore,
-	primaryEthClientManager, secondaryEthClientManager *ethutils.EthereumClientManager,
-	primarySmartContractsManager, secondarySmartContractsManager *smartcontracts.Manager,
-	walletManager *wallet.Manager,
-	logger *zap.Logger,
-) (*VegaNetwork, error) {
+func NewVegaNetwork(network string, dataNodeClient vegaapi.DataNodeClient, nodeSecretStore secrets.NodeSecretStore, primaryEthClientManager *ethutils.EthereumClientManager, walletManager *wallet.Manager, logger *zap.Logger) (*VegaNetwork, error) {
 	var (
 		n = &VegaNetwork{
-			Network:                        network,
-			DataNodeClient:                 dataNodeClient,
-			PrimaryEthClientManager:        primaryEthClientManager,
-			PrimarySmartContractsManager:   primarySmartContractsManager,
-			SecondaryEthClientManager:      secondaryEthClientManager,
-			SecondarySmartContractsManager: secondarySmartContractsManager,
-			WalletManager:                  walletManager,
-			NodeSecretStore:                nodeSecretStore,
-			ServiceSecretStore:             serviceSecretStore,
-			logger:                         logger,
+			Network:                 network,
+			DataNodeClient:          dataNodeClient,
+			PrimaryEthClientManager: primaryEthClientManager,
+			WalletManager:           walletManager,
+			logger:                  logger,
 		}
 		errMsg = "failed to create VegaNetwork for: %w"
 		err    error
@@ -91,7 +63,7 @@ func NewVegaNetwork(
 	}
 
 	// Node Secrets
-	n.NodeSecrets, err = n.NodeSecretStore.GetAllVegaNode(n.Network)
+	n.NodeSecrets, err = nodeSecretStore.GetAllVegaNode(n.Network)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -107,10 +79,6 @@ func NewVegaNetwork(
 	}
 
 	// Wallets
-	n.AssetMainWallet, err = n.WalletManager.GetAssetMainEthWallet(n.PrimaryEthNetwork)
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
 	n.NetworkMainWallet, err = n.WalletManager.GetNetworkMainEthWallet(n.PrimaryEthNetwork, n.Network)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
@@ -121,39 +89,6 @@ func NewVegaNetwork(
 	}
 
 	return n, nil
-}
-
-func (n *VegaNetwork) EthClientForChainID(chainID string) *ethclient.Client {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimaryEthClient
-	case n.EVMChainConfig.ChainId:
-		return n.SecondaryEthClient
-	default:
-		panic(fmt.Sprintf("no ethereum client for chain ID %q", chainID))
-	}
-}
-
-func (n *VegaNetwork) SmartContractManagerForChainID(chainID string) *smartcontracts.Manager {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimarySmartContractsManager
-	case n.EVMChainConfig.ChainId:
-		return n.SecondarySmartContractsManager
-	default:
-		panic(fmt.Sprintf("no smart contract manager for chain ID %q", chainID))
-	}
-}
-
-func (n *VegaNetwork) SmartContractForChainID(chainID string) *veganetworksmartcontracts.VegaNetworkSmartContracts {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimarySmartContracts
-	case n.EVMChainConfig.ChainId:
-		return n.SecondarySmartContracts
-	default:
-		panic(fmt.Sprintf("no smart contract for chain ID %q", chainID))
-	}
 }
 
 func (n *VegaNetwork) Disconnect() {
@@ -192,29 +127,5 @@ func (n *VegaNetwork) RefreshNetworkParams() error {
 		return fmt.Errorf("could not create primary smart contract connector: %w", err)
 	}
 
-	n.EVMChainConfig, err = n.NetworkParams.EVMChainConfig()
-	if err != nil {
-		return fmt.Errorf("could not retrieve secondary ethereum config from network parameters: %w", err)
-	}
-	n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.EVMChainConfig.ChainId)
-	if err != nil {
-		return fmt.Errorf("could not resolve secondary ethereum network name from chain ID: %w", err)
-	}
-	n.SecondaryEthClient, err = n.SecondaryEthClientManager.GetEthClient(n.SecondaryEthNetwork)
-	if err != nil {
-		return fmt.Errorf("could not create secondary ethereum client: %w", err)
-	}
-	n.SecondarySmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
-		n.SecondaryEthClient,
-		"", // will be taken from Staking Bridge
-		"", // will be taken from ERC20 Bridge
-		n.EVMChainConfig.CollateralBridgeContract.Address,
-		n.EVMChainConfig.MultisigControlContract.Address,
-		"",
-		n.logger.Named("secondary-smart-contracts"),
-	)
-	if err != nil {
-		return fmt.Errorf("could not create secondary smart contract connector: %w", err)
-	}
 	return nil
 }

@@ -38,8 +38,7 @@ func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
 type ETHBridge string
 
 const (
-	PrimaryBridge   ETHBridge = "primary-bridge"
-	SecondaryBridge ETHBridge = "secondary-bridge"
+	PrimaryBridge ETHBridge = "primary-bridge"
 )
 
 func (b ETHBridge) String() string {
