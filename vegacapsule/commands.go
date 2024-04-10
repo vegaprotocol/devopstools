@@ -73,7 +73,7 @@ func AddNodes(log *zap.Logger, binary string, filter AddNodesBaseOn, startNode b
 		return nil, fmt.Errorf("failed to read details about new node: %w", err)
 	}
 
-	newNodeDetails := []NodeDetails{}
+	var newNodeDetails []NodeDetails
 
 	if err := json.Unmarshal(newNodeFileContent, &newNodeDetails); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal new node details: %w", err)

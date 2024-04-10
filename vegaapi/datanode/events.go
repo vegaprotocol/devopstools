@@ -23,7 +23,7 @@ func (n *DataNode) ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgrad
 	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
-	result := []vegaeventspb.ProtocolUpgradeEvent{}
+	var result []vegaeventspb.ProtocolUpgradeEvent
 
 	response, err := c.ListProtocolUpgradeProposals(ctx, &dataapipb.ListProtocolUpgradeProposalsRequest{})
 	if err != nil {

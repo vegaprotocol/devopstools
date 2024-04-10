@@ -128,7 +128,7 @@ func (n *DataNode) ListAccounts(ctx context.Context, partyID string, accountType
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	results := []AccountFunds{}
+	var results []AccountFunds
 
 	if response.Accounts == nil || len(response.Accounts.Edges) < 1 {
 		return results, nil

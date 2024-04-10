@@ -90,7 +90,7 @@ func init() {
 func vegacapsuleValidatorsCoreHomePaths(
 	vegacapsuleBinary, vegacapsuleHome string,
 ) ([]string, error) {
-	result := []string{}
+	var result []string
 
 	nodes, err := vegacapsule.ListNodes(vegacapsuleBinary, vegacapsuleHome)
 	if err != nil {

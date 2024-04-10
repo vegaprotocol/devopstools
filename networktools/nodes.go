@@ -24,7 +24,7 @@ const (
 
 func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 	if network.Name == types.NetworkMainnet {
-		result := []string{}
+		var result []string
 
 		for i := 0; i < 10; i++ {
 			if slices.Contains(kind, TypeExplorer) {
@@ -38,7 +38,7 @@ func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 		return result
 	}
 
-	result := []string{}
+	var result []string
 	if slices.Contains(kind, TypeExplorer) {
 		result = append(result, fmt.Sprintf("be.%s", network.DNSSuffix))
 	}
@@ -61,7 +61,7 @@ func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 //
 
 func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []string {
-	hosts := []string{}
+	var hosts []string
 	previousMissing := false
 	httpClient := http.Client{
 		Timeout: network.restTimeout,
@@ -120,7 +120,7 @@ func (network *NetworkTools) GetNetworkHealthyNodes() []string {
 //
 
 func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
-	hosts := []string{}
+	var hosts []string
 	previousMissing := false
 	httpClient := http.Client{
 		Timeout: network.restTimeout,
@@ -180,7 +180,7 @@ func (network *NetworkTools) GetNetworkGRPCVegaCore() []string {
 }
 
 func (network *NetworkTools) GetNetworkGRPCDataNodes() []string {
-	addresses := []string{}
+	var addresses []string
 	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 		address := net.JoinHostPort(host, "3007")
 		conn, err := net.DialTimeout("tcp", address, 2*time.Second)
@@ -219,7 +219,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 		return result
 	}
 
-	hosts := []string{}
+	var hosts []string
 	previousMissing := false
 	for _, host := range network.ListNodes([]NodeType{TypeValidator}) {
 		host := fmt.Sprintf("tm.%s", host)
@@ -251,7 +251,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 }
 
 func FilterHealthyGRPCEndpoints(endpoints []string) []string {
-	healthy := []string{}
+	var healthy []string
 	for _, endpoint := range endpoints {
 		conn, err := net.DialTimeout("tcp", endpoint, MaximumDialDuration)
 		if err == nil && conn != nil {

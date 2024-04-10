@@ -147,7 +147,7 @@ func RunListAssets(args ListArgs) error {
 }
 
 func loadSignersWallets(ctx context.Context, cfg config.Config, signersAddresses []common.Address, ethClient *ethclient.Client) ([]*ethereum.Wallet, error) {
-	signersWallets := []*ethereum.Wallet{}
+	var signersWallets []*ethereum.Wallet
 	for _, node := range cfg.Nodes {
 		if !slices.ContainsFunc(signersAddresses, func(address common.Address) bool {
 			return address.Hex() == node.Secrets.EthereumAddress
