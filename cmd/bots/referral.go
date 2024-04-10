@@ -316,7 +316,7 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 	}
 
 	// add members to the referralSets
-	potentialMembers := []string{}
+	var potentialMembers []string
 	for traderId, trader := range filteredTraders {
 		if !trader.IsMarketMaker() {
 			potentialMembers = append(potentialMembers, traderId)

@@ -105,7 +105,7 @@ func runPropose(args ProposeArgs) error {
 }
 
 func filterMarkets(logger *zap.Logger, allMarkets []*vega.Market, allNetworkProposals []*commandspb.ProposalSubmission) []*commandspb.ProposalSubmission {
-	result := []*commandspb.ProposalSubmission{}
+	var result []*commandspb.ProposalSubmission
 
 	for idx, proposal := range allNetworkProposals {
 		newMarketProposal, ok := proposal.Terms.Change.(*vega.ProposalTerms_NewMarket)
@@ -161,7 +161,7 @@ func sendBatchProposal(logger *zap.Logger, network *veganetwork.VegaNetwork, pro
 }
 
 func preMarketDeployProposals(environment string, currentNetworkParams *types.NetworkParams) ([]*commandspb.ProposalSubmission, error) {
-	commonProposals := []*commandspb.ProposalSubmission{}
+	var commonProposals []*commandspb.ProposalSubmission
 
 	isTradingEnabled, ok := currentNetworkParams.Params[netparams.PerpsMarketTradingEnabled]
 	if !ok || isTradingEnabled != "1" {

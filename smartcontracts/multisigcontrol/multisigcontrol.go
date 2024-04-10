@@ -111,7 +111,7 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 		return nil, fmt.Errorf("version '%s' is not supported", m.Version)
 	}
 
-	result := []common.Address{}
+	var result []common.Address
 
 	for signerAddress, counter := range signerCounter {
 		if counter == 1 {

@@ -61,7 +61,7 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 	blockExplorers := tools.GetBlockExplorers(true)
 	dataNodes := tools.GetNetworkDataNodes(true)
 	tendermintEndpoints := tools.GetNetworkTendermintRESTEndpoints(true)
-	validators := []string{}
+	var validators []string
 
 	for _, nodeHost := range allNodes {
 		var (
@@ -89,9 +89,9 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 		}
 	}
 
-	healthyValidators := []string{}
-	healthyExplorers := []string{}
-	healthyDataNodes := []string{}
+	var healthyValidators []string
+	var healthyExplorers []string
+	var healthyDataNodes []string
 
 	for _, host := range blockExplorers {
 		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {

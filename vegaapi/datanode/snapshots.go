@@ -32,7 +32,7 @@ func (n *DataNode) ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error) 
 		return nil, fmt.Errorf("returned empty response from the List snapshot endpoint")
 	}
 
-	result := []vegaeventspb.CoreSnapshotData{}
+	var result []vegaeventspb.CoreSnapshotData
 
 	for idx, edge := range response.CoreSnapshots.Edges {
 		if edge.Node == nil {

@@ -1,3 +1,3 @@
 package smartcontracts
 
-var SecondaryAssets = []VegaAsset{}
+var SecondaryAssets []VegaAsset

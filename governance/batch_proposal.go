@@ -21,7 +21,7 @@ func NewBatchProposal(
 	// we also do use the BatchProposalTermsChange just in case
 	batchTerms []*vega.BatchProposalTermsChange,
 ) *commandspb.BatchProposalSubmission {
-	changes := []*vega.BatchProposalTermsChange{}
+	var changes []*vega.BatchProposalTermsChange
 
 	for i, v := range proposals {
 		if time.Unix(v.Terms.EnactmentTimestamp, 0).Before(closingTime) {
