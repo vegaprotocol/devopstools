@@ -7,10 +7,6 @@ recovery_phrase = "xxx"
 [bridges.primary]
 client_url = "https://mainnet.infura.io/v3/xxx"
 
-[bridges.primary.etherscan]
-rest_url = "https://api.etherscan.io/api"
-api_key = "xxx"
-
 [bridges.primary.wallets.minter]
 address = "xxx"
 mnemonic = "xxx xxx xxx"
@@ -18,10 +14,6 @@ private_key = "xxx"
 
 [bridges.evm]
 client_url = "https://mainnet.infura.io/v3/xxx"
-
-[bridges.evm.etherscan]
-rest_url = "https://api.etherscan.io/api"
-api_key = "xxx"
 
 [bridges.evm.wallets.minter]
 address = "xxx"

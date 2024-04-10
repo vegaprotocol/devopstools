@@ -10,21 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-//
-// TRANSACT OPTS
-//
-
 func GetTransactOpts(ctx context.Context, ethClient *ethclient.Client, privateKey *ecdsa.PrivateKey) (*bind.TransactOpts, error) {
-	return GetTransactOptsWithNonce(ctx, ethClient, privateKey, 0)
+	return getTransactOptsWithNonce(ctx, ethClient, privateKey, 0)
 }
 
-func GetTransactOptsWithNonce(ctx context.Context, ethClient *ethclient.Client, privateKey *ecdsa.PrivateKey, nonce uint64) (*bind.TransactOpts, error) {
+func getTransactOptsWithNonce(ctx context.Context, ethClient *ethclient.Client, privateKey *ecdsa.PrivateKey, nonce uint64) (*bind.TransactOpts, error) {
 	var (
 		errMsg = "failed to get transact opts, %w"
 		err    error
 	)
 
-	transactionData, err := GetNextTransactionData(ctx, ethClient)
+	transactionData, err := getNextTransactionData(ctx, ethClient)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -45,18 +41,14 @@ func GetTransactOptsWithNonce(ctx context.Context, ethClient *ethclient.Client, 
 	return transactOpts, nil
 }
 
-//
-// TRANSACTION DATA - London Fork
-//
-
-type TransactionData struct {
+type transactionData struct {
 	chainID   *big.Int
 	gasFeeCap *big.Int
 	gasTipCap *big.Int
 }
 
-func GetNextTransactionData(ctx context.Context, ethClient *ethclient.Client) (*TransactionData, error) {
-	result := &TransactionData{}
+func getNextTransactionData(ctx context.Context, ethClient *ethclient.Client) (*transactionData, error) {
+	result := &transactionData{}
 
 	chainID, err := ethClient.ChainID(ctx)
 	if err != nil {
