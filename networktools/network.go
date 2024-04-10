@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/types"
 
 	"go.uber.org/zap"
@@ -28,9 +29,9 @@ func NewNetworkTools(
 	}
 
 	switch name {
-	case types.NetworkFairground:
+	case config.NetworkFairground.String():
 		network.DNSSuffix = "testnet.vega.rocks"
-	case types.NetworkMainnet:
+	case config.NetworkMainnet.String():
 		network.DNSSuffix = "vega.community"
 	default:
 		network.DNSSuffix = fmt.Sprintf("%s.vega.rocks", name)

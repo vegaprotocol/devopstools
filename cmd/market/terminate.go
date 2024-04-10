@@ -6,10 +6,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
@@ -26,16 +29,15 @@ import (
 const OpsManagedMetadata = "managed:vega/ops"
 
 type TerminateArgs struct {
+	*Args
+
 	AllMarkets     bool
 	ManagedMarkets bool
 	MarketIds      []string
-
-	*Args
 }
 
 var terminateArgs TerminateArgs
 
-// provideLPCmd represents the provideLP command
 var terminateCmd = &cobra.Command{
 	Use:   "terminate",
 	Short: "Terminate one or more markets",
@@ -48,7 +50,7 @@ var terminateCmd = &cobra.Command{
 }
 
 func init() {
-	terminateArgs.Args = &marketArgs
+	terminateArgs.Args = &args
 
 	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.AllMarkets, "all", false, "Terminate all markets")
 	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.ManagedMarkets, "managed", false, fmt.Sprintf("Terminate markets managed by ops only(all with %s metadata)", OpsManagedMetadata))
@@ -122,47 +124,88 @@ func networkParametersForMarketsTermination(currentNetworkParameters map[string]
 }
 
 func RunTerminate(args *TerminateArgs) error {
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
-	if err != nil {
-		return err
-	}
-	defer network.Disconnect()
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-	ctx := context.Background()
+	logger := args.Logger.Named("command")
 
-	minClose, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinClose])
+	cfg, err := config.Load(args.NetworkFile)
 	if err != nil {
-		return fmt.Errorf("failed to parse duration for %s: %w", netparams.GovernanceProposalMarketMinClose, err)
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	minEnact, err := time.ParseDuration(network.NetworkParams.Params[netparams.GovernanceProposalMarketMinEnact])
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx) // blocking
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
 	if err != nil {
-		return fmt.Errorf("failed to parse duration for %s: %w", netparams.GovernanceProposalMarketMinEnact, err)
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+	logger.Debug("Network parameters retrieved")
+
+	minClose, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalMarketMinClose])
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
 	}
 
-	marketsToRemove, err := findMarkets(network.DataNodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
+	minEnact, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalMarketMinEnact])
+	if err != nil {
+		return fmt.Errorf("failed to parse duration for %q: %w", netparams.GovernanceProposalMarketMinEnact, err)
+	}
+
+	marketsToRemove, err := findMarkets(datanodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
 	if err != nil {
 		return fmt.Errorf("failed to find markets to remove: %w", err)
 	}
 
-	networkParametersToUpdate := networkParametersForMarketsTermination(network.NetworkParams.Params, len(marketsToRemove))
-	if len(networkParametersToUpdate) > 0 {
-		args.Logger.Sugar().Infof("Voting network parmeters required for markets termination: %v", networkParametersToUpdate)
+	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
 
-		if _, err := governance.ProposeAndVoteOnNetworkParameters(ctx, networkParametersToUpdate, network.VegaTokenWhale, "", network.NetworkParams, network.DataNodeClient, args.Logger); err != nil {
+	if err := vega.GenerateKeysUpToKey(whaleWallet, cfg.Network.Wallets.VegaTokenWhale.PublicKey); err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+
+	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
+
+	networkParametersToUpdate := networkParametersForMarketsTermination(networkParams.Params, len(marketsToRemove))
+	if len(networkParametersToUpdate) > 0 {
+		logger.Info("Voting network parameters required for markets termination", zap.Any("network-parameters", networkParametersToUpdate))
+
+		if _, err := governance.ProposeAndVoteOnNetworkParameters(ctx, networkParametersToUpdate, whaleWallet, whalePublicKey, networkParams, datanodeClient, logger); err != nil {
 			return fmt.Errorf("failed to update network parameters required for market termination: %w", err)
 		}
 
 		time.Sleep(5 * time.Second)
-		args.Logger.Info("Network parameters updated")
+		logger.Info("Network parameters updated")
 	}
-
-	firstKey := vega.MustFirstKey(network.VegaTokenWhale)
 
 	for _, marketDetails := range marketsToRemove {
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 
-		args.Logger.Info("Terminating market", zap.String("market", marketDetails.name))
+		logger.Info("Terminating market", zap.String("market", marketDetails.name))
 		proposal := governance.TerminateMarketProposal(closingTime, enactmentTime, marketDetails.name, marketDetails.id, "10")
 
 		args.Logger.Info("Terminating market: Sending proposal", zap.String("market", marketDetails.name))
@@ -172,15 +215,15 @@ func RunTerminate(args *TerminateArgs) error {
 			},
 		}
 
-		if _, err := walletpkg.SendTransaction(ctx, network.VegaTokenWhale, firstKey, &proposalRequest, network.DataNodeClient); err != nil {
+		if _, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &proposalRequest, datanodeClient); err != nil {
 			return err
 		}
 
-		args.Logger.Info("Terminating market: Waiting for proposal to be picked up on the network", zap.String("market", marketDetails.name))
+		logger.Info("Terminating market: Waiting for proposal to be picked up on the network", zap.String("market", marketDetails.name))
 		proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
 			reference := proposal.Reference
 
-			res, err := network.DataNodeClient.ListGovernanceData(ctx, &v2.ListGovernanceDataRequest{
+			res, err := datanodeClient.ListGovernanceData(ctx, &v2.ListGovernanceDataRequest{
 				ProposalReference: &reference,
 			})
 			if err != nil {
@@ -189,7 +232,7 @@ func RunTerminate(args *TerminateArgs) error {
 			var proposalId string
 			for _, edge := range res.Connection.Edges {
 				if edge.Node.Proposal.Reference == reference {
-					args.Logger.Info("Found proposal", zap.String("market", marketDetails.name), zap.String("reference", reference),
+					logger.Info("Found proposal", zap.String("market", marketDetails.name), zap.String("reference", reference),
 						zap.String("status", edge.Node.Proposal.State.String()),
 						zap.Any("proposal", edge.Node.Proposal))
 					proposalId = edge.Node.Proposal.Id
@@ -206,7 +249,7 @@ func RunTerminate(args *TerminateArgs) error {
 		if err != nil {
 			return fmt.Errorf("failed to find proposal for terminate market %s: %w", marketDetails.name, err)
 		}
-		args.Logger.Info("Terminating market: Proposal found", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
+		logger.Info("Terminating market: Proposal found", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
 
 		args.Logger.Info("Terminating market: Voting on proposal", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
 		voteRequest := walletpb.SubmitTransactionRequest{
@@ -218,15 +261,18 @@ func RunTerminate(args *TerminateArgs) error {
 			},
 		}
 
-		if _, err := walletpkg.SendTransaction(ctx, network.VegaTokenWhale, firstKey, &voteRequest, network.DataNodeClient); err != nil {
+		if _, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &voteRequest, datanodeClient); err != nil {
 			return err
 		}
 
-		args.Logger.Info("Terminating market: Voted on proposal", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
+		logger.Info("Terminating market: Voted on proposal", zap.String("market", marketDetails.name), zap.String("proposal-id", proposalId))
 	}
 
-	fmt.Printf("%v\n", marketsToRemove)
-	fmt.Println(len(marketsToRemove))
+	logger.Info("Markets to remove",
+		zap.Int("total-markets", len(marketsToRemove)),
+		zap.Any("markets", marketsToRemove),
+	)
+	fmt.Println()
 
 	return nil
 }

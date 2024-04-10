@@ -114,7 +114,7 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
@@ -372,13 +372,13 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 	return referralSets, nil
 }
 
-func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
-	allMarkets, err := dataNodeClient.GetAllMarkets(ctx)
+func findMarketsForAssets(ctx context.Context, datanodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
+	allMarkets, err := datanodeClient.GetAllMarkets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
 
-	allAssets, err := dataNodeClient.ListAssets(ctx)
+	allAssets, err := datanodeClient.ListAssets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve assets from datanode: %w", err)
 	}

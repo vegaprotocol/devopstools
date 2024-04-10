@@ -53,7 +53,7 @@ func NewChainClientForID(ctx context.Context, cfg config.Config, networkParams *
 
 	evmChainConfig, err := networkParams.EVMChainConfig()
 	if err != nil {
-		return nil, fmt.Errorf("could not get secondary ethereum configuration from network paramters: %w", err)
+		return nil, fmt.Errorf("could not get EVM chain configuration from network paramters: %w", err)
 	}
 
 	switch chainID {

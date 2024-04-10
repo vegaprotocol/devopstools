@@ -32,7 +32,7 @@ func VoteOnProposal(ctx context.Context, voteDescription string, proposalId stri
 		time.Sleep(time.Second * 3)
 		vote, err := fetchVoteByProposalIdAndVoter(ctx, proposalId, voterPublicKey, dataNodeClient)
 		if err != nil {
-			return fmt.Errorf("failed to find vote %w", err)
+			return fmt.Errorf("failed to find vote: %w", err)
 		}
 		if vote != nil {
 			return nil
@@ -94,11 +94,12 @@ func fetchVoteByProposalIdAndVoter(ctx context.Context, proposalId string, voter
 		PartyId:    &voterPartyId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve votes for proposal %q and party %q: %w", proposalId, voterPartyId, err)
 	}
+
 	if len(voteEdges.Votes.Edges) > 1 {
 		// This is Vega Network issue
-		return nil, fmt.Errorf("found more than 1 vote for proposalId %s from same party %s: %+v",
+		return nil, fmt.Errorf("found more than 1 vote for proposal %q from same party %q: %+v",
 			proposalId, voterPartyId, voteEdges.Votes.Edges,
 		)
 	} else if len(voteEdges.Votes.Edges) == 1 {
