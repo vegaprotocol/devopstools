@@ -52,11 +52,3 @@ func (c *SecretStore) GetDigitalOceanApiToken() (string, error) {
 	}
 	return secret["api_token"].(string), nil
 }
-
-func (c *SecretStore) GetBotsApiToken() (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "bots")
-	if err != nil {
-		return "", err
-	}
-	return secret["api_token"].(string), nil
-}

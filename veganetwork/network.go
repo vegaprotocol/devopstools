@@ -27,7 +27,6 @@ type VegaNetwork struct {
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *ethereum.Wallet
 	AssetMainWallet   *ethereum.Wallet
-	BotsApiToken      string
 
 	MarketsCreator *secrets.VegaWalletPrivate
 	VegaTokenWhale *wallet.VegaWallet
@@ -117,10 +116,6 @@ func NewVegaNetwork(
 		return nil, fmt.Errorf(errMsg, err)
 	}
 	n.VegaTokenWhale, err = n.WalletManager.GetVegaTokenWhaleVegaWallet()
-	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
-	}
-	n.BotsApiToken, err = n.ServiceSecretStore.GetBotsApiToken()
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
