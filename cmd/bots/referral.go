@@ -459,7 +459,7 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
 
-	allAssets, err := dataNodeClient.ListAssets(ctx)
+	allAssets, err := datanodeClient.ListAssets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve assets from datanode: %w", err)
 	}
