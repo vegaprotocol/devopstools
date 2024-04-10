@@ -18,32 +18,9 @@ type Statistics struct {
 	AppVersion  string `json:"appVersion"`
 }
 
-func (network *NetworkTools) GetRunningStatistics() (*Statistics, error) {
-	allHostsStats := network.GetRunningStatisticsForAllHosts()
-	var result *Statistics
-	for hostname, stats := range allHostsStats {
-		if result == nil || result.BlockHeight < stats.BlockHeight {
-			el := allHostsStats[hostname]
-			result = &el
-		}
-	}
-
-	if result != nil {
-		return result, nil
-	}
-
-	return nil, fmt.Errorf("failed to get statistics for network %s, network might be down", network.Name)
-}
-
 func (network *NetworkTools) GetRunningStatisticsForAllHosts() map[string]Statistics {
 	return network.GetRunningStatisticsForHosts(
 		network.GetNetworkNodes(false), false,
-	)
-}
-
-func (network *NetworkTools) GetRunningStatisticsForAllDataNodes() map[string]Statistics {
-	return network.GetRunningStatisticsForHosts(
-		network.GetNetworkDataNodes(false), true,
 	)
 }
 
@@ -133,12 +110,4 @@ func (network *NetworkTools) GetRunningStatisticsForHost(host string, tlsOnly bo
 		return &stats.Statistics, nil
 	}
 	return nil, fmt.Errorf("failed to get statistics for host %s", host)
-}
-
-func (network *NetworkTools) GetRunningVersion() (string, error) {
-	stats, err := network.GetRunningStatistics()
-	if err != nil {
-		return "", err
-	}
-	return stats.AppVersion, nil
 }

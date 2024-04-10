@@ -17,25 +17,10 @@ import (
 type VegaCoreClient interface {
 	LastBlockData() (*vegaapipb.LastBlockHeightResponse, error)
 	Statistics() (*vegaapipb.StatisticsResponse, error)
-	SubmitTransaction(
-		req *vegaapipb.SubmitTransactionRequest,
-	) (response *vegaapipb.SubmitTransactionResponse, err error)
-	PropagateChainEvent(
-		req *vegaapipb.PropagateChainEventRequest,
-	) (response *vegaapipb.PropagateChainEventResponse, err error)
-	DepositBuiltinAsset(
-		vegaAssetId string,
-		partyId string,
-		amount string,
-		signAny func([]byte) ([]byte, string, error),
-	) (bool, error)
-	DepositERC20Asset(
-		vegaAssetId string,
-		sourceEthereumAddress string,
-		targetPartyId string,
-		amount string,
-		signAny func([]byte) ([]byte, string, error),
-	) (bool, error)
+	SubmitTransaction(req *vegaapipb.SubmitTransactionRequest) (response *vegaapipb.SubmitTransactionResponse, err error)
+	PropagateChainEvent(req *vegaapipb.PropagateChainEventRequest) (response *vegaapipb.PropagateChainEventResponse, err error)
+	DepositBuiltinAsset(vegaAssetId string, partyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
+	DepositERC20Asset(vegaAssetId string, sourceEthereumAddress string, targetPartyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
 	CoreNetworkParameters(parameterKey string) ([]*vega.NetworkParameter, error)
 }
 
@@ -53,9 +38,7 @@ type DataNodeClient interface {
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
 	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)
-	ListGovernanceData(
-		req *dataapipb.ListGovernanceDataRequest,
-	) (response *dataapipb.ListGovernanceDataResponse, err error)
+	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
 	GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error)
 	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
 	GetCurrentReferralProgram(ctx context.Context) (*v2.ReferralProgram, error)

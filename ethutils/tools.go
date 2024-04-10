@@ -1,5 +1,0 @@
-package ethutils
-
-//
-// Helper functions
-//
