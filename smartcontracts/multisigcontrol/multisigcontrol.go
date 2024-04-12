@@ -34,9 +34,10 @@ type NewInV2 interface {
 type MultisigControl struct {
 	Common
 	NewInV2
-	Address common.Address
-	Version Version
-	client  *ethclient.Client
+	Address       common.Address
+	Version       Version
+	client        *ethclient.Client
+	staticSigners []common.Address
 
 	// Minimal implementation
 	v1 *MultisigControl_V1.MultisigControl
@@ -44,6 +45,13 @@ type MultisigControl struct {
 }
 
 func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, error) {
+	// It is very hard and time consuming go get signers from the networks
+	// like arbitrum, where the network can produce about 300 blocks per minute and RPC providers
+	// can limit number of blocks for the filter to about 10k.
+	if len(m.staticSigners) > 0 {
+		return m.staticSigners, nil
+	}
+
 	latestBlockNumber, err := m.client.BlockNumber(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest block number: %w", err)
@@ -74,9 +82,11 @@ func (m *MultisigControl) GetSigners(ctx context.Context) ([]common.Address, err
 		if err != nil {
 			return nil, fmt.Errorf(" failed to filter SignerAdded events: %w", err)
 		}
+
 		for addedIterator.Next() {
 			signerCounter[addedIterator.Event.NewSigner] += 1
 		}
+
 	default:
 		return nil, fmt.Errorf("version %q is not supported", m.Version)
 	}
@@ -131,12 +141,24 @@ func NewMultisigControl(
 	ethClient *ethclient.Client,
 	hexAddress string,
 	version Version,
+	staticSigners []string,
 ) (*MultisigControl, error) {
+	staticSignersAddresses := []common.Address{}
+	if len(staticSigners) > 0 {
+		for _, signerAddress := range staticSigners {
+			staticSignersAddresses = append(
+				staticSignersAddresses,
+				common.HexToAddress(signerAddress),
+			)
+		}
+	}
+
 	var err error
 	result := &MultisigControl{
-		Address: common.HexToAddress(hexAddress),
-		Version: version,
-		client:  ethClient,
+		Address:       common.HexToAddress(hexAddress),
+		Version:       version,
+		client:        ethClient,
+		staticSigners: staticSignersAddresses,
 	}
 	switch version {
 	case V1:
