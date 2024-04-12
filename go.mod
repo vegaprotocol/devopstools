@@ -197,4 +197,5 @@ replace (
 	github.com/shopspring/decimal => github.com/vegaprotocol/decimal v1.3.1-uint256
 	github.com/tendermint/tendermint => github.com/vegaprotocol/cometbft v0.34.29-patch.1
 	github.com/tendermint/tm-db => github.com/cometbft/cometbft-db v0.6.7
+	code.vegaprotocol.io/vega => /Users/valentin/Developer/vega/vega
 )

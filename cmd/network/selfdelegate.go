@@ -11,11 +11,11 @@ import (
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
-	"github.com/vegaprotocol/devopstools/wallet"
+	"github.com/vegaprotocol/devopstools/vega"
 
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -112,9 +112,10 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		return fmt.Errorf("failed to get balance, %w", err)
 	}
 	requiredTokensTotal := ethutils.VegaTokenFromFullTokens(humanMissingStakeTotal)
+	ctx := context.Background()
 	if minterTokenBalance.Cmp(requiredTokensTotal) < 0 {
 		diff := new(big.Int).Sub(requiredTokensTotal, minterTokenBalance)
-		opts := minterWallet.GetTransactOpts(context.Background())
+		opts := minterWallet.GetTransactOpts(ctx)
 		logger.Info("minting Vega Token", zap.String("amount", diff.String()), zap.String("token", vegaTokenInfo.Name),
 			zap.String("ethWallet", minterWallet.Address.Hex()),
 			zap.String("balanceBefore", minterTokenBalance.String()),
@@ -139,7 +140,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	}
 	if minterTokenAllowance.Cmp(requiredTokensTotal) < 0 {
 		diff := new(big.Int).Sub(requiredTokensTotal, minterTokenAllowance)
-		opts := minterWallet.GetTransactOpts(context.Background())
+		opts := minterWallet.GetTransactOpts(ctx)
 		logger.Info("increasing allowance", zap.String("amount", diff.String()), zap.String("token", vegaTokenInfo.Name),
 			zap.String("ethWallet", minterWallet.Address.Hex()),
 			zap.String("allowanceBefore", minterTokenAllowance.String()),
@@ -158,7 +159,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	}
 	// wait
 	if mintTx != nil {
-		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, mintTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(ctx, network.PrimaryEthClient, mintTx, time.Minute); err != nil {
 			logger.Error("failed to mint", zap.String("token", vegaTokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mints: %w", err)
 		}
@@ -166,7 +167,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()))
 	}
 	if allowanceTx != nil {
-		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(ctx, network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", minterWallet.Address.Hex()),
 				zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -185,7 +186,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		var (
 			node        = network.NodeSecrets[name]
 			stakeAmount = ethutils.VegaTokenFromFullTokens(humanStakeAmount)
-			opts        = minterWallet.GetTransactOpts(context.Background())
+			opts        = minterWallet.GetTransactOpts(ctx)
 		)
 		logger.Info("staking to node", zap.String("node", name), zap.String("vegaPubKey", node.VegaPubKey),
 			zap.String("amount", humanStakeAmount.String()), zap.String("stakingBridgeAddress", stakingBridge.Address.Hex()))
@@ -203,7 +204,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, tx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(ctx, network.PrimaryEthClient, tx, time.Minute); err != nil {
 			stakeFailureCount += 1
 			logger.Error("failed to stake", zap.String("node", name),
 				zap.Any("tx", tx), zap.Error(err))
@@ -218,11 +219,6 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	//
 	// Delegate
 	//
-	lastBlockData, err := network.DataNodeClient.LastBlockData()
-	if err != nil {
-		return err
-	}
-
 	resultsChannel := make(chan error, len(network.ValidatorsById))
 	var wg sync.WaitGroup
 	for name, nodeSecrets := range network.NodeSecrets {
@@ -252,20 +248,21 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		}
 
 		wg.Add(1)
-		go func(name string, nodeSecrets *secrets.VegaNodePrivate, lastBlockData *vegaapipb.LastBlockHeightResponse, hasVisibleStake bool) {
+		go func(name string, nodeSecrets *secrets.VegaNodePrivate, hasVisibleStake bool) {
 			defer wg.Done()
-			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
-				Id:             nodeSecrets.VegaId,
-				PublicKey:      nodeSecrets.VegaPubKey,
-				PrivateKey:     nodeSecrets.VegaPrivateKey,
-				RecoveryPhrase: nodeSecrets.VegaRecoveryPhrase,
-			})
+			vegawallet, err := vega.LoadWallet(nodeSecrets.VegaId, nodeSecrets.VegaRecoveryPhrase)
 			if err != nil {
 				logger.Error("failed to create wallet", zap.String("node", name), zap.Error(err))
 				resultsChannel <- fmt.Errorf("failed to create wallet for %s node", name)
 				return
 			}
-			walletTxReq := walletpb.SubmitTransactionRequest{
+			if err := vega.GenerateKeysUpToKey(vegawallet, nodeSecrets.VegaPubKey); err != nil {
+				logger.Error("failed to generate wallet keys", zap.String("key", nodeSecrets.VegaPubKey), zap.Error(err))
+				resultsChannel <- fmt.Errorf("failed to generate wallet keys for %s node", name)
+				return
+			}
+
+			request := walletpb.SubmitTransactionRequest{
 				PubKey: nodeSecrets.VegaPubKey,
 				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
 					DelegateSubmission: &commandspb.DelegateSubmission{
@@ -274,31 +271,21 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					},
 				},
 			}
-			logger.Info("tx", zap.String("node", name), zap.Any("walletTxReq", walletTxReq))
+			logger.Info("tx", zap.String("node", name), zap.Any("request", request))
 
 			for i := 1; i <= 5; i += 1 {
 				if i > 1 {
-					logger.Info("seelp for 1 min before retry", zap.String("node", name), zap.Int("try", i))
+					logger.Info("sleep for 1 min before retry", zap.String("node", name), zap.Int("try", i))
 					time.Sleep(time.Minute)
 				}
-				signedTx, err := vegawallet.SignTxWithPoW(&walletTxReq, lastBlockData)
-				if err != nil {
-					logger.Error("failed to sign a trasnaction", zap.String("node", name), zap.Error(err))
-					resultsChannel <- fmt.Errorf("failed to sign a transaction for %s node", name)
-					return
-				}
-				logger.Info("tx", zap.String("node", name), zap.Int("try", i), zap.Any("signedTx", signedTx))
 
-				submitReq := &vegaapipb.SubmitTransactionRequest{
-					Tx:   signedTx,
-					Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
-				}
-				submitResponse, err := network.DataNodeClient.SubmitTransaction(submitReq)
+				submitResponse, err := walletpkg.SendTransaction(ctx, vegawallet, nodeSecrets.VegaPubKey, &request, network.DataNodeClient)
 				if err != nil {
-					logger.Error("failed to submit a trasnaction", zap.String("node", name), zap.Int("try", i), zap.Error(err))
+					logger.Error("failed to submit a transaction", zap.String("node", name), zap.Int("try", i), zap.Error(err))
 					resultsChannel <- fmt.Errorf("failed to submit a transaction for %s node", name)
 					return
 				}
+
 				logger.Info("tx", zap.Any("submitResponse", submitResponse))
 				if submitResponse.Success {
 					logger.Info("successful delegation", zap.String("node", name), zap.Int("try", i), zap.Any("response", submitResponse))
@@ -310,7 +297,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 					return
 				}
 			}
-		}(name, nodeSecrets, lastBlockData, partyTotalStake.Cmp(minValidatorStake) >= 0)
+		}(name, nodeSecrets, partyTotalStake.Cmp(minValidatorStake) >= 0)
 	}
 	wg.Wait()
 	close(resultsChannel)

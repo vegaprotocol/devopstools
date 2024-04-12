@@ -11,13 +11,14 @@ import (
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	vegaeventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
 )
 
 type VegaCoreClient interface {
-	LastBlockData() (*vegaapipb.LastBlockHeightResponse, error)
+	LastBlock(ctx context.Context) (*vegaapipb.LastBlockHeightResponse, error)
 	Statistics() (*vegaapipb.StatisticsResponse, error)
-	SubmitTransaction(req *vegaapipb.SubmitTransactionRequest) (response *vegaapipb.SubmitTransactionResponse, err error)
+	SendTransaction(ctx context.Context, tx *commandspb.Transaction, reqType vegaapipb.SubmitTransactionRequest_Type) (response *vegaapipb.SubmitTransactionResponse, err error)
 	PropagateChainEvent(req *vegaapipb.PropagateChainEventRequest) (response *vegaapipb.PropagateChainEventResponse, err error)
 	DepositBuiltinAsset(vegaAssetId string, partyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
 	DepositERC20Asset(vegaAssetId string, sourceEthereumAddress string, targetPartyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
@@ -37,9 +38,9 @@ type DataNodeClient interface {
 	ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment() (*dataapipb.HistorySegment, error)
 	ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error)
-	ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error)
-	GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error)
-	ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error)
+	ListGovernanceData(ctx context.Context, req *v2.ListGovernanceDataRequest) (response *v2.ListGovernanceDataResponse, err error)
+	GetGovernanceData(ctx context.Context, req *v2.GetGovernanceDataRequest) (response *v2.GetGovernanceDataResponse, err error)
+	ListVotes(ctx context.Context, req *v2.ListVotesRequest) (response *v2.ListVotesResponse, err error)
 	GetCurrentReferralProgram(ctx context.Context) (*v2.ReferralProgram, error)
 	ListReferralSets(ctx context.Context) (map[string]*v2.ReferralSet, error)
 	GetReferralSetReferees(ctx context.Context) (map[string]v2.ReferralSetReferee, error)

@@ -93,8 +93,7 @@ type NetworkWallets struct {
 }
 
 type VegaWallet struct {
-	ID             string `toml:"id"`
-	PrivateKey     string `toml:"private_key"`
+	Name           string `toml:"name"`
 	PublicKey      string `toml:"public_key"`
 	RecoveryPhrase string `toml:"recovery_phrase"`
 }

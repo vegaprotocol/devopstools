@@ -1,7 +1,5 @@
 [network.wallets.vega_token_whale]
-id = "xxx"
-private_key = "xxx"
-public_key = "xxx"
+name = "xxx"
 recovery_phrase = "xxx"
 
 [bridges.primary]

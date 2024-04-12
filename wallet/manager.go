@@ -10,6 +10,9 @@ import (
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
+
+	"code.vegaprotocol.io/vega/wallet/wallet"
 )
 
 type Manager struct {
@@ -26,10 +29,6 @@ func NewWalletManager(
 		walletSecretStore: walletSecretStore,
 	}
 }
-
-//
-// ETHEREUM
-//
 
 func (wm *Manager) GetNetworkMainEthWallet(
 	ethNetwork types.ETHNetwork,
@@ -88,22 +87,24 @@ func (wm *Manager) getEthereumWallet(
 	return ethWallet, nil
 }
 
-//
-// VEGAWALLET
-//
-
-func (wm *Manager) GetVegaTokenWhaleVegaWallet() (*VegaWallet, error) {
+func (wm *Manager) GetVegaTokenWhaleVegaWallet() (wallet.Wallet, error) {
 	return wm.getVegaWallet("vegaTokenWhale")
 }
 
-func (wm *Manager) getVegaWallet(secretPath string) (*VegaWallet, error) {
+func (wm *Manager) getVegaWallet(secretPath string) (wallet.Wallet, error) {
 	walletPrivate, err := wm.walletSecretStore.GetVegaWallet(secretPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get VegaWallet %s, get secret failed, %w", secretPath, err)
 	}
-	vegawallet, err := NewVegaWallet(walletPrivate)
+
+	w, err := vega.LoadWallet(walletPrivate.Id, walletPrivate.RecoveryPhrase)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get VegaWallet %s, setting up secret failed, %w", secretPath, err)
+		return nil, fmt.Errorf("could not load vega wallet %q: %w", secretPath, err)
 	}
-	return vegawallet, nil
+
+	if err := vega.GenerateKeysUpToKey(w, walletPrivate.PublicKey); err != nil {
+		return nil, fmt.Errorf("could not generate key %q: %w", secretPath, err)
+	}
+
+	return w, nil
 }

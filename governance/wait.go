@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,18 +14,14 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func WaitForEnactList(
-	descriptionToProposalId map[string]string,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) error {
+func WaitForEnactList(ctx context.Context, descriptionToProposalId map[string]string, dataNodeClient vegaapi.DataNodeClient, logger *zap.Logger) error {
 	//
 	// Get Latest Enactment
 	//
 	latestEnactmentTimestamp := int64(0)
 
 	for _, proposalId := range descriptionToProposalId {
-		res, err := dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
+		res, err := dataNodeClient.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
 			ProposalId: &proposalId,
 		})
 		if err != nil {
@@ -63,7 +60,7 @@ func WaitForEnactList(
 	// Validat if every proposal is enacted
 	//
 	for _, proposalId := range descriptionToProposalId {
-		res, err := dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
+		res, err := dataNodeClient.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
 			ProposalId: &proposalId,
 		})
 		if err != nil {
