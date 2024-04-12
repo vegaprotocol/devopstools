@@ -8,38 +8,33 @@ import (
 
 	"code.vegaprotocol.io/vega/protos/vega"
 	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 
 	"google.golang.org/grpc/connectivity"
 )
 
 // SubmitTransaction submits a signed v2 transaction.
-func (n *Client) SubmitTransaction(
-	req *vegaapipb.SubmitTransactionRequest,
-) (response *vegaapipb.SubmitTransactionResponse, err error) {
-	msg := "gRPC call failed: SubmitTransaction: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *Client) SendTransaction(ctx context.Context, tx *commandspb.Transaction, reqType vegaapipb.SubmitTransactionRequest_Type) (*vegaapipb.SubmitTransactionResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := vegaapipb.NewCoreServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
-	defer cancel()
+	reqCtx, cancelReq := context.WithTimeout(ctx, n.CallTimeout)
+	defer cancelReq()
 
-	response, err = c.SubmitTransaction(ctx, req)
+	response, err := c.SubmitTransaction(reqCtx, &vegaapipb.SubmitTransactionRequest{
+		Tx:   tx,
+		Type: reqType,
+	})
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("transaction failed: %w", err)
 	}
-	return
+	return response, nil
 }
 
 // LastBlockData gets the latest blockchain data, height, hash and pow parameters.
-func (n *Client) LastBlockData() (*vegaapipb.LastBlockHeightResponse, error) {
+func (n *Client) LastBlock(context.Context) (*vegaapipb.LastBlockHeightResponse, error) {
 	msg := "gRPC call failed: LastBlockData: %w"
 	if n == nil {
 		return nil, fmt.Errorf(msg, e.ErrNil)
@@ -58,31 +53,6 @@ func (n *Client) LastBlockData() (*vegaapipb.LastBlockHeightResponse, error) {
 		err = fmt.Errorf(msg, e.ErrorDetail(err))
 	}
 	return response, err
-}
-
-// ObserveEventBus opens a stream.
-func (n *Client) ObserveEventBus(
-	ctx context.Context,
-) (client vegaapipb.CoreService_ObserveEventBusClient, err error) {
-	msg := "gRPC call failed: ObserveEventBus: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
-	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
-	}
-
-	c := vegaapipb.NewCoreServiceClient(n.Conn)
-	// no timeout on streams
-	client, err = c.ObserveEventBus(ctx)
-	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-		return
-	}
-	return
 }
 
 func (n *Client) Statistics() (*vegaapipb.StatisticsResponse, error) {

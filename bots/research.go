@@ -3,7 +3,9 @@ package bots
 import (
 	"fmt"
 
-	"github.com/vegaprotocol/devopstools/wallet"
+	"github.com/vegaprotocol/devopstools/vega"
+
+	"code.vegaprotocol.io/vega/wallet/wallet"
 )
 
 const (
@@ -20,19 +22,24 @@ type ResearchBot struct {
 		RecoveryPhrase string `json:"recoveryPhrase"`
 	} `json:"wallet"`
 
-	wallet *wallet.VegaWallet
+	wallet wallet.Wallet
 }
 
 func (b *ResearchBot) IsMarketMaker() bool {
 	return b.WalletData.Index != marketMakerWalletIndex
 }
 
-func (b *ResearchBot) GetWallet() (*wallet.VegaWallet, error) {
+func (b *ResearchBot) GetWallet() (wallet.Wallet, error) {
 	if b.wallet == nil {
-		w, err := wallet.GetVegaWalletSingleton(b.WalletData.RecoveryPhrase, uint32(b.WalletData.Index))
+		w, err := vega.LoadWalletAsSingleton(b.WalletData.RecoveryPhrase)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve wallet: %w", err)
+			return nil, fmt.Errorf("could not retrieve singleton wallet: %w", err)
 		}
+
+		if err := vega.GenerateKeysUpToIndex(w, uint32(b.WalletData.Index)); err != nil {
+			return nil, fmt.Errorf("could not generate keys: %w", err)
+		}
+
 		b.wallet = w
 	}
 	return b.wallet, nil

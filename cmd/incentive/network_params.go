@@ -9,10 +9,9 @@ import (
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
-	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
-	"github.com/vegaprotocol/devopstools/wallet"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -138,20 +137,19 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	}
 	logger.Debug("Network parameters retrieved")
 
-	whaleWallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
-		Id:             cfg.Network.Wallets.VegaTokenWhale.ID,
-		PublicKey:      cfg.Network.Wallets.VegaTokenWhale.PublicKey,
-		PrivateKey:     cfg.Network.Wallets.VegaTokenWhale.PrivateKey,
-		RecoveryPhrase: cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase,
-	})
+	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
 	if err != nil {
 		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+	publicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
+	if err := vega.GenerateKeysUpToKey(whaleWallet, publicKey); err != nil {
+		return fmt.Errorf("could not generate whale keys: %w", err)
 	}
 
 	toUpdate := checkNetworkParams(networkParams)
 
 	if args.UpdateParams {
-		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(toUpdate, whaleWallet, networkParams, datanodeClient, logger)
+		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, toUpdate, whaleWallet, publicKey, networkParams, datanodeClient, logger)
 		if err != nil {
 			return err
 		}

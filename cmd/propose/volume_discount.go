@@ -1,6 +1,7 @@
 package propose
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/programs"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 
 	"code.vegaprotocol.io/vega/core/netparams"
@@ -44,16 +46,16 @@ func init() {
 }
 
 func RunVolumeDiscount(args VolumeDiscountArgs) error {
+	ctx := context.Background()
 	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
 	if err != nil {
 		return err
 	}
 	defer network.Disconnect()
 
-	var (
-		proposerVegawallet = network.VegaTokenWhale
-		logger             = args.Logger
-	)
+	proposer := network.VegaTokenWhale
+	proposerPublicKey := vega.MustFirstKey(proposer)
+	logger := args.Logger
 
 	//
 	// Get current volumeDiscount program
@@ -61,7 +63,7 @@ func RunVolumeDiscount(args VolumeDiscountArgs) error {
 	currentVolumeDiscountProgram, err := network.DataNodeClient.GetCurrentVolumeDiscountProgram()
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to get current volume discount program") && strings.Contains(err.Error(), "no rows in result set") {
-			logger.Info("Currently there is no volume discount programm. You can create one.")
+			logger.Info("Currently there is no volume discount program. You can create one.")
 			if !args.SetupVolumeDiscountProgram {
 				logger.Warn("You can use --setup-volume-discount-program to setup Volume Discount program")
 				return err
@@ -77,7 +79,7 @@ func RunVolumeDiscount(args VolumeDiscountArgs) error {
 	// Setup VolumeDiscount Program
 	//
 	if args.SetupVolumeDiscountProgram {
-		err = setupNetworkParametersToSetupVolumeDiscountProgram(network, logger)
+		err = setupNetworkParametersToSetupVolumeDiscountProgram(ctx, network, logger)
 		if err != nil {
 			return err
 		}
@@ -99,9 +101,7 @@ func RunVolumeDiscount(args VolumeDiscountArgs) error {
 		//
 		// Propose & Vote & Wait
 		//
-		err = governance.ProposeVoteAndWait(
-			"Update Volume Discount Program proposal", proposalConfig, proposerVegawallet, network.DataNodeClient, logger,
-		)
+		err = governance.ProposeVoteAndWait(context.Background(), "Update Volume Discount Program proposal", proposalConfig, proposer, proposerPublicKey, network.DataNodeClient, logger)
 		if err != nil {
 			return err
 		}
@@ -110,10 +110,7 @@ func RunVolumeDiscount(args VolumeDiscountArgs) error {
 	return nil
 }
 
-func setupNetworkParametersToSetupVolumeDiscountProgram(
-	network *veganetwork.VegaNetwork,
-	logger *zap.Logger,
-) error {
+func setupNetworkParametersToSetupVolumeDiscountProgram(ctx context.Context, network *veganetwork.VegaNetwork, logger *zap.Logger) error {
 	updateParams := map[string]string{
 		"governance.proposal.VolumeDiscountProgram.minEnact": "5s",
 		"governance.proposal.VolumeDiscountProgram.minClose": "5s",
@@ -125,9 +122,7 @@ func setupNetworkParametersToSetupVolumeDiscountProgram(
 		updateParams["governance.proposal.VolumeDiscountProgram.requiredParticipation"] = "0.0001"
 	}
 
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
-		updateParams, network.VegaTokenWhale, network.NetworkParams, network.DataNodeClient, logger,
-	)
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, network.VegaTokenWhale, vega.MustFirstKey(network.VegaTokenWhale), network.NetworkParams, network.DataNodeClient, logger)
 	if err != nil {
 		return err
 	}

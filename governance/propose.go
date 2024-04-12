@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,37 +9,28 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/wallet"
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
-	"code.vegaprotocol.io/vega/protos/vega"
+	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
+	"code.vegaprotocol.io/vega/wallet/wallet"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
 
-func SubmitProposalList(
-	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
-	proposer *wallet.VegaWallet,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (map[string]string, error) {
-	//
-	// Propose
-	//
+func SubmitProposalList(ctx context.Context, descriptionToProposalConfig map[string]*commandspb.ProposalSubmission, proposer wallet.Wallet, proposerPublicKey string, dataNodeClient vegaapi.DataNodeClient) (map[string]string, error) {
 	for description, proposalConfig := range descriptionToProposalConfig {
-		// Prepare vegawallet Transaction Request
-		walletTxReq := walletpb.SubmitTransactionRequest{
-			PubKey: proposer.PublicKey,
+		request := walletpb.SubmitTransactionRequest{
 			Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
 				ProposalSubmission: proposalConfig,
 			},
 		}
-		if err := SubmitTx(description, dataNodeClient, proposer, logger, &walletTxReq); err != nil {
-			return nil, err
+		if _, err := walletpkg.SendTransaction(ctx, proposer, proposerPublicKey, &request, dataNodeClient); err != nil {
+			return nil, fmt.Errorf("transaction for proposal %q failed: %w", description, err)
 		}
 	}
 
@@ -56,7 +48,7 @@ func SubmitProposalList(
 		// on test networks there can be a lot of proposals, so fetching one by one can be more efficient
 
 		proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
-			proposal, err := fetchProposalByReferenceAndProposer(proposalConfig.Reference, dataNodeClient)
+			proposal, err := fetchProposalByReferenceAndProposer(ctx, proposalConfig.Reference, dataNodeClient)
 			if err != nil {
 				return "", fmt.Errorf("failed to find proposal: %w", err)
 			}
@@ -80,9 +72,9 @@ func SubmitProposalList(
 	return descriptionToProposalId, nil
 }
 
-func fetchProposalByReferenceAndProposer(reference string, dataNodeClient vegaapi.DataNodeClient) (*vega.Proposal, error) {
+func fetchProposalByReferenceAndProposer(ctx context.Context, reference string, dataNodeClient vegaapi.DataNodeClient) (*vegapb.Proposal, error) {
 	res, err := tools.RetryReturn(6, 10*time.Second, func() (*v2.GetGovernanceDataResponse, error) {
-		return dataNodeClient.GetGovernanceData(&v2.GetGovernanceDataRequest{
+		return dataNodeClient.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
 			Reference: &reference,
 		})
 	})
@@ -92,7 +84,7 @@ func fetchProposalByReferenceAndProposer(reference string, dataNodeClient vegaap
 	if res != nil {
 		proposal := res.Data.Proposal
 		if slices.Contains(
-			[]vega.Proposal_State{vega.Proposal_STATE_FAILED, vega.Proposal_STATE_REJECTED, vega.Proposal_STATE_DECLINED},
+			[]vegapb.Proposal_State{vegapb.Proposal_STATE_FAILED, vegapb.Proposal_STATE_REJECTED, vegapb.Proposal_STATE_DECLINED},
 			proposal.State,
 		) {
 			return nil, fmt.Errorf("proposal '%s' is in wrong state %s: %+v", proposal.Rationale.Title, proposal.State.String(), proposal)
@@ -102,13 +94,7 @@ func fetchProposalByReferenceAndProposer(reference string, dataNodeClient vegaap
 	return nil, nil
 }
 
-func ProposeAndVoteOnNetworkParameters(
-	desiredValues map[string]string,
-	proposer *wallet.VegaWallet,
-	networkParams *types.NetworkParams,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (int64, error) {
+func ProposeAndVoteOnNetworkParameters(ctx context.Context, desiredValues map[string]string, proposer wallet.Wallet, proposerPublicKey string, networkParams *types.NetworkParams, dataNodeClient vegaapi.DataNodeClient, logger *zap.Logger) (int64, error) {
 	minClose, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalUpdateNetParamMinClose])
 	if err != nil {
 		return 0, fmt.Errorf("could not parse network parameter %q", netparams.GovernanceProposalUpdateNetParamMinClose)
@@ -149,7 +135,7 @@ func ProposeAndVoteOnNetworkParameters(
 		return 0, nil
 	}
 
-	if err := ProposeVoteAndWaitList(descriptionToProposalConfig, proposer, dataNodeClient, logger); err != nil {
+	if err := ProposeVoteAndWaitList(ctx, descriptionToProposalConfig, proposer, proposerPublicKey, dataNodeClient, logger); err != nil {
 		return 0, fmt.Errorf("proposals failed: %w", err)
 	}
 
