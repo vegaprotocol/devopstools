@@ -40,7 +40,6 @@ func (n *DataNode) ListVotes(ctx context.Context, req *dataapipb.ListVotesReques
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-
 	return response, nil
 }
 
@@ -57,6 +56,5 @@ func (n *DataNode) GetGovernanceData(ctx context.Context, req *dataapipb.GetGove
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-
 	return response, nil
 }

@@ -201,6 +201,8 @@ func RunTerminate(args *TerminateArgs) error {
 		logger.Info("Network parameters updated")
 	}
 
+	firstKey := vega.MustFirstKey(network.VegaTokenWhale)
+
 	for _, marketDetails := range marketsToRemove {
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
