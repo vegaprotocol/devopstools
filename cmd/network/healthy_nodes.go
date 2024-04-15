@@ -1,16 +1,16 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/config"
 	toolslib "github.com/vegaprotocol/devopstools/tools"
 
 	"github.com/spf13/cobra"
@@ -35,7 +35,7 @@ var healthyNodesCmd = &cobra.Command{
 }
 
 func init() {
-	healthyNodesArgs.Args = &networkArgs
+	healthyNodesArgs.Args = &args
 
 	Cmd.AddCommand(healthyNodesCmd)
 }
@@ -49,53 +49,29 @@ type output struct {
 }
 
 func RunHealthyNodes(args HealthyNodesArgs) error {
-	logger := args.Logger
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-	logger.Debug("Connecting to the vega network")
-	tools, err := networktools.NewNetworkTools(args.VegaNetworkName, logger)
+	logger := args.Logger.Named("command")
+
+	cfg, err := config.Load(args.NetworkFile)
 	if err != nil {
-		return fmt.Errorf("failed to get network tools: %w", err)
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
 
-	allNodes := tools.GetNetworkNodes(true)
-	blockExplorers := tools.GetBlockExplorers(true)
-	dataNodes := tools.GetNetworkDataNodes(true)
-	tendermintEndpoints := tools.GetNetworkTendermintRESTEndpoints(true)
-	var validators []string
-
-	for _, nodeHost := range allNodes {
-		var (
-			isDataNode bool
-			isExplorer bool
-		)
-		for _, dataNodeHost := range dataNodes {
-			// assuming data node host has the `api.` prefix
-			if strings.Contains(dataNodeHost, nodeHost) {
-				isDataNode = true
-				break
-			}
-		}
-
-		for _, explorerHost := range blockExplorers {
-			// assuming data node host has the `api.` prefix
-			if strings.Contains(explorerHost, nodeHost) {
-				isExplorer = true
-				break
-			}
-		}
-
-		if !isDataNode && !isExplorer {
-			validators = append(validators, nodeHost)
-		}
-	}
+	explorersEndpoints := []string{cfg.Explorer.RESTURL}
+	datanodesEndpoints := config.ListDatanodeRESTEndpoints(cfg)
+	blockchainEndpoints := config.ListBlockchainRESTEndpoints(cfg)
+	validatorsEndpoints := config.ListValidatorRESTEndpoints(cfg)
 
 	var healthyValidators []string
 	var healthyExplorers []string
 	var healthyDataNodes []string
 
-	for _, host := range blockExplorers {
+	for _, host := range explorersEndpoints {
 		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {
-			if !isNodeHealthy(logger, host, false) {
+			if !isNodeHealthy(ctx, logger, host, false) {
 				return fmt.Errorf("node is not healthy")
 			}
 
@@ -105,9 +81,9 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 		}
 	}
 
-	for _, host := range validators {
+	for _, host := range validatorsEndpoints {
 		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {
-			if !isNodeHealthy(logger, host, false) {
+			if !isNodeHealthy(ctx, logger, host, false) {
 				return fmt.Errorf("node is not healthy")
 			}
 
@@ -117,9 +93,9 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 		}
 	}
 
-	for _, host := range dataNodes {
+	for _, host := range datanodesEndpoints {
 		if err := toolslib.RetryRun(3, 500*time.Millisecond, func() error {
-			if !isNodeHealthy(logger, host, true) {
+			if !isNodeHealthy(ctx, logger, host, true) {
 				return fmt.Errorf("node is not healthy")
 			}
 
@@ -133,7 +109,7 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 		Validators:          healthyValidators,
 		Explorers:           healthyExplorers,
 		DataNodes:           healthyDataNodes,
-		TendermintEndpoints: tendermintEndpoints,
+		TendermintEndpoints: blockchainEndpoints,
 		All:                 append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...),
 	}
 
@@ -156,46 +132,54 @@ type statisticsResponse struct {
 }
 
 // Simple logic to check data node is healthy and ready to use somewhere, where We want
-func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
+func isNodeHealthy(ctx context.Context, logger *zap.Logger, host string, dataNode bool) bool {
 	const timeThresholds = 10 * time.Second
 	const blocksThresholds = 10
 
-	httpClient := http.Client{
-		Timeout: time.Second,
-	}
-	resp, err := httpClient.Get(fmt.Sprintf("https://%s/statistics", host))
+	reqCtx, cancelReq := context.WithTimeout(ctx, time.Second)
+	defer cancelReq()
+
+	request, err := http.NewRequestWithContext(reqCtx, http.MethodGet, fmt.Sprintf("%s/statistics", host), nil)
 	if err != nil {
-		logger.Sugar().Debugf("Failed to GET for node %s: %s", host, err.Error())
+		logger.Debug("Building query failed", zap.String("host", host), zap.Error(err))
+		return false
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		logger.Debug("Querying node failed", zap.String("host", host), zap.Error(err))
 		return false
 	}
 	defer resp.Body.Close()
 
 	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Sugar().Debugf("Failed to read response body for node %s: %s", host, err.Error())
+		logger.Debug("Failed to read node response", zap.String("host", host), zap.Error(err))
 		return false
 	}
 
 	statsResponse := statisticsResponse{}
 	if err := json.Unmarshal(responseBytes, &statsResponse); err != nil {
-		logger.Sugar().Debugf("Failed to unsmrshal response into golang structure for node %s: %s", host, err.Error())
+		logger.Debug("Failed to unmarshal response", zap.String("host", host), zap.Error(err))
 		return false
 	}
 
 	currentTime, err := time.Parse(time.RFC3339Nano, statsResponse.Statistics.CurrentTime)
 	if err != nil {
-		logger.Sugar().Debugf("Failed to parse current time (%s): %s", statsResponse.Statistics.CurrentTime, err.Error())
+		logger.Debug("Failed to parse current time", zap.String("current-time", statsResponse.Statistics.CurrentTime), zap.Error(err))
 		return false
 	}
 
 	vegaTime, err := time.Parse(time.RFC3339Nano, statsResponse.Statistics.VegaTime)
 	if err != nil {
-		logger.Sugar().Debugf("Failed to parse vega time (%s): %s", statsResponse.Statistics.VegaTime, err.Error())
+		logger.Debug("Failed to parse vega time", zap.String("current-time", statsResponse.Statistics.VegaTime), zap.Error(err))
 		return false
 	}
 
-	if currentTime.Sub(vegaTime) > timeThresholds {
-		// Time diff too big
+	timeDiff := currentTime.Sub(vegaTime)
+	if timeDiff > timeThresholds {
+		logger.Debug("Time difference too big", zap.String("diff", timeDiff.String()), zap.String("threshold", timeThresholds.String()))
 		return false
 	}
 
@@ -205,19 +189,19 @@ func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
 
 	dataNodeCurrentBlock := resp.Header.Get("X-Block-Height")
 	if dataNodeCurrentBlock == "" {
-		logger.Sugar().Debugf("Failed to get X-Block-Height header")
+		logger.Debug("Failed to get X-Block-Height header")
 		return false
 	}
 
 	vegaBlock, err := strconv.ParseUint(statsResponse.Statistics.BlockHeight, 10, 64)
 	if err != nil {
-		logger.Sugar().Debugf("failed to convert vega block(%s) to int: %s", statsResponse.Statistics.BlockHeight, err.Error())
+		logger.Debug("Failed to convert vega block", zap.String("block-height", statsResponse.Statistics.BlockHeight), zap.Error(err))
 		return false
 	}
 
 	dataNodeBlock, err := strconv.ParseUint(dataNodeCurrentBlock, 10, 64)
 	if err != nil {
-		logger.Sugar().Debugf("failed to convert data-node block(%s) to int: %s", dataNodeCurrentBlock, err.Error())
+		logger.Debug("Failed to convert data-node block", zap.String("block-height", dataNodeCurrentBlock), zap.Error(err))
 		return false
 	}
 

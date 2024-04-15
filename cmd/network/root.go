@@ -10,10 +10,10 @@ import (
 
 type Args struct {
 	*rootCmd.RootArgs
-	VegaNetworkName string
+	NetworkFile string
 }
 
-var networkArgs Args
+var args Args
 
 var Cmd = &cobra.Command{
 	Use:   "network",
@@ -22,10 +22,11 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	networkArgs.RootArgs = &rootCmd.Args
+	args.RootArgs = &rootCmd.Args
 
-	Cmd.PersistentFlags().StringVar(&networkArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&args.NetworkFile, "network-file", "./network.toml", "Path the the network file")
+
+	if err := Cmd.MarkPersistentFlagRequired("network-file"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

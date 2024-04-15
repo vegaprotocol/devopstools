@@ -22,7 +22,7 @@ func NewNetworkParams(params map[string]string) *NetworkParams {
 	}
 }
 
-func (p *NetworkParams) GetMinimumValidatorStake() (*big.Int, error) {
+func (p *NetworkParams) GetMinimumValidatorStake() (*Amount, error) {
 	param := netparams.StakingAndDelegationRewardMinimumValidatorStake
 	val, ok := p.Params[param]
 	if !ok {
@@ -34,7 +34,7 @@ func (p *NetworkParams) GetMinimumValidatorStake() (*big.Int, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to get MinimumValidatorStake, failed to conver '%s'='%s' to big.Int", param, val)
 	}
-	return minimumValidatorStake, nil
+	return NewAmountFromSubUnit(minimumValidatorStake, 18), nil
 }
 
 func (p *NetworkParams) PrimaryEthereumConfig() (*vega.EthereumConfig, error) {
