@@ -105,10 +105,11 @@ func RunJoin(args JoinArgs) error {
 	if err != nil {
 		return err
 	}
-	minValidatorStake, err = networkParams.GetMinimumValidatorStake()
+	minValidatorStake1, err := networkParams.GetMinimumValidatorStake()
 	if err != nil {
 		return err
 	}
+	minValidatorStake = minValidatorStake1.AsSubUnit()
 	// Get Node Secrets
 	secretStore, err = args.GetNodeSecretStore()
 	if err != nil {

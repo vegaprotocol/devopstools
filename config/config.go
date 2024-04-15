@@ -48,15 +48,6 @@ type EVMBridge struct {
 	Signers       []string      `toml:"signers"`
 }
 
-// Etherscan describes the Etherscan block explorer API connection.
-type Etherscan struct {
-	// RESTURL defines the REST endpoint used to query the block explorer API.
-	RESTURL string `toml:"rest_url"`
-
-	// APIKey defines the authentication key used to query the block explorer API.
-	APIKey string `toml:"api_key"`
-}
-
 // Node describes a node on the network.
 type Node struct {
 	Metadata NodeMetadata `toml:"metadata"`
@@ -104,6 +95,7 @@ type VegaWallet struct {
 
 type NodeAPI struct {
 	BlockchainRESTURL string `toml:"blockchain_rest_url"`
+	VegaRESTURL       string `toml:"vega_rest_url"`
 	VegaGRPCURL       string `toml:"vega_grpc_url"`
 	DataNodeRESTURL   string `toml:"datanode_rest_url"`
 	DataNodeGRPCURL   string `toml:"datanode_grpc_url"`
