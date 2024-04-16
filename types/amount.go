@@ -32,6 +32,19 @@ func (a *Amount) String() string {
 	return a.amount.String()
 }
 
+func (a *Amount) StringWithDecimals() string {
+	return big.NewFloat(0).Mul(
+		a.amount,
+		big.NewFloat(0).SetInt(
+			big.NewInt(0).Exp(
+				big.NewInt(10),
+				big.NewInt(0).SetUint64(a.decimals),
+				nil,
+			),
+		),
+	).Text('f', 0)
+}
+
 func (a *Amount) Copy() *Amount {
 	return &Amount{
 		amount:   new(big.Float).Copy(a.amount),

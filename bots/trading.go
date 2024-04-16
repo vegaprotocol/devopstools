@@ -17,17 +17,24 @@ const (
 
 var ErrEmptyResponse = errors.New("empty response")
 
+type BotTraderWantedToken struct {
+	PartyId         string  `json:"party_id"`
+	Symbol          string  `json:"symbol"`
+	VegaAssetId     string  `json:"vega_asset_id"`
+	AssetERC20Asset string  `json:"asset_erc20_address"`
+	Balance         float64 `json:"balance"`
+	WantedTokens    float64 `json:"wanted_tokens"`
+}
+
 type TradingBot struct {
 	Name       string `json:"name"`
 	PubKey     string `json:"pubKey"`
 	Parameters struct {
-		Base                              string  `json:"marketBase"`
-		Quote                             string  `json:"marketQuote"`
-		SettlementEthereumContractAddress string  `json:"marketSettlementEthereumContractAddress"`
-		SettlementVegaAssetID             string  `json:"marketSettlementVegaAssetID"`
-		WantedTokens                      float64 `json:"wantedTokens"`
-		CurrentBalance                    float64 `json:"balance"`
-		EnableTopUp                       bool    `json:"enableTopUp"`
+		Base         string                 `json:"marketBase"`
+		Quote        string                 `json:"marketQuote"`
+		WantedTokens []BotTraderWantedToken `json:"wantedTokens"`
+
+		EnableTopUp bool `json:"enableTopUp"`
 	} `json:"parameters"`
 }
 
