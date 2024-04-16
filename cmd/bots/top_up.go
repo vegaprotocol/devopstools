@@ -124,7 +124,7 @@ func TopUpBots(args TopUpArgs) error {
 	}
 	logger.Debug("Assets found", zap.Strings("assets", maps.Keys(assets)))
 
-	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Trading.RESTURL, cfg.Bots.Trading.APIKey, logger.Named("trading-bots"))
+	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Research.RESTURL, cfg.Bots.Research.APIKey, logger.Named("trading-bots"))
 	if err != nil {
 		return fmt.Errorf("failed to retrieve trading bots: %w", err)
 	}

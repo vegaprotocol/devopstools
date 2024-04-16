@@ -65,8 +65,8 @@ type Node struct {
 }
 
 type Bots struct {
-	Trading  BotsAPI
-	Research BotsAPI
+	Trading  BotsAPI `toml:"trading"`
+	Research BotsAPI `toml:"research"`
 }
 
 type BotsAPI struct {
