@@ -641,7 +641,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 	}
 
 	logger.Debug("Staking Vega token to parties", zap.Strings("parties", maps.Keys(missingStakeByPubKey)))
-	if err := chainClient.StakeVegaTokenFromMinter(ctx, missingStakeByPubKey); err != nil {
+	if err := chainClient.StakeFromMinter(ctx, missingStakeByPubKey); err != nil {
 		return fmt.Errorf("failed to stake Vega token from minter wallet: %w", err)
 	}
 	logger.Debug("Staking Vega token successful", zap.Strings("parties", maps.Keys(missingStakeByPubKey)))

@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-// SubmitTransaction submits a signed v2 transaction.
 func (n *Client) SendTransaction(ctx context.Context, tx *commandspb.Transaction, reqType vegaapipb.SubmitTransactionRequest_Type) (*vegaapipb.SubmitTransactionResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
@@ -33,7 +32,6 @@ func (n *Client) SendTransaction(ctx context.Context, tx *commandspb.Transaction
 	return response, nil
 }
 
-// LastBlockData gets the latest blockchain data, height, hash and pow parameters.
 func (n *Client) LastBlock(context.Context) (*vegaapipb.LastBlockHeightResponse, error) {
 	msg := "gRPC call failed: LastBlockData: %w"
 	if n == nil {

@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"log"
+
 	rootCmd "github.com/vegaprotocol/devopstools/cmd"
 
 	"github.com/spf13/cobra"
@@ -8,9 +10,11 @@ import (
 
 type Args struct {
 	*rootCmd.RootArgs
+
+	NetworkFile string
 }
 
-var validatorArgs Args
+var args Args
 
 var Cmd = &cobra.Command{
 	Use:   "validator",
@@ -19,5 +23,11 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	validatorArgs.RootArgs = &rootCmd.Args
+	args.RootArgs = &rootCmd.Args
+
+	Cmd.PersistentFlags().StringVar(&args.NetworkFile, "network-file", "./network.toml", "Path the the network file")
+
+	if err := Cmd.MarkPersistentFlagRequired("network-file"); err != nil {
+		log.Fatalf("%v\n", err)
+	}
 }
