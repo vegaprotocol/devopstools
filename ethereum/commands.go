@@ -33,7 +33,7 @@ func (c *ChainClient) DepositERC20AssetFromMinter(ctx context.Context, assetCont
 	minterHexAddress := c.minterWallet.Address.Hex()
 	bridgeHexAddress := c.collateralBridge.Address.Hex()
 
-	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress, erc20token.Base)
+	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress)
 	if err != nil {
 		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", assetContractHexAddress, err)
 	}
@@ -96,7 +96,7 @@ func (c *ChainClient) DepositERC20AssetFromAddress(ctx context.Context, minterPr
 		requiredAmountAsSubUnit.Add(requiredAmountAsSubUnit, amount.AsSubUnit())
 	}
 
-	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress, erc20token.Base)
+	token, err := erc20token.NewERC20Token(c.client, assetContractHexAddress)
 	if err != nil {
 		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", assetContractHexAddress, err)
 	}
