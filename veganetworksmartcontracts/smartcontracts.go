@@ -94,7 +94,7 @@ func NewVegaNetworkSmartContracts(
 		}
 		vegaTokenHexAddress = vegaTokenAddress.Hex()
 	}
-	result.VegaToken, err = erc20token.NewERC20Token(result.EthClient, vegaTokenHexAddress, erc20token.Base)
+	result.VegaToken, err = erc20token.NewERC20Token(result.EthClient, vegaTokenHexAddress)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

@@ -27,40 +27,21 @@ func (t *ERC20Token) GetInfo() (result Info, err error) {
 	)
 	result.Address = t.Address.Hex()
 
-	if t.Version != Minimal {
-		result.Name, err = t.Name(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", t.Address, err)
-			return
-		}
-		result.Symbol, err = t.Symbol(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
-			return
-		}
-		result.Decimals, err = t.Decimals(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
-			return
-		}
+	result.BurnEnabled, err = t.BurnEnabled(&bind.CallOpts{})
+	if err != nil {
+		err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
+		return
 	}
-	if t.Version == Base {
-		result.BurnEnabled, err = t.BurnEnabled(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
-			return
-		}
-		faucetAmount, err = t.FaucetAmount(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
-			return
-		}
-		result.FaucetAmount = ethutils.TokenToFullTokens(faucetAmount, result.Decimals)
-		result.FaucetCallLimit, err = t.FaucetCallLimit(&bind.CallOpts{})
-		if err != nil {
-			err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
-			return
-		}
+	faucetAmount, err = t.FaucetAmount(&bind.CallOpts{})
+	if err != nil {
+		err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
+		return
+	}
+	result.FaucetAmount = ethutils.TokenToFullTokens(faucetAmount, result.Decimals)
+	result.FaucetCallLimit, err = t.FaucetCallLimit(&bind.CallOpts{})
+	if err != nil {
+		err = fmt.Errorf("failed to get info about %s, %w", result.Name, err)
+		return
 	}
 
 	totalSupply, err = t.TotalSupply(&bind.CallOpts{})
