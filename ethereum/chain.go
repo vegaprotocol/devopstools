@@ -108,7 +108,12 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}
 
-	multisigControl, err := multisigcontrol.NewMultisigControl(client, ethConfig.MultisigControlContract.Address, multisigcontrol.V2)
+	multisigControl, err := multisigcontrol.NewMultisigControl(
+		client,
+		ethConfig.MultisigControlContract.Address,
+		multisigcontrol.V2,
+		cfg.Signers,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize multisig control client: %w", err)
 	}
@@ -147,6 +152,16 @@ func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *veg
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}
 
+	multisigControl, err := multisigcontrol.NewMultisigControl(
+		client,
+		ethConfig.MultisigControlContract.Address,
+		multisigcontrol.V2,
+		cfg.Signers,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize multisig contract: %w", err)
+	}
+
 	minterWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*Wallet, error) {
 		w, err := NewWallet(ctx, client, cfg.Wallets.Minter.PrivateKey)
 		if err != nil {
@@ -164,7 +179,7 @@ func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *veg
 		client:           client,
 		collateralBridge: collateralBridge,
 		minterWallet:     minterWallet,
-
-		chainID: ethConfig.ChainId,
+		multisigControl:  multisigControl,
+		chainID:          ethConfig.ChainId,
 	}, nil
 }

@@ -68,7 +68,7 @@ func NewVegaNetworkSmartContracts(
 		}
 		multisigControlHexAddress = multisigControlAddress.Hex()
 	}
-	result.MultisigControl, err = multisigcontrol.NewMultisigControl(result.EthClient, multisigControlHexAddress, multisigcontrol.V2)
+	result.MultisigControl, err = multisigcontrol.NewMultisigControl(result.EthClient, multisigControlHexAddress, multisigcontrol.V2, nil)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}

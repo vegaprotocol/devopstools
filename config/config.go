@@ -38,12 +38,14 @@ type PrimaryBridge struct {
 	ClientURL     string        `toml:"client_url"`
 	BlockExplorer Etherscan     `toml:"block_explorer"`
 	Wallets       BridgeWallets `toml:"wallets"`
+	Signers       []string      `toml:"signers"`
 }
 
 type EVMBridge struct {
 	ClientURL     string        `toml:"client_url"`
 	BlockExplorer Etherscan     `toml:"block_explorer"`
 	Wallets       BridgeWallets `toml:"wallets"`
+	Signers       []string      `toml:"signers"`
 }
 
 // Etherscan describes the Etherscan block explorer API connection.
@@ -63,8 +65,8 @@ type Node struct {
 }
 
 type Bots struct {
-	Trading  BotsAPI
-	Research BotsAPI
+	Trading  BotsAPI `toml:"trading"`
+	Research BotsAPI `toml:"research"`
 }
 
 type BotsAPI struct {
