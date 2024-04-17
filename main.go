@@ -11,11 +11,11 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/node"
 	"github.com/vegaprotocol/devopstools/cmd/parties"
-	"github.com/vegaprotocol/devopstools/cmd/propose"
 	"github.com/vegaprotocol/devopstools/cmd/snapshotcompatibility"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
 	"github.com/vegaprotocol/devopstools/cmd/vegacapsule"
 	"github.com/vegaprotocol/devopstools/cmd/version"
+	"github.com/vegaprotocol/devopstools/cmd/volumediscount"
 )
 
 func main() {
@@ -35,6 +35,6 @@ func init() {
 	rootCmd.RootCmd.AddCommand(benchmark.Cmd)
 	rootCmd.RootCmd.AddCommand(snapshotcompatibility.Cmd)
 	rootCmd.RootCmd.AddCommand(version.Cmd)
-	rootCmd.RootCmd.AddCommand(propose.Cmd)
+	rootCmd.RootCmd.AddCommand(volumediscount.Cmd)
 	rootCmd.RootCmd.AddCommand(incentive.Cmd)
 }
