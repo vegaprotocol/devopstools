@@ -21,7 +21,6 @@ type VegaCoreClient interface {
 	SendTransaction(ctx context.Context, tx *commandspb.Transaction, reqType vegaapipb.SubmitTransactionRequest_Type) (response *vegaapipb.SubmitTransactionResponse, err error)
 	PropagateChainEvent(req *vegaapipb.PropagateChainEventRequest) (response *vegaapipb.PropagateChainEventResponse, err error)
 	DepositBuiltinAsset(vegaAssetId string, partyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
-	DepositERC20Asset(vegaAssetId string, sourceEthereumAddress string, targetPartyId string, amount string, signAny func([]byte) ([]byte, string, error)) (bool, error)
 	CoreNetworkParameters(parameterKey string) ([]*vega.NetworkParameter, error)
 }
 

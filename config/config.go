@@ -82,6 +82,7 @@ type Network struct {
 
 type NetworkWallets struct {
 	VegaTokenWhale VegaWallet `toml:"vega_token_whale"`
+	Faucet         VegaWallet `toml:"faucet"`
 }
 
 type VegaWallet struct {

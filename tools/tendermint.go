@@ -5,19 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 type TendermintRESTClient struct {
 	httpClient *http.Client
-}
-
-func NewTendermintRESTClient() *TendermintRESTClient {
-	return &TendermintRESTClient{
-		httpClient: &http.Client{
-			Timeout: time.Second * 5,
-		},
-	}
 }
 
 type NodeInfo struct {

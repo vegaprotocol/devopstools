@@ -60,24 +60,14 @@ func RunCreateNode(args CreateArgs) error {
 		}
 	}
 
-	newNode, err := generation.GenerateVegaNodeSecrets2()
+	newNode, err := generation.GenerateVegaNodeSecrets()
 	if err != nil {
 		return fmt.Errorf("failed to generate vega node: %w", err)
 	}
 
 	newNode.ID = args.NodeID
 
-	replaced := false
-	for i, node := range cfg.Nodes {
-		if node.ID == newNode.ID {
-			cfg.Nodes[i] = newNode
-			replaced = true
-		}
-	}
-
-	if !replaced {
-		cfg.Nodes = append(cfg.Nodes, newNode)
-	}
+	cfg = config.UpsertNode(cfg, newNode)
 
 	if err := config.SaveConfig(args.NetworkFile, cfg); err != nil {
 		return fmt.Errorf("could not save network file at %q: %w", args.NetworkFile, err)

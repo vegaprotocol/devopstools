@@ -68,6 +68,15 @@ func NewAmountFromSubUnit(value *big.Int, decimals uint64) *Amount {
 	}
 }
 
+func ParseAmountFromSubUnit(value string, decimals uint64) *Amount {
+	valueAsInt, _ := new(big.Int).SetString(value, 10)
+
+	return &Amount{
+		amount:   AsMainUint(valueAsInt, decimals),
+		decimals: decimals,
+	}
+}
+
 func AsMainUint(value *big.Int, decimals uint64) *big.Float {
 	valueStr := value.String()
 

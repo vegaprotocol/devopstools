@@ -12,7 +12,6 @@ import (
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
@@ -87,7 +86,7 @@ func TopUpBots(args TopUpArgs) error {
 	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Debug("Looking for healthy gRPC endpoints...")
-	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}

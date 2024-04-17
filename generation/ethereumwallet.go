@@ -4,13 +4,18 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/vegaprotocol/devopstools/secrets"
-
 	"github.com/cosmos/go-bip39"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 )
 
-func GenerateNewEthereumWallet() (*secrets.EthereumWalletPrivate, error) {
+type EthereumWalletPrivate struct {
+	Address    string `json:"address"`
+	Mnemonic   string `json:"mnemonic"`
+	Seed       string `json:"seed"`
+	PrivateKey string `json:"private_key"`
+}
+
+func GenerateNewEthereumWallet() (*EthereumWalletPrivate, error) {
 	return GenerateEthereumWallet("", "", "")
 }
 
@@ -18,7 +23,7 @@ func GenerateEthereumWallet(
 	mnemonic string,
 	seed string,
 	password string,
-) (*secrets.EthereumWalletPrivate, error) {
+) (*EthereumWalletPrivate, error) {
 	var (
 		byteSeed []byte
 		err      error
@@ -62,7 +67,7 @@ func GenerateEthereumWallet(
 		return nil, fmt.Errorf("failed to get priv key for Ethereum key %w", err)
 	}
 
-	return &secrets.EthereumWalletPrivate{
+	return &EthereumWalletPrivate{
 		Address:    address,
 		Mnemonic:   mnemonic,
 		Seed:       seed,

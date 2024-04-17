@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -45,7 +44,4 @@ func Execute() {
 func init() {
 	RootCmd.CompletionOptions.DisableDefaultCmd = true
 	RootCmd.PersistentFlags().BoolVar(&Args.Debug, "debug", false, "Print debug logs")
-	RootCmd.PersistentFlags().StringVar(&Args.GitHubToken, "github-token", viper.GetString("GITHUB_TOKEN"), "GitHub token to access HashiCorp Vault")
-	RootCmd.PersistentFlags().StringVar(&Args.FileWithGitHubToken, "github-token-file", "secret.txt", "file containing GitHub token to access HashiCorp Vault")
-	RootCmd.PersistentFlags().StringVar(&Args.HCVaultURL, "hc-vault-url", "https://vault.ops.vega.xyz", "url to HashiCorp Vault")
 }
