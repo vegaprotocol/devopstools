@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/vegaprotocol/devopstools/bots"
+	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
-	"github.com/vegaprotocol/devopstools/generate"
+	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetwork"
@@ -30,7 +31,7 @@ import (
 const waitTimeout = 5 * time.Minute
 
 type ReferralArgs struct {
-	*BotArgs
+	*Args
 	SetupBotsInReferralProgram bool
 	Assets                     []string
 	NumberOfTeams              uint32
@@ -53,9 +54,9 @@ var referralCmd = &cobra.Command{
 }
 
 func init() {
-	referralArgs.BotArgs = &botArgs
+	referralArgs.Args = &botArgs
 
-	BotCmd.AddCommand(referralCmd)
+	Cmd.AddCommand(referralCmd)
 	referralCmd.PersistentFlags().BoolVar(
 		&referralArgs.SetupBotsInReferralProgram,
 		"setup",
@@ -338,7 +339,7 @@ func findMarketMarketsForAssets(dataNodeClient vegaapi.DataNodeClient, assetsSym
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all markets: %w", err)
 	}
-	allAssets, err := dataNodeClient.GetAssets()
+	allAssets, err := dataNodeClient.ListAssets(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all assets: %w", err)
 	}
@@ -534,16 +535,16 @@ func createReferralSet(
 	logger *zap.Logger,
 ) error {
 	errorMsg := fmt.Errorf("failed to create referral set by %s", creatorVegawallet.PrivateKey)
-	teamName, err := generate.GenerateName()
+	teamName, err := generation.GenerateName()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
 	teamName = fmt.Sprintf("Bots Team: %s", teamName)
-	teamURL, err := generate.GenerateRandomWikiURL()
+	teamURL, err := generation.GenerateRandomWikiURL()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
-	teamAvatar, err := generate.GenerateAvatarURL()
+	teamAvatar, err := generation.GenerateAvatarURL()
 	if err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
@@ -561,8 +562,7 @@ func createReferralSet(
 			},
 		},
 	}
-	if err := governance.SubmitTx(fmt.Sprintf("create referral team %s", teamName),
-		dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
+	if err := governance.SubmitTx(fmt.Sprintf("create referral team %s", teamName), dataNodeClient, creatorVegawallet, logger, &walletTxReq); err != nil {
 		return fmt.Errorf("%s, %w", errorMsg, err)
 	}
 	return nil
@@ -610,9 +610,9 @@ func doStake(
 	//
 	// Prepare source Ethereum wallet
 	//
-	vegaToken := network.SmartContracts.VegaToken
+	vegaToken := network.PrimarySmartContracts.VegaToken
 	wallet := network.NetworkMainWallet
-	stakingBridge := network.SmartContracts.StakingBridge
+	stakingBridge := network.PrimarySmartContracts.StakingBridge
 
 	// TODO - check if there any pending transactions
 
@@ -635,19 +635,19 @@ func doStake(
 		// increase ALLOWANCE
 		increaseAllowanceAmount := ethutils.VegaTokenFromFullTokens(big.NewFloat(1000000))
 		if increaseAllowanceAmount.Cmp(totalMissingStake) < 0 {
-			return fmt.Errorf("Want to stake more than 1kk tokens total - it is too much")
+			return fmt.Errorf("want to stake more than 1kk tokens total - it is too much")
 		}
 		logger.Info("increasing allowance", zap.String("amount", increaseAllowanceAmount.String()),
 			zap.String("ethWallet", wallet.Address.Hex()),
 			zap.String("allowanceBefore", currentAllowance.String()),
 			zap.String("tokenAddress", vegaToken.Address.Hex()))
-		opts := wallet.GetTransactOpts()
+		opts := wallet.GetTransactOpts(context.Background())
 		allowanceTx, err := vegaToken.IncreaseAllowance(opts, stakingBridge.Address, increaseAllowanceAmount)
 		if err != nil {
 			return fmt.Errorf("failed to increase allowance: %w", err)
 		}
 		// WAIT
-		if err = ethutils.WaitForTransaction(network.EthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, allowanceTx, time.Minute); err != nil {
 			logger.Error("failed to increase allowance", zap.String("ethWallet", wallet.Address.Hex()),
 				zap.String("tokenAddress", vegaToken.Address.Hex()), zap.Error(err))
 			return fmt.Errorf("transaction failed to increase allowance: %w", err)
@@ -671,7 +671,7 @@ func doStake(
 	)
 	logger.Info("Sending stake transactions", zap.Int("count", len(missingStakeByPubKey)))
 	for pubKey, missingStake := range missingStakeByPubKey {
-		opts := wallet.GetTransactOpts()
+		opts := wallet.GetTransactOpts(context.Background())
 		tx, err := stakingBridge.Stake(opts, missingStake, pubKey)
 		if err != nil {
 			failedCount += 1
@@ -697,7 +697,7 @@ func doStake(
 			continue
 		}
 		logger.Debug("waiting", zap.Any("tx", tx))
-		if err = ethutils.WaitForTransaction(network.EthClient, tx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context.Background(), network.PrimaryEthClient, tx, time.Minute); err != nil {
 			failedCount += 1
 			logger.Error("Stake transaction failed", zap.String("pub key", pubKey),
 				zap.Uint64("nonce", tx.Nonce()), zap.Any("tx", tx), zap.Error(err))

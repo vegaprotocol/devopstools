@@ -8,15 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type IncentiveArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 	VegaNetworkName string
 }
 
-var incentiveArgs IncentiveArgs
+var incentiveArgs Args
 
-// Root Command for Incentive
-var IncentiveCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "incentive",
 	Short: "Setup network for incentive",
 	Long:  ``,
@@ -25,8 +24,8 @@ var IncentiveCmd = &cobra.Command{
 func init() {
 	incentiveArgs.RootArgs = &rootCmd.Args
 
-	IncentiveCmd.PersistentFlags().StringVar(&incentiveArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := IncentiveCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&incentiveArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

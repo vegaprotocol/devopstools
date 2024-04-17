@@ -27,7 +27,7 @@ type TerminateArgs struct {
 	ManagedMarkets bool
 	MarketIds      []string
 
-	*MarketArgs
+	*Args
 }
 
 var terminateArgs TerminateArgs
@@ -45,13 +45,13 @@ var terminateCmd = &cobra.Command{
 }
 
 func init() {
-	terminateArgs.MarketArgs = &marketArgs
+	terminateArgs.Args = &marketArgs
 
 	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.AllMarkets, "all", false, "Terminate all markets")
 	terminateCmd.PersistentFlags().BoolVar(&terminateArgs.ManagedMarkets, "managed", false, fmt.Sprintf("Terminate markets managed by ops only(all with %s metadata)", OpsManagedMetadata))
 	terminateCmd.PersistentFlags().StringSliceVar(&terminateArgs.MarketIds, "market-ids", []string{}, "Terminate only certain markets")
 
-	MarketCmd.AddCommand(terminateCmd)
+	Cmd.AddCommand(terminateCmd)
 }
 
 type marketDetails struct {

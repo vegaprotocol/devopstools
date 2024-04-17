@@ -70,7 +70,7 @@ func (sb *StakingBridge) StakeBalance(opts *bind.CallOpts, target common.Address
 	if err != nil {
 		return nil, err
 	}
-	return sb.StakingBridgeCommon.StakeBalance(opts, target, byte32VegaPubKey)
+	return sb.Common.StakeBalance(opts, target, byte32VegaPubKey)
 }
 
 func (sb *StakingBridge) Stake(opts *bind.TransactOpts, amount *big.Int, vegaPubKey string) (*types.Transaction, error) {
@@ -78,7 +78,7 @@ func (sb *StakingBridge) Stake(opts *bind.TransactOpts, amount *big.Int, vegaPub
 	if err != nil {
 		return nil, err
 	}
-	return sb.StakingBridgeCommon.Stake(opts, amount, byte32VegaPubKey)
+	return sb.Common.Stake(opts, amount, byte32VegaPubKey)
 }
 
 func (sb *StakingBridge) RemoveStake(opts *bind.TransactOpts, amount *big.Int, vegaPubKey string) (*types.Transaction, error) {
@@ -86,5 +86,5 @@ func (sb *StakingBridge) RemoveStake(opts *bind.TransactOpts, amount *big.Int, v
 	if err != nil {
 		return nil, err
 	}
-	return sb.StakingBridgeCommon.RemoveStake(opts, amount, byte32VegaPubKey)
+	return sb.Common.RemoveStake(opts, amount, byte32VegaPubKey)
 }

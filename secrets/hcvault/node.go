@@ -12,7 +12,7 @@ const (
 	networkVaultRoot = "network"
 )
 
-func (c *HCVaultSecretStore) GetVegaNode(network string, node string) (*secrets.VegaNodePrivate, error) {
+func (c *SecretStore) GetVegaNode(network string, node string) (*secrets.VegaNodePrivate, error) {
 	path := fmt.Sprintf("%s/%s", network, node)
 	secretDataByte, err := c.GetSecretAsByte(networkVaultRoot, path)
 	if err != nil {
@@ -25,7 +25,7 @@ func (c *HCVaultSecretStore) GetVegaNode(network string, node string) (*secrets.
 	return &result, nil
 }
 
-func (c *HCVaultSecretStore) StoreVegaNode(network string, node string, privateData *secrets.VegaNodePrivate) error {
+func (c *SecretStore) StoreVegaNode(network string, node string, privateData *secrets.VegaNodePrivate) error {
 	path := fmt.Sprintf("%s/%s", network, node)
 	secretDataByte, err := json.Marshal(privateData)
 	if err != nil {
@@ -34,12 +34,12 @@ func (c *HCVaultSecretStore) StoreVegaNode(network string, node string, privateD
 	return c.UpsertSecretFromByte(networkVaultRoot, path, secretDataByte)
 }
 
-func (c *HCVaultSecretStore) DoesVegaNodeExist(network string, node string) (bool, error) {
+func (c *SecretStore) DoesVegaNodeExist(network string, node string) (bool, error) {
 	path := fmt.Sprintf("%s/%s", network, node)
 	return c.DoesExist(networkVaultRoot, path)
 }
 
-func (c *HCVaultSecretStore) GetVegaNodeList(network string) ([]string, error) {
+func (c *SecretStore) GetVegaNodeList(network string) ([]string, error) {
 	secretList, err := c.GetSecretList(networkVaultRoot, network)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get list of nodes for '%s' network; %w", network, err)
@@ -47,7 +47,7 @@ func (c *HCVaultSecretStore) GetVegaNodeList(network string) ([]string, error) {
 	return secretList, nil
 }
 
-func (c *HCVaultSecretStore) GetAllVegaNode(network string) (map[string]*secrets.VegaNodePrivate, error) {
+func (c *SecretStore) GetAllVegaNode(network string) (map[string]*secrets.VegaNodePrivate, error) {
 	nodeList, err := c.GetVegaNodeList(network)
 	if err != nil {
 		return nil, err

@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type ERC20AssetPoolCommon interface {
+type Common interface {
 	Erc20BridgeAddress(opts *bind.CallOpts) (common.Address, error)
 	MultisigControlAddress(opts *bind.CallOpts) (common.Address, error)
 	SetBridgeAddress(opts *bind.TransactOpts, new_address common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error)
@@ -20,9 +20,9 @@ type ERC20AssetPoolCommon interface {
 }
 
 type ERC20AssetPool struct {
-	ERC20AssetPoolCommon
+	Common
 	Address common.Address
-	Version ERC20AssetPoolVersion
+	Version Version
 	client  *ethclient.Client
 
 	// Minimal implementation
@@ -32,7 +32,7 @@ type ERC20AssetPool struct {
 func NewERC20AssetPool(
 	ethClient *ethclient.Client,
 	hexAddress string,
-	version ERC20AssetPoolVersion,
+	version Version,
 ) (*ERC20AssetPool, error) {
 	var err error
 	result := &ERC20AssetPool{
@@ -41,12 +41,12 @@ func NewERC20AssetPool(
 		client:  ethClient,
 	}
 	switch version {
-	case ERC20AssetPoolV1:
+	case V1:
 		result.v1, err = ERC20AssetPool_V1.NewERC20AssetPool(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20AssetPoolCommon = result.v1
+		result.Common = result.v1
 	}
 
 	return result, nil

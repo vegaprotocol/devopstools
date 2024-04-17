@@ -5,10 +5,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -16,24 +14,17 @@ import (
 // TRANSACT OPTS
 //
 
-func GetTransactOpts(
-	ethClient *ethclient.Client,
-	privateKey *ecdsa.PrivateKey,
-) (*bind.TransactOpts, error) {
-	return GetTransactOptsWithNonce(ethClient, privateKey, 0)
+func GetTransactOpts(ctx context.Context, ethClient *ethclient.Client, privateKey *ecdsa.PrivateKey) (*bind.TransactOpts, error) {
+	return GetTransactOptsWithNonce(ctx, ethClient, privateKey, 0)
 }
 
-func GetTransactOptsWithNonce(
-	ethClient *ethclient.Client,
-	privateKey *ecdsa.PrivateKey,
-	nonce uint64,
-) (*bind.TransactOpts, error) {
+func GetTransactOptsWithNonce(ctx context.Context, ethClient *ethclient.Client, privateKey *ecdsa.PrivateKey, nonce uint64) (*bind.TransactOpts, error) {
 	var (
 		errMsg = "failed to get transact opts, %w"
 		err    error
 	)
 
-	transactionData, err := GetNextTransactionData(ethClient)
+	transactionData, err := GetNextTransactionData(ctx, ethClient)
 	if err != nil {
 		return nil, fmt.Errorf(errMsg, err)
 	}
@@ -64,28 +55,24 @@ type TransactionData struct {
 	gasTipCap *big.Int
 }
 
-// Get post London Fork transaction data
-func GetNextTransactionData(ethClient *ethclient.Client) (*TransactionData, error) {
-	var (
-		result = &TransactionData{}
-		errMsg = "failed to get next transaction data, %w"
-		err    error
-	)
+func GetNextTransactionData(ctx context.Context, ethClient *ethclient.Client) (*TransactionData, error) {
+	result := &TransactionData{}
 
-	// get chain id
-	if result.chainID, err = ethClient.ChainID(context.Background()); err != nil {
-		return nil, fmt.Errorf(errMsg, err)
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve chain ID: %w", err)
 	}
+	result.chainID = chainID
 
 	// get suggested gas price (Base Fee)
-	suggestedGasPrice, err := ethClient.SuggestGasPrice(context.Background())
+	suggestedGasPrice, err := ethClient.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
+		return nil, fmt.Errorf("failed to get suggested gas price: %w", err)
 	}
 	// get suggested gas tip cap (Max Priority Fee)
-	suggestedGasTipCap, err := ethClient.SuggestGasTipCap(context.Background())
+	suggestedGasTipCap, err := ethClient.SuggestGasTipCap(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(errMsg, err)
+		return nil, fmt.Errorf("failed to get suggested gas tip cap: %w", err)
 	}
 
 	// (!!) TRIPLE (!!) the tip, to speed up transaction
@@ -94,21 +81,4 @@ func GetNextTransactionData(ethClient *ethclient.Client) (*TransactionData, erro
 	result.gasFeeCap = new(big.Int).Add(suggestedGasPrice.Mul(suggestedGasPrice, big.NewInt(2)), result.gasTipCap)
 
 	return result, nil
-}
-
-func WaitForTransaction(
-	ethClient *ethclient.Client,
-	tx *types.Transaction,
-	timeout time.Duration,
-) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	receipt, err := bind.WaitMined(ctx, ethClient, tx)
-	if err != nil {
-		return fmt.Errorf("transaction failed to mint, %w", err)
-	}
-	if receipt.Status != 1 {
-		return fmt.Errorf("Ethereum transaction failed %+v", receipt)
-	}
-	return nil
 }

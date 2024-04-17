@@ -18,7 +18,7 @@ import (
 // Functions included in ERC20 standard and implemented by every ERC20 Token
 //
 
-type ERC20TokenStandard interface {
+type Standard interface {
 	BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error)
 	TotalSupply(opts *bind.CallOpts) (*big.Int, error)
 	Approve(opts *bind.TransactOpts, spender common.Address, amount *big.Int) (*types.Transaction, error)
@@ -31,7 +31,7 @@ type ERC20TokenStandard interface {
 // Common functions, but not included in ERC20 standard
 //
 
-type ERC20TokenCommon interface {
+type Common interface {
 	Name(opts *bind.CallOpts) (string, error)
 	Symbol(opts *bind.CallOpts) (string, error)
 	Decimals(opts *bind.CallOpts) (uint8, error)
@@ -41,7 +41,7 @@ type ERC20TokenCommon interface {
 // Base Token extra functionality
 //
 
-type ERC20TokenTesting interface {
+type Testing interface {
 	Faucet(opts *bind.TransactOpts) (*types.Transaction, error)
 	Mint(opts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error)
 	IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error)
@@ -61,11 +61,11 @@ type ERC20TokenTesting interface {
 }
 
 type ERC20Token struct {
-	ERC20TokenStandard
-	ERC20TokenCommon
-	ERC20TokenTesting
+	Standard
+	Common
+	Testing
 	Address common.Address
-	Version ERC20TokenVersion
+	Version Version
 	client  *ethclient.Client
 
 	// Minimal implementation
@@ -78,11 +78,7 @@ type ERC20Token struct {
 	v_TokenBase *ERC20Token_TokenBase.TokenBase
 }
 
-func NewERC20Token(
-	ethClient *ethclient.Client,
-	hexAddress string,
-	version ERC20TokenVersion,
-) (*ERC20Token, error) {
+func NewERC20Token(ethClient *ethclient.Client, hexAddress string, version Version) (*ERC20Token, error) {
 	var err error
 	result := &ERC20Token{
 		Address: common.HexToAddress(hexAddress),
@@ -90,34 +86,26 @@ func NewERC20Token(
 		client:  ethClient,
 	}
 	switch version {
-	case ERC20TokenMinimal:
+	case Minimal:
 		result.v_IERC20, err = ERC20Token_IERC20.NewIERC20(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20TokenStandard = result.v_IERC20
-	case ERC20TokenOther:
+	case Other:
 		result.v_TokenOther, err = ERC20Token_TokenOther.NewTokenOther(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20TokenStandard = result.v_TokenOther
-		result.ERC20TokenCommon = result.v_TokenOther
-	case ERC20TokenOld:
+	case Old:
 		result.v_TokenOld, err = ERC20Token_TokenOld.NewTokenOld(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20TokenStandard = result.v_TokenOld
-		result.ERC20TokenCommon = result.v_TokenOld
-	case ERC20TokenBase:
+	case Base:
 		result.v_TokenBase, err = ERC20Token_TokenBase.NewTokenBase(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20TokenStandard = result.v_TokenBase
-		result.ERC20TokenCommon = result.v_TokenBase
-		result.ERC20TokenTesting = result.v_TokenBase
 	}
 
 	return result, nil

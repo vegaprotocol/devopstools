@@ -12,7 +12,7 @@ import (
 
 const EntryTimeFormat = time.RFC3339
 
-type BackupEntry struct {
+type Entry struct {
 	ID       string
 	Date     string
 	Block    string
@@ -25,14 +25,14 @@ type BackupEntry struct {
 type State struct {
 	Config Config
 
-	Backups []BackupEntry
+	Backups []Entry
 }
 
 func (state State) Empty() bool {
 	return len(state.Backups) < 1
 }
 
-func (state State) SortedBackups() []BackupEntry {
+func (state State) SortedBackups() []Entry {
 	entries := state.Backups
 	// sort.Slice(people, func(i, j int) bool { return people[i].Name < people[j].Name })
 	sort.Slice(entries, func(i, j int) bool {
@@ -62,7 +62,7 @@ func (state *State) AddEntry(id, location string, blockHeight int, full bool, po
 		pools = []Pool{}
 	}
 
-	entry := BackupEntry{
+	entry := Entry{
 		ID:       id,
 		Location: location,
 		Origin:   hostname,
@@ -93,7 +93,7 @@ func OpenOrCreateNewState(filePath string, config *Config) *State {
 	state, err := LoadStateFromFile(filePath)
 	if err != nil || state == nil {
 		state = &State{
-			Backups: []BackupEntry{},
+			Backups: []Entry{},
 		}
 	}
 

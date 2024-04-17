@@ -15,7 +15,7 @@ const (
 // Ethereum
 //
 
-func (c *HCVaultSecretStore) GetEthereumWallet(secretPath string) (*secrets.EthereumWalletPrivate, error) {
+func (c *SecretStore) GetEthereumWallet(secretPath string) (*secrets.EthereumWalletPrivate, error) {
 	path := fmt.Sprintf("ethereum/%s", secretPath)
 	secretDataByte, err := c.GetSecretAsByte(walletVaultRoot, path)
 	if err != nil {
@@ -28,7 +28,7 @@ func (c *HCVaultSecretStore) GetEthereumWallet(secretPath string) (*secrets.Ethe
 	return &result, nil
 }
 
-func (c *HCVaultSecretStore) StoreEthereumWallet(secretPath string, secretData *secrets.EthereumWalletPrivate) error {
+func (c *SecretStore) StoreEthereumWallet(secretPath string, secretData *secrets.EthereumWalletPrivate) error {
 	path := fmt.Sprintf("ethereum/%s", secretPath)
 	secretDataByte, err := json.Marshal(secretData)
 	if err != nil {
@@ -37,7 +37,7 @@ func (c *HCVaultSecretStore) StoreEthereumWallet(secretPath string, secretData *
 	return c.UpsertSecretFromByte(walletVaultRoot, path, secretDataByte)
 }
 
-func (c *HCVaultSecretStore) DoesEthereumWalletExist(secretPath string) (bool, error) {
+func (c *SecretStore) DoesEthereumWalletExist(secretPath string) (bool, error) {
 	path := fmt.Sprintf("ethereum/%s", secretPath)
 	return c.DoesExist(walletVaultRoot, path)
 }
@@ -46,7 +46,7 @@ func (c *HCVaultSecretStore) DoesEthereumWalletExist(secretPath string) (bool, e
 // Vega Wallet
 //
 
-func (c *HCVaultSecretStore) GetVegaWallet(secretPath string) (*secrets.VegaWalletPrivate, error) {
+func (c *SecretStore) GetVegaWallet(secretPath string) (*secrets.VegaWalletPrivate, error) {
 	path := fmt.Sprintf("vegawallet/%s", secretPath)
 	secretDataByte, err := c.GetSecretAsByte(walletVaultRoot, path)
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *HCVaultSecretStore) GetVegaWallet(secretPath string) (*secrets.VegaWall
 	return &result, nil
 }
 
-func (c *HCVaultSecretStore) StoreVegaWallet(secretPath string, secretData *secrets.VegaWalletPrivate) error {
+func (c *SecretStore) StoreVegaWallet(secretPath string, secretData *secrets.VegaWalletPrivate) error {
 	path := fmt.Sprintf("vegawallet/%s", secretPath)
 	secretDataByte, err := json.Marshal(secretData)
 	if err != nil {
@@ -68,7 +68,7 @@ func (c *HCVaultSecretStore) StoreVegaWallet(secretPath string, secretData *secr
 	return c.UpsertSecretFromByte(walletVaultRoot, path, secretDataByte)
 }
 
-func (c *HCVaultSecretStore) DoesVegaWalletExist(secretPath string) (bool, error) {
+func (c *SecretStore) DoesVegaWalletExist(secretPath string) (bool, error) {
 	path := fmt.Sprintf("vegawallet/%s", secretPath)
 	return c.DoesExist(walletVaultRoot, path)
 }

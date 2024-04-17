@@ -8,18 +8,7 @@ import (
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 )
 
-// The CoinBase Oracle data
 const CoinBaseOraclePubKey = "0xfCEAdAFab14d46e20144F48824d0C09B1a03F2BC"
-
-const (
-	MARKET_AAPL_MARKER    = "auto:aapl"
-	MARKET_AAVEDAI_MARKER = "auto:aavedai"
-	MARKET_BTCUSD_MARKER  = "auto:btcusd"
-	MARKET_ETHBTC_MARKER  = "auto:ethbtc"
-	MARKET_TSLA_MARKER    = "auto:tsla"
-	MARKET_UNIDAI_MARKER  = "auto:unidai"
-	MARKET_ETHDAI_MARKER  = "auto:ethdai"
-)
 
 type networkAssetsIDs struct {
 	AAPL    string
@@ -34,7 +23,7 @@ type networkAssetsIDs struct {
 	MainnetLikeAsset_USDT string
 }
 
-var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL2Config{
+var l2Configs = map[string][]*vega.EthereumL2Config{
 	types.NetworkDevnet1: {
 		&vega.EthereumL2Config{
 			NetworkId:     "100",
@@ -93,7 +82,7 @@ var l2Configs map[string][]*vega.EthereumL2Config = map[string][]*vega.EthereumL
 	},
 }
 
-var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs{
+var settlementAssetIDs = map[string]networkAssetsIDs{
 	types.NetworkDevnet1: {
 		// AAPL:    "deadbeef00000000000000000000000000000000000000000000000000000008", // "fUSDC"
 		// AAVEDAI: "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
@@ -152,7 +141,7 @@ var settlementAssetIDs map[string]networkAssetsIDs = map[string]networkAssetsIDs
 	},
 }
 
-func MarketProposalsForEnvironment(environment string) []*commandspb.ProposalSubmission {
+func ProposalsForEnvironment(environment string) []*commandspb.ProposalSubmission {
 	switch environment {
 	case types.NetworkDevnet1:
 		return []*commandspb.ProposalSubmission{

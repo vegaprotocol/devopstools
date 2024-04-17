@@ -16,13 +16,13 @@ type AddNodesBaseOn struct {
 	Group string
 }
 
-func ListNodes(binary, customNetworkHomePath string) (VegacapsuleNodesListOut, error) {
+func ListNodes(binary, customNetworkHomePath string) (NodesListOut, error) {
 	args := []string{"nodes", "ls"}
 	if customNetworkHomePath != "" {
 		args = append(args, "--home-path", customNetworkHomePath)
 	}
 
-	vegacapsuleNodesLsOut := VegacapsuleNodesListOut{}
+	vegacapsuleNodesLsOut := NodesListOut{}
 	if _, err := tools.ExecuteBinary(binary, args, &vegacapsuleNodesLsOut); err != nil {
 		return nil, fmt.Errorf("failed to execute vegacapsule nodes ls command: %w", err)
 	}

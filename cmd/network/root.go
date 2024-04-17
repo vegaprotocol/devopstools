@@ -8,15 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type NetworkArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 	VegaNetworkName string
 }
 
-var networkArgs NetworkArgs
+var networkArgs Args
 
-// Root Command for Network
-var NetworkCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "network",
 	Short: "Vega Network commands",
 	Long:  `Vega Network commands`,
@@ -25,8 +24,8 @@ var NetworkCmd = &cobra.Command{
 func init() {
 	networkArgs.RootArgs = &rootCmd.Args
 
-	NetworkCmd.PersistentFlags().StringVar(&networkArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := NetworkCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&networkArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

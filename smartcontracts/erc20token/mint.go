@@ -11,11 +11,11 @@ import (
 
 func (t *ERC20Token) Mint(opts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error) {
 	switch t.Version {
-	case ERC20TokenBase:
+	case Base:
 		return t.v_TokenBase.Mint(opts, to, amount)
-	case ERC20TokenOld:
+	case Old:
 		return t.v_TokenOld.Issue(opts, to, amount)
-	case ERC20TokenOther, ERC20TokenMinimal:
+	case Other, Minimal:
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("not implemented for token %s", t.Version)

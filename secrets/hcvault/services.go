@@ -1,21 +1,25 @@
 package hcvault
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vegaprotocol/devopstools/types"
+)
 
 const (
 	serviceVaultRoot = "service"
 )
 
-func (c *HCVaultSecretStore) GetInfuraProjectId() (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "infura")
+func (c *SecretStore) GetInfuraProjectId(bridge types.ETHBridge) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "infura")
 	if err != nil {
 		return "", err
 	}
 	return secret["projectId"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEthereumNodeURL(environment string) (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "ethereum-node")
+func (c *SecretStore) GetEthereumNodeURL(bridge types.ETHBridge, environment string) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "ethereum-node")
 	if err != nil {
 		return "", fmt.Errorf("failed to get ethereum node url from the vault: %w", err)
 	}
@@ -33,15 +37,15 @@ func (c *HCVaultSecretStore) GetEthereumNodeURL(environment string) (string, err
 	return secret[environment].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetEtherscanApikey() (string, error) {
-	secret, err := c.GetSecret(serviceVaultRoot, "etherscan")
+func (c *SecretStore) GetEtherscanApikey(bridge types.ETHBridge) (string, error) {
+	secret, err := c.GetSecret(serviceVaultRoot, bridge.String(), "etherscan")
 	if err != nil {
 		return "", err
 	}
 	return secret["apikey"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
+func (c *SecretStore) GetDigitalOceanApiToken() (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, "digitalocean")
 	if err != nil {
 		return "", err
@@ -49,7 +53,7 @@ func (c *HCVaultSecretStore) GetDigitalOceanApiToken() (string, error) {
 	return secret["api_token"].(string), nil
 }
 
-func (c *HCVaultSecretStore) GetBotsApiToken() (string, error) {
+func (c *SecretStore) GetBotsApiToken() (string, error) {
 	secret, err := c.GetSecret(serviceVaultRoot, "bots")
 	if err != nil {
 		return "", err

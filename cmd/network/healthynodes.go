@@ -18,7 +18,7 @@ import (
 )
 
 type HealthyNodesArgs struct {
-	*NetworkArgs
+	*Args
 }
 
 var healthyNodesArgs HealthyNodesArgs
@@ -28,16 +28,16 @@ var healthyNodesCmd = &cobra.Command{
 	Short: "Get and print healthy nodes from the given network",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := RunHealthyNodes(healthyNodesArgs); err != nil {
-			networkParamsArgs.Logger.Error("Error", zap.Error(err))
+			healthyNodesArgs.Logger.Error("Error", zap.Error(err))
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
-	healthyNodesArgs.NetworkArgs = &networkArgs
+	healthyNodesArgs.Args = &networkArgs
 
-	NetworkCmd.AddCommand(healthyNodesCmd)
+	Cmd.AddCommand(healthyNodesCmd)
 }
 
 type output struct {

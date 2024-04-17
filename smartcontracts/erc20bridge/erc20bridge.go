@@ -12,23 +12,16 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type ERC20BridgeCommon interface {
+type Common interface {
 	GetAssetSource(opts *bind.CallOpts, vega_asset_id [32]byte) (common.Address, error)
-	// GetDepositMaximum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
-	// GetDepositMinimum(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error) // removed in v2
 	GetMultisigControlAddress(opts *bind.CallOpts) (common.Address, error)
 	GetVegaAssetId(opts *bind.CallOpts, asset_source common.Address) ([32]byte, error)
 	IsAssetListed(opts *bind.CallOpts, asset_source common.Address) (bool, error)
-
 	DepositAsset(opts *bind.TransactOpts, asset_source common.Address, amount *big.Int, vega_public_key [32]byte) (*types.Transaction, error)
-	// ListAsset(opts *bind.TransactOpts, asset_source common.Address, vega_asset_id [32]byte, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
 	RemoveAsset(opts *bind.TransactOpts, asset_source common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error)
-	// SetDepositMaximum(opts *bind.TransactOpts, asset_source common.Address, maximum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
-	// SetDepositMinimum(opts *bind.TransactOpts, asset_source common.Address, minimum_amount *big.Int, nonce *big.Int, signatures []byte) (*types.Transaction, error) // removed in v2
-	// WithdrawAsset(opts *bind.TransactOpts, asset_source common.Address, amount *big.Int, target common.Address, nonce *big.Int, signatures []byte) (*types.Transaction, error) // changed in v2
 }
 
-type ERC20BridgeNewInV2 interface {
+type NewInV2 interface {
 	DefaultWithdrawDelay(opts *bind.CallOpts) (*big.Int, error)
 	Erc20AssetPoolAddress(opts *bind.CallOpts) (common.Address, error)
 	GetAssetDepositLifetimeLimit(opts *bind.CallOpts, asset_source common.Address) (*big.Int, error)
@@ -47,10 +40,10 @@ type ERC20BridgeNewInV2 interface {
 }
 
 type ERC20Bridge struct {
-	ERC20BridgeCommon
-	ERC20BridgeNewInV2
+	Common
+	NewInV2
 	Address common.Address
-	Version ERC20BridgeVersion
+	Version Version
 	client  *ethclient.Client
 
 	// Minimal implementation
@@ -61,7 +54,7 @@ type ERC20Bridge struct {
 func NewERC20Bridge(
 	ethClient *ethclient.Client,
 	hexAddress string,
-	version ERC20BridgeVersion,
+	version Version,
 ) (*ERC20Bridge, error) {
 	var err error
 	result := &ERC20Bridge{
@@ -70,19 +63,19 @@ func NewERC20Bridge(
 		client:  ethClient,
 	}
 	switch version {
-	case ERC20BridgeV1:
+	case V1:
 		result.v1, err = ERC20Bridge_V1.NewERC20Bridge(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20BridgeCommon = result.v1
-	case ERC20BridgeV2:
+		result.Common = result.v1
+	case V2:
 		result.v2, err = ERC20Bridge_V2.NewERC20BridgeRestricted(result.Address, result.client)
 		if err != nil {
 			return nil, err
 		}
-		result.ERC20BridgeCommon = result.v2
-		result.ERC20BridgeNewInV2 = result.v2
+		result.Common = result.v2
+		result.NewInV2 = result.v2
 	}
 
 	return result, nil

@@ -4,18 +4,18 @@ import (
 	"fmt"
 )
 
-type ERC20TokenVersion string
+type Version string
 
 const (
-	ERC20TokenBase    ERC20TokenVersion = "TokenBase"
-	ERC20TokenOld     ERC20TokenVersion = "TokenOld" // deprecated - don't ever use, remove if you can
-	ERC20TokenOther   ERC20TokenVersion = "TokenOther"
-	ERC20TokenMinimal ERC20TokenVersion = "TokenMinimal"
+	Base    Version = "TokenBase"
+	Old     Version = "TokenOld" // deprecated - don't ever use, remove if you can
+	Other   Version = "TokenOther"
+	Minimal Version = "TokenMinimal"
 )
 
-func (n ERC20TokenVersion) IsValid() error {
+func (n Version) IsValid() error {
 	switch n {
-	case ERC20TokenBase, ERC20TokenOld, ERC20TokenOther, ERC20TokenMinimal:
+	case Base, Old, Other, Minimal:
 		return nil
 	}
 	return fmt.Errorf("invalid ERC20 Token Version %s", n)

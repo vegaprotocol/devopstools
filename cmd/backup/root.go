@@ -6,15 +6,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type BackupArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 
 	configPath string
 }
 
-var backupArgs BackupArgs
+var backupArgs Args
 
-var BackupCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Create backup or restore",
 }
@@ -22,7 +22,7 @@ var BackupCmd = &cobra.Command{
 func init() {
 	backupArgs.RootArgs = &rootCmd.Args
 
-	BackupCmd.PersistentFlags().StringVar(
+	Cmd.PersistentFlags().StringVar(
 		&backupArgs.configPath,
 		"config-path",
 		"",

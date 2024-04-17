@@ -14,7 +14,7 @@ import (
 )
 
 type NetworkParamsArgs struct {
-	*IncentiveArgs
+	*Args
 	UpdateParams bool
 }
 
@@ -34,9 +34,9 @@ var networkParamsCmd = &cobra.Command{
 }
 
 func init() {
-	networkParamsArgs.IncentiveArgs = &incentiveArgs
+	networkParamsArgs.Args = &incentiveArgs
 
-	IncentiveCmd.AddCommand(networkParamsCmd)
+	Cmd.AddCommand(networkParamsCmd)
 	networkParamsCmd.PersistentFlags().BoolVar(&networkParamsArgs.UpdateParams, "update", false, "Update Network Parameter values with propose & vote")
 }
 
@@ -106,9 +106,6 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	defer network.Disconnect()
 
 	toUpdate := checkNetworkParams(network)
-	if err != nil {
-		return err
-	}
 
 	if args.UpdateParams {
 		updateCount, err := governance.ProposeAndVoteOnNetworkParameters(
@@ -123,9 +120,6 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 			}
 		}
 		_ = checkNetworkParams(network)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

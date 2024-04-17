@@ -49,20 +49,6 @@ func TokenToFullTokens(amount *big.Int, decimals uint8) *big.Float {
 	return f.Quo(fWei.SetInt(amount), big.NewFloat(math.Pow10(int(decimals))))
 }
 
-func TokenFromFullTokens(amount *big.Float, decimals uint8) *big.Int {
-	truncInt, _ := amount.Int(nil)
-	truncInt = new(big.Int).Mul(truncInt, big.NewInt(int64(math.Pow10(int(decimals)))))
-	fracStr := strings.Split(fmt.Sprintf("%.18f", amount), ".")[1]
-	if int(decimals) > len(fracStr) {
-		fracStr += strings.Repeat("0", int(decimals)-len(fracStr))
-	} else {
-		fracStr = fracStr[:int(decimals)]
-	}
-	fracInt, _ := new(big.Int).SetString(fracStr, 10)
-	wei := new(big.Int).Add(truncInt, fracInt)
-	return wei
-}
-
 func TimestampNonce() uint64 {
 	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
 }

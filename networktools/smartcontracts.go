@@ -12,15 +12,15 @@ func (network *NetworkTools) GetEthNetwork() (types.ETHNetwork, error) {
 	errMsg := fmt.Sprintf("failed to get Eth Network for %s network", network.Name)
 	params, err := network.GetNetworkParams()
 	if err != nil {
-		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
+		return "unknown", fmt.Errorf("%s, %w", errMsg, err)
 	}
-	ethConfig, err := params.GetEthereumConfig()
+	ethConfig, err := params.PrimaryEthereumConfig()
 	if err != nil {
-		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
+		return "unknown", fmt.Errorf("%s, %w", errMsg, err)
 	}
 	ethNetwork, err := types.GetEthNetworkForId(ethConfig.ChainId)
 	if err != nil {
-		return types.ETHNetwork("unknown"), fmt.Errorf("%s, %w", errMsg, err)
+		return "unknown", fmt.Errorf("%s, %w", errMsg, err)
 	}
 	return ethNetwork, nil
 }
@@ -33,7 +33,7 @@ func (network *NetworkTools) GetSmartContracts(
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}
-	ethConfig, err := params.GetEthereumConfig()
+	ethConfig, err := params.PrimaryEthereumConfig()
 	if err != nil {
 		return nil, fmt.Errorf("%s, %w", errMsg, err)
 	}

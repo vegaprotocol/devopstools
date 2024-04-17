@@ -13,7 +13,7 @@ import (
 )
 
 type GetLiveBinaryArgs struct {
-	*VegacapsuleArgs
+	*Args
 
 	copyTo    string
 	overwrite bool
@@ -49,21 +49,21 @@ var getLiveBInaryCmd = &cobra.Command{
 }
 
 func init() {
-	getLiveBinaryArgs.VegacapsuleArgs = &vegacapsuleArgs
+	getLiveBinaryArgs.Args = &vegacapsuleArgs
 
-	VegacapsuleCmd.PersistentFlags().StringVar(
+	Cmd.PersistentFlags().StringVar(
 		&getLiveBinaryArgs.copyTo,
 		"copy-to",
 		"",
 		"If not empty binary is copied to given folder")
 
-	VegacapsuleCmd.PersistentFlags().BoolVar(
+	Cmd.PersistentFlags().BoolVar(
 		&getLiveBinaryArgs.overwrite,
 		"overwrite",
 		true,
 		"If true, binary is removed when exists")
 
-	VegacapsuleCmd.AddCommand(getLiveBInaryCmd)
+	Cmd.AddCommand(getLiveBInaryCmd)
 }
 
 func copyBiinaryTo(logger *zap.Logger, binaryPath, outputFile string, overwrite bool) error {

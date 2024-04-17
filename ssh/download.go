@@ -49,5 +49,5 @@ func Download(
 			logger.Error("Failed to download file", zap.String("stdout", stdOut.String()), zap.String("stderr", stdErr.String()), zap.Error(err))
 		}
 	}
-	return fmt.Errorf("Failed to download file")
+	return fmt.Errorf("failed to download file")
 }

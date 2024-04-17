@@ -4,17 +4,17 @@ import (
 	"fmt"
 )
 
-type ERC20BridgeVersion string
+type Version string
 
 const (
-	ERC20BridgeV1 ERC20BridgeVersion = "v1"
-	ERC20BridgeV2 ERC20BridgeVersion = "v2"
+	V1 Version = "v1"
+	V2 Version = "v2"
 )
 
-func (n ERC20BridgeVersion) IsValid() error {
+func (n Version) IsValid() error {
 	switch n {
-	case ERC20BridgeV1, ERC20BridgeV2:
+	case V1, V2:
 		return nil
 	}
-	return fmt.Errorf("Invalid ERC20 Bridge Version %s", n)
+	return fmt.Errorf("invalid ERC20 Bridge Version %s", n)
 }

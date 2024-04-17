@@ -18,7 +18,7 @@ func (n ETHNetwork) IsValid() error {
 	case ETHMainnet, ETHSepolia, ETHGoerli, ETHRopsten:
 		return nil
 	}
-	return fmt.Errorf("Invalid Ethereum network %s", n)
+	return fmt.Errorf("invalid Ethereum network %s", n)
 }
 
 func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
@@ -33,4 +33,15 @@ func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
 		return ETHSepolia, nil
 	}
 	return "", fmt.Errorf("unknown Ethereum chain id: %s", chainId)
+}
+
+type ETHBridge string
+
+const (
+	PrimaryBridge   ETHBridge = "primary-bridge"
+	SecondaryBridge ETHBridge = "secondary-bridge"
+)
+
+func (b ETHBridge) String() string {
+	return string(b)
 }

@@ -30,7 +30,6 @@ func NewFutureETHUSDTWithoutTime(settlementAsset string, oraclePubKey string) *c
 	)
 }
 
-// settlementVegaAssetId ideally with 6 decimal places
 func NewFutureETHUSDT(
 	settlementVegaAssetId string,
 	oraclePubKey string,

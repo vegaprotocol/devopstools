@@ -21,7 +21,7 @@ var (
 )
 
 type DownloadMainnetSnapshotArgs struct {
-	*SnapshotCompatibilityArgs
+	*Args
 
 	RemoteVegaBinary     string
 	TemporaryDestination string
@@ -90,7 +90,7 @@ var downloadMainnetSnapshotCmd = &cobra.Command{
 }
 
 func init() {
-	downloadMainnetSnapshotArgs.SnapshotCompatibilityArgs = &snapshotCompatibilityArgs
+	downloadMainnetSnapshotArgs.Args = &snapshotCompatibilityArgs
 
 	currentUser, _ := tools.WhoAmI()
 	downloadMainnetSnapshotCmd.PersistentFlags().

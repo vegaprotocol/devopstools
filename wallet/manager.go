@@ -1,16 +1,18 @@
 package wallet
 
 import (
+	context2 "context"
 	"fmt"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 )
 
-type WalletManager struct {
+type Manager struct {
 	ethClientManager  *ethutils.EthereumClientManager
 	walletSecretStore secrets.WalletSecretStore
 }
@@ -18,8 +20,8 @@ type WalletManager struct {
 func NewWalletManager(
 	ethClientManager *ethutils.EthereumClientManager,
 	walletSecretStore secrets.WalletSecretStore,
-) *WalletManager {
-	return &WalletManager{
+) *Manager {
+	return &Manager{
 		ethClientManager:  ethClientManager,
 		walletSecretStore: walletSecretStore,
 	}
@@ -29,13 +31,13 @@ func NewWalletManager(
 // ETHEREUM
 //
 
-func (wm *WalletManager) GetNetworkMainEthWallet(
+func (wm *Manager) GetNetworkMainEthWallet(
 	ethNetwork types.ETHNetwork,
 	vegaNetwork string,
-) (*EthWallet, error) {
+) (*ethereum.Wallet, error) {
 	var (
-		secretPath string = fmt.Sprintf("%s/main", vegaNetwork)
-		errMsg            = "failed to get Main Ethereum Wallet for %s network, %w"
+		secretPath = fmt.Sprintf("%s/main", vegaNetwork)
+		errMsg     = "failed to get Main Ethereum Wallet for %s network, %w"
 	)
 	ethWallet, err := wm.getEthereumWallet(ethNetwork, secretPath)
 	if err != nil {
@@ -44,7 +46,7 @@ func (wm *WalletManager) GetNetworkMainEthWallet(
 	return ethWallet, nil
 }
 
-func (wm *WalletManager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*EthWallet, error) {
+func (wm *Manager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*ethereum.Wallet, error) {
 	wallet, err := wm.getEthereumWallet(ethNetwork, "AssetMain")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Asset Main Ethereum Wallet, %w", err)
@@ -52,7 +54,7 @@ func (wm *WalletManager) GetAssetMainEthWallet(ethNetwork types.ETHNetwork) (*Et
 	return wallet, nil
 }
 
-func (wm *WalletManager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*EthWallet, error) {
+func (wm *Manager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*ethereum.Wallet, error) {
 	wallet, err := wm.getEthereumWallet(ethNetwork, "EthWhale")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Ethereum Whale Wallet, %w", err)
@@ -60,10 +62,10 @@ func (wm *WalletManager) GetEthWhaleWallet(ethNetwork types.ETHNetwork) (*EthWal
 	return wallet, nil
 }
 
-func (wm *WalletManager) getEthereumWallet(
+func (wm *Manager) getEthereumWallet(
 	ethNetwork types.ETHNetwork,
 	secretPath string,
-) (*EthWallet, error) {
+) (*ethereum.Wallet, error) {
 	walletPrivate, err := wm.walletSecretStore.GetEthereumWallet(secretPath)
 	if err != nil {
 		return nil, err
@@ -73,8 +75,8 @@ func (wm *WalletManager) getEthereumWallet(
 		return nil, err
 	}
 
-	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*EthWallet, error) {
-		ethWallet, err := NewEthWallet(ethClient, walletPrivate)
+	ethWallet, err := tools.RetryReturn(6, 10*time.Second, func() (*ethereum.Wallet, error) {
+		ethWallet, err := ethereum.NewWallet(context2.Background(), ethClient, walletPrivate.PrivateKey)
 		if err != nil {
 			return nil, err
 		}
@@ -90,11 +92,11 @@ func (wm *WalletManager) getEthereumWallet(
 // VEGAWALLET
 //
 
-func (wm *WalletManager) GetVegaTokenWhaleVegaWallet() (*VegaWallet, error) {
+func (wm *Manager) GetVegaTokenWhaleVegaWallet() (*VegaWallet, error) {
 	return wm.getVegaWallet("vegaTokenWhale")
 }
 
-func (wm *WalletManager) getVegaWallet(secretPath string) (*VegaWallet, error) {
+func (wm *Manager) getVegaWallet(secretPath string) (*VegaWallet, error) {
 	walletPrivate, err := wm.walletSecretStore.GetVegaWallet(secretPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get VegaWallet %s, get secret failed, %w", secretPath, err)

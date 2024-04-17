@@ -1,23 +1,23 @@
 package veganetworksmartcontracts
 
 import (
+	context2 "context"
 	"fmt"
 	"math/big"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/ethutils"
-	"github.com/vegaprotocol/devopstools/wallet"
+	"github.com/vegaprotocol/devopstools/ethereum"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
 
-func (m *VegaNetworkSmartContracts) TopUpStakeForOne(minterWallet *wallet.EthWallet, partyPubKey string, amount *big.Int) error {
+func (m *VegaNetworkSmartContracts) TopUpStakeForOne(minterWallet *ethereum.Wallet, partyPubKey string, amount *big.Int) error {
 	return m.TopUpStake(minterWallet, map[string]*big.Int{partyPubKey: amount})
 }
 
-func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, requiredStakeByParty map[string]*big.Int) error {
+func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *ethereum.Wallet, requiredStakeByParty map[string]*big.Int) error {
 	vegaTokenInfo, err := m.VegaToken.GetInfo()
 	if err != nil {
 		return fmt.Errorf("failed to get info about Vega Token, %w", err)
@@ -64,7 +64,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 	}
 	if minterTokenBalance.Cmp(totalMissingStake) < 0 {
 		diff := new(big.Int).Sub(totalMissingStake, minterTokenBalance)
-		opts := minterWallet.GetTransactOpts()
+		opts := minterWallet.GetTransactOpts(context2.Background())
 		m.logger.Info("Mint", zap.String("token", vegaTokenInfo.Name), zap.String("ethWallet", minterWallet.Address.Hex()), zap.String("amount", diff.String()))
 		m.logger.Debug("Mint", zap.String("balanceBefore", minterTokenBalance.String()), zap.String("requiredBalance", totalMissingStake.String()))
 
@@ -85,7 +85,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 	}
 	if minterTokenAllowance.Cmp(totalMissingStake) < 0 {
 		diff := new(big.Int).Sub(totalMissingStake, minterTokenAllowance)
-		opts := minterWallet.GetTransactOpts()
+		opts := minterWallet.GetTransactOpts(context2.Background())
 		m.logger.Info("Increasing allowance", zap.String("token", vegaTokenInfo.Name), zap.String("ethWallet", minterWallet.Address.Hex()), zap.String("amount", diff.String()))
 		m.logger.Debug("Increasing allowance", zap.String("allowanceBefore", minterTokenAllowance.String()), zap.String("requiredAllowance", totalMissingStake.String()))
 		allowanceTx, err = m.VegaToken.IncreaseAllowance(opts, m.StakingBridge.Address, diff)
@@ -100,7 +100,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 	// wait for Mint and IncreaseAllowance
 	if mintTx != nil {
 		m.logger.Sugar().Infof("Wait for mint transaction  (%s) ...", mintTx.Hash().Hex())
-		if err = ethutils.WaitForTransaction(m.EthClient, mintTx, time.Minute*2); err != nil {
+		if err = ethereum.WaitForTransaction(context2.Background(), m.EthClient, mintTx, time.Minute*2); err != nil {
 			m.logger.Error("failed to mint", zap.String("token", vegaTokenInfo.Name), zap.Error(err))
 			return fmt.Errorf("transaction failed to mints: %w", err)
 		}
@@ -108,7 +108,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 	}
 	if allowanceTx != nil {
 		m.logger.Sugar().Infof("Wait for increase allowance transaction  (%s) ... ", allowanceTx.Hash().Hex())
-		if err = ethutils.WaitForTransaction(m.EthClient, allowanceTx, time.Minute); err != nil {
+		if err = ethereum.WaitForTransaction(context2.Background(), m.EthClient, allowanceTx, time.Minute); err != nil {
 			m.logger.Sugar().Infoln("failed")
 			m.logger.Error("failed to increase allowance", zap.String("ethWallet", minterWallet.Address.Hex()),
 				zap.String("token", vegaTokenInfo.Name), zap.String("tokenAddress", vegaTokenInfo.Address), zap.Error(err))
@@ -131,7 +131,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 			stakeOKCount += 1
 			m.logger.Info("No need to top up", zap.String("partyPubKey", partyPubKey))
 		} else {
-			opts := minterWallet.GetTransactOpts()
+			opts := minterWallet.GetTransactOpts(context2.Background())
 			tx, err := m.StakingBridge.Stake(opts, partyMissingStake, partyPubKey)
 			if err != nil {
 				stakeFailureCount += 1
@@ -149,7 +149,7 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 			continue
 		}
 		m.logger.Sugar().Infof("Wait for stake for %s transaction  (%s) ... ", partyPubKey, tx.Hash().Hex())
-		if err := ethutils.WaitForTransaction(m.EthClient, tx, time.Minute*2); err != nil {
+		if err := ethereum.WaitForTransaction(context2.Background(), m.EthClient, tx, time.Minute*2); err != nil {
 			stakeFailureCount += 1
 			m.logger.Sugar().Infoln("failed")
 			m.logger.Error("failed to stake", zap.String("partyPubKey", partyPubKey),
@@ -166,22 +166,22 @@ func (m *VegaNetworkSmartContracts) TopUpStake(minterWallet *wallet.EthWallet, r
 	return nil
 }
 
-func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *wallet.EthWallet, partyPubKey string) error {
+func (m *VegaNetworkSmartContracts) RemoveStake(ethWallet *ethereum.Wallet, partyPubKey string) error {
 	fmt.Printf("---- m: %v, ethWallet %v", m, ethWallet)
 	currentStake, err := m.StakingBridge.StakeBalance(&bind.CallOpts{}, ethWallet.Address, partyPubKey)
 	if err != nil {
 		return err
 	}
 	if currentStake.Cmp(big.NewInt(0)) > 0 {
-		opts := ethWallet.GetTransactOpts()
+		opts := ethWallet.GetTransactOpts(context2.Background())
 		tx, err := m.StakingBridge.RemoveStake(opts, currentStake, partyPubKey)
 		if err != nil {
 			m.logger.Error("failed to remove stake", zap.String("ethWallet", ethWallet.Address.Hex()), zap.String("partyPubKey", partyPubKey),
 				zap.String("amount", currentStake.String()), zap.Error(err))
 			return fmt.Errorf("failed to remove stake %s by %s from %s , %w", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, err)
 		}
-		m.logger.Sugar().Infof("Wait for remove stake %d by %s from %s transaction  (%s) ... ", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, tx.Hash().Hex())
-		if err := ethutils.WaitForTransaction(m.EthClient, tx, time.Minute*2); err != nil {
+		m.logger.Sugar().Infof("Wait for remove stake %s by %s from %s transaction  (%s) ... ", currentStake.String(), ethWallet.Address.Hex(), partyPubKey, tx.Hash().Hex())
+		if err := ethereum.WaitForTransaction(context2.Background(), m.EthClient, tx, time.Minute*2); err != nil {
 			m.logger.Sugar().Infoln("failed")
 			m.logger.Error("failed to remove stake", zap.String("ethWallet", ethWallet.Address.Hex()), zap.String("partyPubKey", partyPubKey),
 				zap.String("amount", currentStake.String()), zap.Any("tx", tx), zap.Error(err))

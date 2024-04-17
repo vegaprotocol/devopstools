@@ -1,13 +1,10 @@
 package market
 
 const (
-	SepoliaChainID    = 11155111
-	GnosisChainID     = 100
-	EthereumMainnetID = 1
+	SepoliaChainID = 11155111
+	GnosisChainID  = 100
 )
 
-const EmptyMetadata = ""
-
-var DefaultExtraMetadata []string = []string{
+var DefaultExtraMetadata = []string{
 	"devopstools:true",
 }

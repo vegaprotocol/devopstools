@@ -10,12 +10,12 @@ import (
 
 // DataNode stores state for a Vega Data node.
 type DataNode struct {
-	core.CoreClient
+	*core.Client
 }
 
-// NewDataNode returns a new node.
-func NewDataNode(hosts []string, callTimeout time.Duration, logger *zap.Logger) *DataNode {
+// New returns a new node.
+func New(hosts []string, callTimeout time.Duration, logger *zap.Logger) *DataNode {
 	return &DataNode{
-		CoreClient: *core.NewCoreClient(hosts, callTimeout, logger),
+		Client: core.NewClient(hosts, callTimeout, logger),
 	}
 }

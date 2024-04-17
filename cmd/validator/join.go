@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/vegaprotocol/devopstools/generate"
+	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
@@ -22,7 +22,7 @@ import (
 )
 
 type JoinArgs struct {
-	*ValidatorArgs
+	*Args
 	VegaNetworkName             string
 	NodeId                      string
 	GenerateSecrets             bool
@@ -49,9 +49,9 @@ var joinCmd = &cobra.Command{
 }
 
 func init() {
-	joinArgs.ValidatorArgs = &validatorArgs
+	joinArgs.Args = &validatorArgs
 
-	ValidatorCmd.AddCommand(joinCmd)
+	Cmd.AddCommand(joinCmd)
 	joinCmd.PersistentFlags().StringVar(&joinArgs.VegaNetworkName, "network", "", "Vega Network name")
 	if err := joinCmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
@@ -126,7 +126,7 @@ func RunJoin(args JoinArgs) error {
 		// Generate new secrets for node
 		//
 		oldNodeSecrets = currentNodeSecrets
-		currentNodeSecrets, err = generate.GenerateVegaNodeSecrets()
+		currentNodeSecrets, err = generation.GenerateVegaNodeSecrets()
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,7 @@ func RunJoin(args JoinArgs) error {
 		//
 		// Get Smart Contracts for Network
 		//
-		ethClientManager, err := args.GetEthereumClientManager()
+		ethClientManager, err := args.GetPrimaryEthereumClientManager()
 		if err != nil {
 			return err
 		}

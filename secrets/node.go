@@ -4,7 +4,6 @@ package secrets
 // Node secrets
 //
 
-// Private part stored in HashiCorp Vault
 type VegaNodePrivate struct {
 	// Metadata
 	Name      string `json:"name"`

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-type EtherscanClient struct {
+type Client struct {
 	apiURL      string
 	apikey      string
 	rateLimiter *rate.Limiter
@@ -18,7 +18,7 @@ type EtherscanClient struct {
 func NewEtherscanClient(
 	ethNetwork types.ETHNetwork,
 	apikey string,
-) (*EtherscanClient, error) {
+) (*Client, error) {
 	var apiURL string
 	switch ethNetwork {
 	case types.ETHMainnet:
@@ -33,7 +33,7 @@ func NewEtherscanClient(
 		return nil, fmt.Errorf("failed to get etherscan client, not supported ethereum network %s", ethNetwork)
 	}
 
-	return &EtherscanClient{
+	return &Client{
 		apiURL:      apiURL,
 		apikey:      apikey,
 		rateLimiter: etherscanRateLimiter(apikey),

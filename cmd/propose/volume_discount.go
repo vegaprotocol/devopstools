@@ -18,13 +18,12 @@ import (
 )
 
 type VolumeDiscountArgs struct {
-	*ProposeArgs
+	*Args
 	SetupVolumeDiscountProgram bool
 }
 
 var volumeDiscountArgs VolumeDiscountArgs
 
-// volumeDiscountCmd represents the volumeDiscount command
 var volumeDiscountCmd = &cobra.Command{
 	Use:   "volume-discount",
 	Short: "Setup Volume Discount Program",
@@ -38,9 +37,9 @@ var volumeDiscountCmd = &cobra.Command{
 }
 
 func init() {
-	volumeDiscountArgs.ProposeArgs = &proposeArgs
+	volumeDiscountArgs.Args = &proposeArgs
 
-	ProposeCmd.AddCommand(volumeDiscountCmd)
+	Cmd.AddCommand(volumeDiscountCmd)
 	volumeDiscountCmd.PersistentFlags().BoolVar(&volumeDiscountArgs.SetupVolumeDiscountProgram, "setup-volume-discount-program", false, "Create or update Volume Discount program")
 }
 

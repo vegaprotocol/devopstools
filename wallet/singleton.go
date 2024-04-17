@@ -75,10 +75,3 @@ func GetVegaWalletSingleton(
 	}
 	return walletSingletons[recoveryPhrase].KeyPair[index], nil
 }
-
-func GetWalletForPubKey(pubKey string) *VegaWallet {
-	if wallet, ok := walletByPubKey[pubKey]; ok {
-		return wallet
-	}
-	return nil
-}

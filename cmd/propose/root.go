@@ -8,25 +8,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ProposeArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 	VegaNetworkName string
 }
 
-var proposeArgs ProposeArgs
+var proposeArgs Args
 
-// Root Command for Propose
-var ProposeCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "propose",
 	Short: "Submit and vote on Vega Network Proposals",
-	Long:  ``,
+	Long:  "Submit and vote on Vega Network Proposals",
 }
 
 func init() {
 	proposeArgs.RootArgs = &rootCmd.Args
 
-	ProposeCmd.PersistentFlags().StringVar(&proposeArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := ProposeCmd.MarkPersistentFlagRequired("network"); err != nil {
+	Cmd.PersistentFlags().StringVar(&proposeArgs.VegaNetworkName, "network", "", "Vega Network name")
+	if err := Cmd.MarkPersistentFlagRequired("network"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }

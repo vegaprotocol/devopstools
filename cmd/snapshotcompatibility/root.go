@@ -6,14 +6,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type SnapshotCompatibilityArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 }
 
-var snapshotCompatibilityArgs SnapshotCompatibilityArgs
+var snapshotCompatibilityArgs Args
 
-// Root Command for Spam
-var SnapshotCompatibilityCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "snapshot-compatibility",
 	Short: "Set of tools for the compatibility pipeline",
 }
@@ -21,9 +20,9 @@ var SnapshotCompatibilityCmd = &cobra.Command{
 func init() {
 	snapshotCompatibilityArgs.RootArgs = &rootCmd.Args
 
-	SnapshotCompatibilityCmd.AddCommand(loadSnapshotCmd)
-	SnapshotCompatibilityCmd.AddCommand(downloadMainnetSnapshotCmd)
-	SnapshotCompatibilityCmd.AddCommand(downloadBinaryCmd)
-	SnapshotCompatibilityCmd.AddCommand(produceNewSnapshotCmd)
-	SnapshotCompatibilityCmd.AddCommand(collectSnapshotCmd)
+	Cmd.AddCommand(loadSnapshotCmd)
+	Cmd.AddCommand(downloadMainnetSnapshotCmd)
+	Cmd.AddCommand(downloadBinaryCmd)
+	Cmd.AddCommand(produceNewSnapshotCmd)
+	Cmd.AddCommand(collectSnapshotCmd)
 }

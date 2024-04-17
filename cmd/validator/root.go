@@ -6,14 +6,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ValidatorArgs struct {
+type Args struct {
 	*rootCmd.RootArgs
 }
 
-var validatorArgs ValidatorArgs
+var validatorArgs Args
 
-// Root Command for OPS
-var ValidatorCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "validator",
 	Short: "Manage validators",
 	Long:  `Manage validators`,

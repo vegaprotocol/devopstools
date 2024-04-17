@@ -18,9 +18,9 @@ const (
 	TypeValidator NodeType = "validator"
 	TypeDataNode  NodeType = "data-node"
 	TypeExplorer  NodeType = "block-explorer"
-)
 
-var AllKinds = []NodeType{TypeValidator, TypeDataNode, TypeExplorer}
+	MaximumDialDuration = 2 * time.Second
+)
 
 func (network *NetworkTools) ListNodes(kind []NodeType) []string {
 	if network.Name == types.NetworkMainnet {
@@ -99,11 +99,11 @@ func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []stri
 }
 
 func (network *NetworkTools) GetNetworkNodes(healthyOnly bool) []string {
-	return network.checkNodes(network.ListNodes([]NodeType{TypeValidator}), false)
+	return network.checkNodes(network.ListNodes([]NodeType{TypeValidator}), healthyOnly)
 }
 
 func (network *NetworkTools) GetBlockExplorers(healthyOnly bool) []string {
-	return network.checkNodes(network.ListNodes([]NodeType{TypeExplorer}), false)
+	return network.checkNodes(network.ListNodes([]NodeType{TypeExplorer}), healthyOnly)
 }
 
 func (network *NetworkTools) GetNetworkHealthyNodes() []string {
@@ -142,10 +142,13 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 			return err
 		}); err != nil {
 			network.logger.Sugar().Debugf("Node %s missing", host)
-			continue
-		} else {
-			hosts = append(hosts, host)
 		}
+
+		if !healthyOnly {
+			continue
+		}
+
+		hosts = append(hosts, host)
 	}
 	return hosts
 }
@@ -232,4 +235,16 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 		hosts = append(hosts, host)
 	}
 	return hosts
+}
+
+func FilterHealthyGRPCEndpoints(endpoints []string) []string {
+	healthy := []string{}
+	for _, endpoint := range endpoints {
+		conn, err := net.DialTimeout("tcp", endpoint, MaximumDialDuration)
+		if err == nil && conn != nil {
+			_ = conn.Close()
+			healthy = append(healthy, endpoint)
+		}
+	}
+	return healthy
 }

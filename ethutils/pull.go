@@ -1,61 +1,10 @@
 package ethutils
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/vegaprotocol/devopstools/etherscan"
-	"github.com/vegaprotocol/devopstools/types"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
-
-func PullAndStoreSmartContractImmutableData(
-	hexAddress string,
-	ethNetwork types.ETHNetwork,
-	name string,
-	dir string,
-	ethereumClientManager *EthereumClientManager,
-) error {
-	// Get clients
-	ethClient, err := ethereumClientManager.GetEthClient(ethNetwork)
-	if err != nil {
-		return fmt.Errorf(
-			"failed to pull and store Smart Contract %s (%s: %s), failed to get Ethereum Client, %w",
-			name, ethNetwork, hexAddress, err,
-		)
-	}
-	etherscanClient, err := ethereumClientManager.GetEtherscanClient(ethNetwork)
-	if err != nil {
-		return fmt.Errorf(
-			"failed to pull and store Smart Contract %s (%s: %s), failed to get Etherscan Client, %w",
-			name, ethNetwork, hexAddress, err,
-		)
-	}
-
-	// Pull data
-	data, err := PullSmartContractImmutableData(
-		ethClient, etherscanClient, name, hexAddress,
-	)
-	if err != nil {
-		return fmt.Errorf(
-			"failed to pull and store Smart Contract %s (%s: %s), failed to pull, %w",
-			name, ethNetwork, hexAddress, err,
-		)
-	}
-
-	// Store data
-	if err = storeSmartContractImmutableData(name, *data, dir); err != nil {
-		return fmt.Errorf(
-			"failed to pull and store Smart Contract %s (%s: %s), failed to store, %w",
-			name, ethNetwork, hexAddress, err,
-		)
-	}
-	return nil
-}
 
 type SmartContractImmutableData struct {
 	SourceCode          map[string]string
@@ -68,51 +17,7 @@ type SmartContractImmutableData struct {
 	DownloadURL         string
 }
 
-func PullSmartContractImmutableData(
-	ethClient *ethclient.Client,
-	etherscanClient *etherscan.EtherscanClient,
-	name string,
-	hexAddress string,
-) (*SmartContractImmutableData, error) {
-	address := common.HexToAddress(hexAddress)
-
-	// Fetch Byte Code
-	byteCode, err := ethClient.CodeAt(context.Background(), address, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get byte code for the \"%s\" smart contract: %w", hexAddress, err)
-	}
-
-	// Get Byte Code Hash
-	byteCodeHash, err := GetByteCodeHash(byteCode)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Byte Code Hash for %s. %w", hexAddress, err)
-	}
-	// Data from etherscan
-	etherscanData, err := etherscanClient.GetSmartContractData(context.Background(), hexAddress)
-	if err != nil {
-		return nil, err
-	}
-	// Cleanup Creation Byte Code
-	creationHexByteCode := CleanupCreationByteCode(etherscanData.CreationHexByteCode)
-	// Get Go Bindings
-	goBindings, err := GetGoBindings(etherscanData.ABI, name, creationHexByteCode)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Go Bindings for %s. %w", hexAddress, err)
-	}
-
-	return &SmartContractImmutableData{
-		SourceCode:          etherscanData.SourceCode,
-		Name:                etherscanData.ContractName,
-		ByteCode:            byteCode,
-		ByteCodeHash:        *byteCodeHash,
-		CreationHexByteCode: etherscanData.CreationHexByteCode,
-		ABI:                 etherscanData.ABI,
-		GoBindings:          *goBindings,
-		DownloadURL:         etherscanData.DownloadURL,
-	}, nil
-}
-
-func storeSmartContractImmutableData(
+func _(
 	name string,
 	data SmartContractImmutableData,
 	dir string,

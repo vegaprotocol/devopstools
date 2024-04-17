@@ -8,7 +8,6 @@ import (
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
-	"github.com/vegaprotocol/devopstools/veganetwork"
 	"github.com/vegaprotocol/devopstools/wallet"
 
 	"code.vegaprotocol.io/vega/core/netparams"
@@ -21,49 +20,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func SubmitProposal(
-	proposalDescription string,
-	proposerVegawallet *wallet.VegaWallet,
-	proposal *commandspb.ProposalSubmission,
-	dataNodeClient vegaapi.DataNodeClient,
-	logger *zap.Logger,
-) (string, error) {
-	reference := proposal.Reference
-	//
-	// Propose
-	//
-	// Prepare vegawallet Transaction Request
-	walletTxReq := walletpb.SubmitTransactionRequest{
-		PubKey: proposerVegawallet.PublicKey,
-		Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
-			ProposalSubmission: proposal,
-		},
-	}
-	if err := SubmitTx(proposalDescription, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
-		return "", err
-	}
-
-	//
-	// Find Proposal
-	//
-	proposalId, err := tools.RetryReturn(6, 10*time.Second, func() (string, error) {
-		proposal, err := fetchProposalByReferenceAndProposer(reference, dataNodeClient)
-		if err != nil {
-			return "", fmt.Errorf("failed to find proposal: %w", err)
-		}
-		if proposal != nil {
-			return proposal.Id, nil
-		}
-
-		return "", fmt.Errorf("got empty proposal id for the '%s', re %s reference", proposalDescription, reference)
-	})
-
-	return proposalId, fmt.Errorf("failed to find proposal: %w", err)
-}
-
 func SubmitProposalList(
 	descriptionToProposalConfig map[string]*commandspb.ProposalSubmission,
-	proposerVegawallet *wallet.VegaWallet,
+	proposer *wallet.VegaWallet,
 	dataNodeClient vegaapi.DataNodeClient,
 	logger *zap.Logger,
 ) (map[string]string, error) {
@@ -73,12 +32,12 @@ func SubmitProposalList(
 	for description, proposalConfig := range descriptionToProposalConfig {
 		// Prepare vegawallet Transaction Request
 		walletTxReq := walletpb.SubmitTransactionRequest{
-			PubKey: proposerVegawallet.PublicKey,
+			PubKey: proposer.PublicKey,
 			Command: &walletpb.SubmitTransactionRequest_ProposalSubmission{
 				ProposalSubmission: proposalConfig,
 			},
 		}
-		if err := SubmitTx(description, dataNodeClient, proposerVegawallet, logger, &walletTxReq); err != nil {
+		if err := SubmitTx(description, dataNodeClient, proposer, logger, &walletTxReq); err != nil {
 			return nil, err
 		}
 	}
@@ -144,78 +103,55 @@ func fetchProposalByReferenceAndProposer(reference string, dataNodeClient vegaap
 }
 
 func ProposeAndVoteOnNetworkParameters(
-	nameToValue map[string]string,
-	proposerVegawallet *wallet.VegaWallet,
+	desiredValues map[string]string,
+	proposer *wallet.VegaWallet,
 	networkParams *types.NetworkParams,
 	dataNodeClient vegaapi.DataNodeClient,
 	logger *zap.Logger,
 ) (int64, error) {
-	errorMsgPrefix := "failed to Propose and Vote on Update Network Paramter"
 	minClose, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalUpdateNetParamMinClose])
 	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
+		return 0, fmt.Errorf("could not parse network parameter %q", netparams.GovernanceProposalUpdateNetParamMinClose)
 	}
 	minEnact, err := time.ParseDuration(networkParams.Params[netparams.GovernanceProposalUpdateNetParamMinEnact])
 	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
+		return 0, fmt.Errorf("could not parse network parameter %q", netparams.GovernanceProposalUpdateNetParamMinEnact)
 	}
-	logger.Debug("proposal limits", zap.Duration("minClose", minClose), zap.Duration("minEnact", minEnact))
 
-	//
-	// Prepare proposals
-	//
+	closingTime := time.Now().Add(time.Second * 20).Add(minClose)
+	enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
+
 	descriptionToProposalConfig := map[string]*commandspb.ProposalSubmission{}
-	for name, value := range nameToValue {
-		if currentValue, ok := networkParams.Params[name]; ok && value == currentValue {
-			logger.Info("Skip Networ Paramter proposal", zap.String("name", name), zap.String("value", value))
+	for name, desiredValue := range desiredValues {
+		currentValue, ok := networkParams.Params[name]
+		if ok && desiredValue == currentValue {
+			logger.Debug("Not including network parameter to proposal as already set to the updated value",
+				zap.String("name", name),
+				zap.String("value", currentValue),
+			)
 			continue
 		}
-		description := fmt.Sprintf("Update Network Paramter '%s'='%s'", name, value)
-		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
-		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
-		descriptionToProposalConfig[description] = networkparameters.NewUpdateParametersProposal(
-			name, value, closingTime, enactmentTime,
+
+		logger.Debug("Including network parameter to proposal to the updated value",
+			zap.String("name", name),
+			zap.String("current-value", currentValue),
+			zap.String("desired-value", desiredValue),
+			zap.Time("proposal-closing-time", closingTime),
+			zap.Time("proposal-enactment-time", enactmentTime),
 		)
+
+		description := fmt.Sprintf("Update Network Paramter %q=%q", name, desiredValue)
+		descriptionToProposalConfig[description] = networkparameters.NewUpdateParametersProposal(name, desiredValue, closingTime, enactmentTime)
 	}
+
 	if len(descriptionToProposalConfig) == 0 {
+		logger.Debug("No network parameter to update")
 		return 0, nil
 	}
 
-	//
-	// Propose & Vote
-	//
-	err = ProposeVoteAndWaitList(
-		descriptionToProposalConfig, proposerVegawallet, dataNodeClient, logger,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("%s, %w", errorMsgPrefix, err)
+	if err := ProposeVoteAndWaitList(descriptionToProposalConfig, proposer, dataNodeClient, logger); err != nil {
+		return 0, fmt.Errorf("proposals failed: %w", err)
 	}
 
 	return int64(len(descriptionToProposalConfig)), nil
-}
-
-func WaitForNetworkParameters(network *veganetwork.VegaNetwork, expectedNetworkParameters map[string]string) error {
-	return tools.RetryRun(6, 10*time.Second, func() error {
-		if err := network.RefreshNetworkParams(); err != nil {
-			return fmt.Errorf("failed to refresh network parameters: %w", err)
-		}
-
-		for key, expectedValue := range expectedNetworkParameters {
-			currentValue, ok := network.NetworkParams.Params[key]
-			if !ok {
-				return fmt.Errorf("the %s network parameter not found yet on the network", key)
-			}
-
-			if currentValue != expectedValue {
-				return fmt.Errorf(
-					"the %s network parameter not updated yet: expected value %s, current value: %s",
-					key,
-					expectedValue,
-					currentValue,
-				)
-			}
-		}
-
-		return nil
-	})
 }

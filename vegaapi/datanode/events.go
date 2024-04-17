@@ -10,17 +10,17 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (dn *DataNode) ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error) {
-	if dn == nil {
+func (n *DataNode) ListProtocolUpgradeProposals() ([]vegaeventspb.ProtocolUpgradeEvent, error) {
+	if n == nil {
 		return nil, fmt.Errorf("data-node object cannot be nil")
 	}
 
-	if dn.Conn.GetState() != connectivity.Ready {
+	if n.Conn.GetState() != connectivity.Ready {
 		return nil, fmt.Errorf("data-node connection is not ready")
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(dn.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), dn.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
 	result := []vegaeventspb.ProtocolUpgradeEvent{}

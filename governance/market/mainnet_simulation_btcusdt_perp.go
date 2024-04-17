@@ -26,7 +26,7 @@ func NewMainnetSimulationBitcoinTetherPerpetual(
 	closingTime time.Time,
 	enactmentTime time.Time,
 ) *commandspb.ProposalSubmission {
-	var reference string = tools.RandAlphaNumericString(40)
+	reference := tools.RandAlphaNumericString(40)
 	const (
 		contractAddress = "0x719abd606155442c21b7d561426d42bd0e40a776"
 		contractABI     = `[{

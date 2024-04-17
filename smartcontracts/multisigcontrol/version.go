@@ -4,17 +4,17 @@ import (
 	"fmt"
 )
 
-type MultisigControlVersion string
+type Version string
 
 const (
-	MultisigControlV1 MultisigControlVersion = "v1"
-	MultisigControlV2 MultisigControlVersion = "v2"
+	V1 Version = "v1"
+	V2 Version = "v2"
 )
 
-func (n MultisigControlVersion) IsValid() error {
+func (n Version) IsValid() error {
 	switch n {
-	case MultisigControlV1, MultisigControlV2:
+	case V1, V2:
 		return nil
 	}
-	return fmt.Errorf("Invalid Multisig Control Version %s", n)
+	return fmt.Errorf("invalid Multisig Control Version %s", n)
 }
