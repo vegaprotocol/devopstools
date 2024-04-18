@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 
 	e "github.com/vegaprotocol/devopstools/errors"
 	"github.com/vegaprotocol/devopstools/types"
@@ -15,6 +16,20 @@ import (
 )
 
 var ErrAssetNotFound = errors.New("asset not found")
+
+func (n *DataNode) GeneralAccountBalance(ctx context.Context, partyID, assetID string) (*big.Int, error) {
+	whaleAccounts, err := n.ListAccounts(ctx, partyID, vega.AccountType_ACCOUNT_TYPE_GENERAL, &assetID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve general accounts: %w", err)
+	}
+
+	whaleFundsAsSubUnits := big.NewInt(0)
+	if len(whaleAccounts) > 0 {
+		whaleFundsAsSubUnits = whaleAccounts[0].Balance
+	}
+
+	return whaleFundsAsSubUnits, nil
+}
 
 func (n *DataNode) ListNetworkParameters(ctx context.Context) (*types.NetworkParams, error) {
 	if n.Conn.GetState() != connectivity.Ready {

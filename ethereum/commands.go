@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
@@ -180,7 +179,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 
 	txs := map[string]*ethtypes.Transaction{}
 	for partyID, amount := range deposits {
-		partyKeyB32, err := ethutils.VegaPubKeyToByte32(partyID)
+		partyKeyB32, err := tools.KeyAsByte32(partyID)
 		if err != nil {
 			return fmt.Errorf("could not convert party ID to byte32: %w", err)
 		}
@@ -299,13 +298,13 @@ func (c *ChainClient) Signers(ctx context.Context) ([]common.Address, error) {
 }
 
 func (c *ChainClient) ListAsset(ctx context.Context, signers []*Wallet, assetID, assetHexAddress string, lifetimeLimit, withdrawThreshold *big.Int) error {
-	assetIDB32, err := ethutils.VegaPubKeyToByte32(assetID)
+	assetIDB32, err := tools.KeyAsByte32(assetID)
 	if err != nil {
 		return fmt.Errorf("could not convert asset ID to byte32: %w", err)
 	}
 
 	assetAddress := common.HexToAddress(assetHexAddress)
-	nonce := num.NewUint(ethutils.TimestampNonce()).BigInt()
+	nonce := num.NewUint(timestampNonce()).BigInt()
 
 	msg, err := buildListAssetMsg(c.collateralBridge.Address, assetAddress, assetIDB32, lifetimeLimit, withdrawThreshold, nonce)
 	if err != nil {
@@ -443,4 +442,8 @@ func packBufAndSubmitter(buf []byte, submitter common.Address) ([]byte, error) {
 	})
 
 	return args2.Pack(buf, submitter)
+}
+
+func timestampNonce() uint64 {
+	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
 }

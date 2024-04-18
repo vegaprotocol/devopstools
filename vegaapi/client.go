@@ -30,6 +30,7 @@ type DataNodeClient interface {
 	ListAssets(ctx context.Context) (map[string]*vega.AssetDetails, error)
 	ListMarkets(ctx context.Context) ([]*vega.Market, error)
 	GetPartyTotalStake(ctx context.Context, partyId string) (*big.Int, error)
+	GeneralAccountBalance(ctx context.Context, partyID, assetID string) (*big.Int, error)
 	ListAccounts(ctx context.Context, partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)
 	ListCoreSnapshots(ctx context.Context) ([]vegaeventspb.CoreSnapshotData, error)
 	LastNetworkHistorySegment(ctx context.Context) (*dataapipb.HistorySegment, error)
