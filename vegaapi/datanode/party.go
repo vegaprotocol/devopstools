@@ -13,88 +13,47 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) GetPartyTotalStake(partyId string) (*big.Int, error) {
-	res, err := n.GetStake(&dataapipb.GetStakeRequest{
+func (n *DataNode) GetPartyTotalStake(ctx context.Context, partyId string) (*big.Int, error) {
+	if n.Conn.GetState() != connectivity.Ready {
+		return nil, e.ErrConnectionNotReady
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	defer cancel()
+
+	response, err := c.GetStake(reqCtx, &dataapipb.GetStakeRequest{
 		PartyId: partyId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
+
 	totalStake := new(big.Int)
-	totalStake, ok := totalStake.SetString(res.CurrentStakeAvailable, 0)
+	totalStake, ok := totalStake.SetString(response.CurrentStakeAvailable, 0)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert %s to big.Int", res.CurrentStakeAvailable)
+		return nil, fmt.Errorf("failed to convert %s to big.Int", response.CurrentStakeAvailable)
 	}
 
 	return totalStake, nil
 }
 
-func (n *DataNode) GetPartyDelegationToNode(partyId string, nodeId string) (*big.Int, error) {
-	epoch, err := n.GetCurrentEpoch()
-	if err != nil {
-		return nil, err
-	}
-	amount := "0"
-	for _, delegation := range epoch.Delegations {
-		if delegation.Party == partyId && delegation.NodeId == nodeId {
-			amount = delegation.Amount
-			break
-		}
-	}
-	result := new(big.Int)
-	result, ok := result.SetString(amount, 0)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert %s to big.Int", amount)
-	}
-	return result, nil
-}
-
-// GetStake returns stakes for the given party.
-func (n *DataNode) GetStake(req *dataapipb.GetStakeRequest) (response *dataapipb.GetStakeResponse, err error) {
-	msg := "gRPC call failed (data-node): GetStake: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
-	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
-	}
-
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
-	defer cancel()
-
-	response, err = c.GetStake(ctx, req)
-	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-	}
-	return
-}
-
 // ListDelegations returns delegations for the given party.
-func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (response *dataapipb.ListDelegationsResponse, err error) {
-	msg := "gRPC call failed (data-node): ListDelegations: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (*dataapipb.ListDelegationsResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
 	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
 	defer cancel()
 
-	response, err = c.ListDelegations(ctx, req)
+	response, err := c.ListDelegations(ctx, req)
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
-	return
+
+	return response, nil
 }
 
 type AccountFunds struct {
@@ -125,7 +84,7 @@ func (n *DataNode) ListAccounts(ctx context.Context, partyID string, accountType
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
 
 	var results []AccountFunds

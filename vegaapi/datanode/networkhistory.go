@@ -4,25 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) LastNetworkHistorySegment() (*dataapipb.HistorySegment, error) {
-	if n == nil || n.Conn == nil {
-		return nil, fmt.Errorf("data-node object cannot be nil")
-	}
-
+func (n *DataNode) LastNetworkHistorySegment(ctx context.Context) (*dataapipb.HistorySegment, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		return nil, fmt.Errorf("data-node connection is not ready")
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err := c.GetMostRecentNetworkHistorySegment(ctx, &dataapipb.GetMostRecentNetworkHistorySegmentRequest{})
+	response, err := c.GetMostRecentNetworkHistorySegment(reqCtx, &dataapipb.GetMostRecentNetworkHistorySegmentRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get most recent network history segment: %w", err)
 	}

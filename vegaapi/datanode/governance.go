@@ -15,6 +15,7 @@ func (n *DataNode) ListGovernanceData(ctx context.Context, req *dataapipb.ListGo
 	if n.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
+
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
 	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()

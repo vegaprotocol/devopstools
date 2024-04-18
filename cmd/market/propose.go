@@ -95,7 +95,7 @@ func runPropose(args ProposeArgs) error {
 	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -124,7 +124,7 @@ func runPropose(args ProposeArgs) error {
 		logger.Debug("Network parameters do not need to be updated")
 	}
 
-	allMarkets, err := datanodeClient.GetAllMarkets(ctx)
+	allMarkets, err := datanodeClient.ListMarkets(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}

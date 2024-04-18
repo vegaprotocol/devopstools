@@ -131,7 +131,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -155,7 +155,7 @@ func RunNetworkParams(args NetworkParamsArgs) error {
 		}
 		if updateCount > 0 {
 			logger.Debug("Retrieving network parameters...")
-			updatedNetworkParams, err := datanodeClient.GetAllNetworkParameters()
+			updatedNetworkParams, err := datanodeClient.ListNetworkParameters(ctx)
 			if err != nil {
 				return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 			}

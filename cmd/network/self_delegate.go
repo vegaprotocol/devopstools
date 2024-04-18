@@ -85,7 +85,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -110,7 +110,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	for _, node := range cfg.Nodes {
 		nodeKey := node.Secrets.VegaPubKey
 
-		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(nodeKey)
+		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, nodeKey)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve current stake for party %s: %w", nodeKey, err)
 		}
@@ -146,7 +146,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	// Delegate
 	//
 
-	currentEpoch, err := datanodeClient.GetCurrentEpoch()
+	currentEpoch, err := datanodeClient.GetCurrentEpoch(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve current epoch: %w", err)
 	}
@@ -183,7 +183,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 			continue
 		}
 
-		partyTotalStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(node.Secrets.VegaId)
+		partyTotalStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, node.Secrets.VegaId)
 		if err != nil {
 			return err
 		}

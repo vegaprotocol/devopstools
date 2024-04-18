@@ -122,7 +122,7 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	// We have to check if protocol upgrade happened on the network.
 	// If there was a protocol upgrade, we have to wait at least for one snapshot after the protocol upgrade.
 	// Otherwise we are not able to restart network with a new binary.
-	latestProtocolUpgradeEvent, err := findLatestProtocolUpgradeEvent(dataNodeClient)
+	latestProtocolUpgradeEvent, err := findLatestProtocolUpgradeEvent(ctx, dataNodeClient)
 	if err != nil {
 		return fmt.Errorf("failed to list upgrade proposals event: %w", err)
 	}
@@ -135,12 +135,12 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	logger.Info("Checking if enough snapshots is produced")
 	snapshotWaitCtx, snapshotWaitCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer snapshotWaitCancel()
-	if err := wait(logger, snapshotWaitCtx, checkSnapshots(dataNodeClient, waitForSnapshotAtBlock)); err != nil {
+	if err := wait(logger, snapshotWaitCtx, checkSnapshots(ctx, dataNodeClient, waitForSnapshotAtBlock)); err != nil {
 		return fmt.Errorf("failed to wait until enough snapshots is produced: %w", err)
 	}
 
 	logger.Info("Collecting available snapshots")
-	snapshots, err := dataNodeClient.ListCoreSnapshots()
+	snapshots, err := dataNodeClient.ListCoreSnapshots(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list snapshots from the data-node: %w", err)
 	}
@@ -164,12 +164,12 @@ func startDataNodeFromNetworkHistory(logger *zap.Logger, vegacapsuleBinary, base
 	networkHistoryCtx, networkHistoryCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer networkHistoryCancel()
 	logger.Info("Waiting untill at least one network history segment is available")
-	if err := wait(logger, networkHistoryCtx, checkHistorySegments(logger, dataNodeClient)); err != nil {
+	if err := wait(logger, networkHistoryCtx, checkHistorySegments(ctx, logger, dataNodeClient)); err != nil {
 		return fmt.Errorf("network did not show any history segment: %w", err)
 	}
 
 	logger.Info("Getting most recent network history segment")
-	segment, err := dataNodeClient.LastNetworkHistorySegment()
+	segment, err := dataNodeClient.LastNetworkHistorySegment(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get most recent network history segment: %w", err)
 	}
@@ -325,9 +325,9 @@ func wait(logger *zap.Logger, ctx context.Context, checker func() error) error {
 	}
 }
 
-func checkHistorySegments(logger *zap.Logger, client vegaapi.DataNodeClient) func() error {
+func checkHistorySegments(ctx context.Context, logger *zap.Logger, client vegaapi.DataNodeClient) func() error {
 	return func() error {
-		segment, err := client.LastNetworkHistorySegment()
+		segment, err := client.LastNetworkHistorySegment(ctx)
 		if err != nil {
 			logger.Info("no network history segments available", zap.Error(err))
 			return err
@@ -356,11 +356,11 @@ func checkNodeReadiness(logger *zap.Logger, oldNodeRESTPort, newNodeRESTPort str
 	}
 }
 
-func checkSnapshots(client vegaapi.DataNodeClient, minimumSnapshotBlock uint64) func() error {
+func checkSnapshots(ctx context.Context, client vegaapi.DataNodeClient, minimumSnapshotBlock uint64) func() error {
 	const requiredSnapshots = 1
 
 	return func() error {
-		snapshots, err := client.ListCoreSnapshots()
+		snapshots, err := client.ListCoreSnapshots(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get snapshots: %w", err)
 		}
@@ -464,8 +464,8 @@ func DescribeDataNode(nodeDetails vctools.NodeDetails, outFile string) error {
 	return nil
 }
 
-func findLatestProtocolUpgradeEvent(client vegaapi.DataNodeClient) (*v1.ProtocolUpgradeEvent, error) {
-	protocolUpgradeEvents, err := client.ListProtocolUpgradeProposals()
+func findLatestProtocolUpgradeEvent(ctx context.Context, client vegaapi.DataNodeClient) (*v1.ProtocolUpgradeEvent, error) {
+	protocolUpgradeEvents, err := client.ListProtocolUpgradeProposals(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list protocol upgrade proposals: %w", err)
 	}

@@ -113,7 +113,7 @@ func RunListAssets(args ListArgs) error {
 	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}

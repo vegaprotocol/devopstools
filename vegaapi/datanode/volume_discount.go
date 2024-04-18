@@ -11,72 +11,19 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-//
-// CURRENT PROGRAM
-//
-
-func (n *DataNode) GetCurrentVolumeDiscountProgram() (*dataapipb.VolumeDiscountProgram, error) {
-	res, err := n.GetCurrentVolumeDiscountProgramRaw(&dataapipb.GetCurrentVolumeDiscountProgramRequest{})
-	if err != nil {
-		return nil, err
-	}
-	return res.CurrentVolumeDiscountProgram, nil
-}
-
-func (n *DataNode) GetCurrentVolumeDiscountProgramRaw(req *dataapipb.GetCurrentVolumeDiscountProgramRequest) (response *dataapipb.GetCurrentVolumeDiscountProgramResponse, err error) {
-	msg := "gRPC call failed (data-node): GetCurrentVolumeDiscountProgram: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) GetCurrentVolumeDiscountProgram(ctx context.Context) (*dataapipb.VolumeDiscountProgram, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err = c.GetCurrentVolumeDiscountProgram(ctx, req)
+	response, err := c.GetCurrentVolumeDiscountProgram(reqCtx, &dataapipb.GetCurrentVolumeDiscountProgramRequest{})
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-	}
-	return
-}
-
-//
-// STATS
-//
-
-func (n *DataNode) GetVolumeDiscountStats() ([]*dataapipb.VolumeDiscountStatsEdge, error) {
-	res, err := n.GetVolumeDiscountStatsRaw(&dataapipb.GetVolumeDiscountStatsRequest{})
-	if err != nil {
-		return nil, err
-	}
-	return res.Stats.Edges, nil
-}
-
-func (n *DataNode) GetVolumeDiscountStatsRaw(req *dataapipb.GetVolumeDiscountStatsRequest) (response *dataapipb.GetVolumeDiscountStatsResponse, err error) {
-	msg := "gRPC call failed (data-node): GetVolumeDiscountStats: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
+		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
 
-	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
-	}
-
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
-	defer cancel()
-
-	response, err = c.GetVolumeDiscountStats(ctx, req)
-	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-	}
-	return
+	return response.CurrentVolumeDiscountProgram, nil
 }

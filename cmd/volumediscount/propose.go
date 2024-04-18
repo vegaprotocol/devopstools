@@ -90,7 +90,7 @@ func RunVolumeDiscount(args ProposeArgs) error {
 
 	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
-	currentVolumeDiscountProgram, err := datanodeClient.GetCurrentVolumeDiscountProgram()
+	currentVolumeDiscountProgram, err := datanodeClient.GetCurrentVolumeDiscountProgram(ctx)
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to get current volume discount program") && strings.Contains(err.Error(), "no rows in result set") {
 			logger.Info("Currently there is no volume discount program. You can create one.")

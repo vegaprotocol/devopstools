@@ -12,57 +12,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) GetAllMarkets(ctx context.Context) ([]*vega.Market, error) {
-	res, err := n.ListMarkets(ctx, &dataapipb.ListMarketsRequest{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all markets, %w", err)
-	}
-	result := make([]*vega.Market, len(res.Markets.Edges))
-	for i, edge := range res.Markets.Edges {
-		result[i] = edge.Node
-	}
-	return result, nil
-}
-
-func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapipb.GetMarketResponse, err error) {
-	msg := "gRPC call failed (data-node): GetMarket: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
-	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
-	}
-
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
-	defer cancel()
-
-	response, err = c.GetMarket(ctx, req)
-	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
-	}
-	return
-}
-
-func (n *DataNode) GetMarketById(marketId string) (*vega.Market, error) {
-	if marketId == "" {
-		return nil, fmt.Errorf("market id cannot be empty")
-	}
-
-	marketResponse, err := n.GetMarket(&dataapipb.GetMarketRequest{
-		MarketId: marketId,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get market: %w", err)
-	}
-
-	return marketResponse.GetMarket(), nil
-}
-
-func (n *DataNode) ListMarkets(ctx context.Context, req *dataapipb.ListMarketsRequest) (*dataapipb.ListMarketsResponse, error) {
+func (n *DataNode) ListMarkets(ctx context.Context) ([]*vega.Market, error) {
 	if n.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
@@ -71,10 +21,14 @@ func (n *DataNode) ListMarkets(ctx context.Context, req *dataapipb.ListMarketsRe
 	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancelRequest()
 
-	response, err := c.ListMarkets(reqCtx, req)
+	response, err := c.ListMarkets(reqCtx, &dataapipb.ListMarketsRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
 
-	return response, nil
+	result := make([]*vega.Market, len(response.Markets.Edges))
+	for i, edge := range response.Markets.Edges {
+		result[i] = edge.Node
+	}
+	return result, nil
 }

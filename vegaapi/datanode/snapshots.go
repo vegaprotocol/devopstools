@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error) {
+func (n *DataNode) ListCoreSnapshots(ctx context.Context) ([]vegaeventspb.CoreSnapshotData, error) {
 	if n == nil || n.Conn == nil {
 		return nil, fmt.Errorf("data-node object cannot be nil")
 	}
@@ -20,10 +20,10 @@ func (n *DataNode) ListCoreSnapshots() ([]vegaeventspb.CoreSnapshotData, error) 
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err := c.ListCoreSnapshots(ctx, &dataapipb.ListCoreSnapshotsRequest{})
+	response, err := c.ListCoreSnapshots(reqCtx, &dataapipb.ListCoreSnapshotsRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list snapshot from the data-node: %w", err)
 	}

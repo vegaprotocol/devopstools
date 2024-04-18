@@ -172,7 +172,7 @@ func runReferral(args ReferralArgs) error {
 	}
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -373,7 +373,7 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 }
 
 func findMarketsForAssets(ctx context.Context, datanodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
-	allMarkets, err := datanodeClient.GetAllMarkets(ctx)
+	allMarkets, err := datanodeClient.ListMarkets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
@@ -423,7 +423,7 @@ func joinReferees(ctx context.Context, referralSets []ReferralSet, dataNodeClien
 		return fmt.Errorf("failed to retrieve current referral sets, %w", err)
 	}
 
-	referralSetReferees, err := dataNodeClient.GetReferralSetReferees(ctx)
+	referralSetReferees, err := dataNodeClient.ListReferralSetReferees(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve current referees: %w", err)
 	}
@@ -502,7 +502,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 		logger.Debug("Retrieving current stake for party...",
 			zap.String("party-id", referralSet.Leader.PublicKey),
 		)
-		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(referralSet.Leader.PublicKey)
+		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, referralSet.Leader.PublicKey)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve current stake for party %s: %w", referralSet.Leader.PublicKey, err)
 		}

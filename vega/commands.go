@@ -14,7 +14,7 @@ import (
 )
 
 func UpdateNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, whalePublicKey string, datanodeClient *datanode.DataNode, updateParams map[string]string, logger *zap.Logger) (*types.NetworkParams, error) {
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
+	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -29,7 +29,7 @@ func UpdateNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, wha
 		return nil, nil
 	}
 
-	updatedNetworkParameters, err := datanodeClient.GetAllNetworkParameters()
+	updatedNetworkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve updated network parameters from datanode: %w", err)
 	}
