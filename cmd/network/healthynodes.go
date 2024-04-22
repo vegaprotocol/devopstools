@@ -129,12 +129,24 @@ func RunHealthyNodes(args HealthyNodesArgs) error {
 		}
 	}
 
+	allHealthyEndpoints := append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...)
+
+	healthyTendermintNodes := []string{}
+	for _, node := range tendermintEndpoints { // e.g: http://api0.vega.community:26657
+		for _, healthyEndpoint := range allHealthyEndpoints { // e.g: api2.vega.community
+			if strings.Contains(node, healthyEndpoint) {
+				healthyTendermintNodes = append(healthyTendermintNodes, node)
+				break
+			}
+		}
+	}
+
 	result := output{
 		Validators:          healthyValidators,
 		Explorers:           healthyExplorers,
 		DataNodes:           healthyDataNodes,
-		TendermintEndpoints: tendermintEndpoints,
-		All:                 append(healthyExplorers, append(healthyValidators, healthyDataNodes...)...),
+		TendermintEndpoints: healthyTendermintNodes,
+		All:                 allHealthyEndpoints,
 	}
 
 	resp, err := json.MarshalIndent(result, "", "    ")
@@ -196,6 +208,7 @@ func isNodeHealthy(logger *zap.Logger, host string, dataNode bool) bool {
 
 	if currentTime.Sub(vegaTime) > timeThresholds {
 		// Time diff too big
+		logger.Sugar().Debugf("Time diff too big")
 		return false
 	}
 
