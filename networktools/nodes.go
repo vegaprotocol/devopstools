@@ -190,7 +190,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 	}
 	if network.Name == types.NetworkMainnet {
 		result := []string{}
-		for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
+		for _, host := range network.ListNodes([]NodeType{TypeDataNode, TypeExplorer}) {
 			url := fmt.Sprintf("http://%s:26657", host)
 
 			if _, err := httpClient.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
