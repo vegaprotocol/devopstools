@@ -142,10 +142,23 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 			return err
 		}); err != nil {
 			network.logger.Sugar().Debugf("Node %s missing", host)
+
+			if healthyOnly {
+				continue
+			}
 		}
 
-		if !healthyOnly {
-			continue
+		// Check if data-node really has statistics available for given DNS.
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := httpClient.Get(fmt.Sprintf("https://%s/api/v2/info", host))
+
+			return err
+		}); err != nil {
+			network.logger.Sugar().Debugf("Node %s missing", host)
+
+			if healthyOnly {
+				continue
+			}
 		}
 
 		hosts = append(hosts, host)
