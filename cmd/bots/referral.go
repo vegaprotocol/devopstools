@@ -113,48 +113,49 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name))
+	logger.Info("Network file loaded", zap.String("name", cfg.Name))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
-	logger.Debug("Looking for healthy gRPC endpoints...")
+	logger.Info("Looking for healthy gRPC endpoints...")
 	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
 
-	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	logger.Info("Connecting to a datanode's gRPC endpoint...")
 	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelDialing()
 	datanodeClient.MustDialConnection(dialCtx) // blocking
-	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+	logger.Info("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
+	logger.Sugar().Infof("Fetching traders from the %s", cfg.Bots.Research.RESTURL)
 	researchBots, err := bots.RetrieveResearchBots(ctx, cfg.Bots.Research.RESTURL, cfg.Bots.Research.APIKey, logger.Named("research-bots"))
 	if err != nil {
 		return fmt.Errorf("failed to retrieve research bots: %w", err)
 	}
-	logger.Debug("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
+	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
-	logger.Debug("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
+	logger.Info("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
 	wantedMarketsIds, err := findMarketsForAssets(ctx, datanodeClient, args.Assets)
 	if err != nil {
 		return fmt.Errorf("failed to find markets for wanted assets")
 	}
-	logger.Debug("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
+	logger.Info("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
 
-	logger.Debug("Building referral sets topology...")
+	logger.Info("Building referral sets topology...")
 	newReferralSets, err := buildReferralSetsTopology(researchBots, int(args.NumberOfSets), int(args.NumberOfMembersPerSet), wantedMarketsIds)
 	if err != nil {
 		return fmt.Errorf("could not build referral sets topology: %w", err)
 	}
-	logger.Debug("Referral sets topology built")
+	logger.Info("Referral sets topology built")
 
 	for setNo, referralSet := range newReferralSets {
 		var refereesPublicKeys []string
@@ -170,12 +171,12 @@ func runReferral(args ReferralArgs) error {
 		)
 	}
 
-	logger.Debug("Retrieving network parameters...")
+	logger.Info("Retrieving network parameters...")
 	networkParams, err := datanodeClient.GetAllNetworkParameters()
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
-	logger.Debug("Network parameters retrieved")
+	logger.Info("Network parameters retrieved")
 
 	primaryEthConfig, err := networkParams.PrimaryEthereumConfig()
 	if err != nil {
@@ -187,29 +188,31 @@ func runReferral(args ReferralArgs) error {
 		return fmt.Errorf("could not initialize primary ethereum chain client: %w", err)
 	}
 
-	logger.Debug("Ensuring enough stake for referrers...")
+	logger.Info("Ensuring enough stake for referrers...")
 	if err := ensureReferrersHaveEnoughStake(ctx, newReferralSets, datanodeClient, primaryChainClient, !args.Setup, logger); err != nil {
 		return fmt.Errorf("failed to ensure enough stake for referrers: %w", err)
 	}
-	logger.Debug("Referrers have enough stake")
+	logger.Info("Referrers have enough stake")
 
-	logger.Debug("Creating new referral sets...")
+	logger.Info("Creating new referral sets...")
 	if err := createReferralSets(ctx, newReferralSets, datanodeClient, !args.Setup, logger); err != nil {
 		return fmt.Errorf("failed to create referral sets: %w", err)
 	}
-	logger.Debug("Referral sets created")
+	logger.Info("Referral sets created")
 
-	logger.Debug("Waiting for referral set to be created")
-	if err := waitForReferralSets(ctx, newReferralSets, datanodeClient, logger); err != nil {
-		return fmt.Errorf("failed to wait for referral sets: %w", err)
+	if args.Setup {
+		logger.Info("Waiting for referral set to be created")
+		if err := waitForReferralSets(ctx, newReferralSets, datanodeClient, logger); err != nil {
+			return fmt.Errorf("failed to wait for referral sets: %w", err)
+		}
+		logger.Info("All referral sets are ready")
 	}
-	logger.Debug("All referral sets are ready")
 
-	logger.Debug("Referees are joining the referral sets...")
+	logger.Info("Referees are joining the referral sets...")
 	if err := joinReferees(ctx, newReferralSets, datanodeClient, !args.Setup, logger); err != nil {
 		return fmt.Errorf("referees failed to join the referral sets: %w", err)
 	}
-	logger.Debug("Referees joined the referral sets")
+	logger.Info("Referees joined the referral sets")
 
 	logger.Info("Referral set created and joined by research bots successfully")
 
@@ -252,9 +255,18 @@ func waitForReferralSets(ctx context.Context, referralSets []ReferralSet, dataNo
 					zap.String("referral-set-id", referralSet.Id),
 					zap.String("referrer", referrer),
 				)
-				wantedReferrerPubKeys = slices.DeleteFunc(wantedReferrerPubKeys, func(item string) bool {
+				wantedReferrerPubKeysNew := slices.DeleteFunc(wantedReferrerPubKeys, func(item string) bool {
 					return item == referrer
 				})
+
+				wantedReferrerPubKeys = []string{}
+				for _, pubKey := range wantedReferrerPubKeysNew {
+					if pubKey == "" {
+						continue
+					}
+
+					wantedReferrerPubKeys = append(wantedReferrerPubKeys, pubKey)
+				}
 			}
 
 			if len(wantedReferrerPubKeys) == 0 {
@@ -285,7 +297,7 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 	filteredTraders := bots.ResearchBots{}
 	for traderId, trader := range traders {
 		for _, marketId := range includedMarkets {
-			if strings.Contains(traderId, marketId) {
+			if strings.Contains(trader.Name, marketId) {
 				filteredTraders[traderId] = trader
 				break
 			}
@@ -372,7 +384,7 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 }
 
 func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
-	allMarkets, err := dataNodeClient.GetAllMarkets(ctx)
+	allMarkets, err := dataNodeClient.GetAllMarketsWithState(ctx, datanode.ActiveMarkets)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
@@ -385,6 +397,7 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 	var result []string
 	for _, market := range allMarkets {
 		settlementAsset := ""
+		quoteAsset := ""
 
 		if market.GetTradableInstrument() != nil && market.GetTradableInstrument().GetInstrument() != nil {
 			instrument := market.GetTradableInstrument().GetInstrument()
@@ -393,6 +406,9 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 				settlementAsset = instrument.GetFuture().SettlementAsset
 			} else if instrument.GetPerpetual() != nil {
 				settlementAsset = instrument.GetPerpetual().SettlementAsset
+			} else if instrument.GetSpot() != nil {
+				settlementAsset = instrument.GetSpot().BaseAsset
+				quoteAsset = instrument.GetSpot().QuoteAsset
 			}
 		}
 
@@ -404,8 +420,19 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 		if !assetFound {
 			return nil, fmt.Errorf("settlement asset %q for market %q not found in asset lists", settlementAsset, market.Id)
 		}
+		quoteAssetSymbol := "UNKNOWN"
+		if quoteAsset != "" {
+			quoteAssetDetails, assetFound := allAssets[quoteAsset]
+			if !assetFound {
+				return nil, fmt.Errorf("quote settlement asset %q for market %q not found in asset lists", settlementAsset, market.Id)
+			}
 
-		if len(assetsSymbols) > 0 && !slices.Contains(assetsSymbols, assetDetails.Symbol) {
+			quoteAssetSymbol = quoteAssetDetails.Symbol
+		}
+
+		if len(assetsSymbols) > 0 &&
+			!slices.Contains(assetsSymbols, assetDetails.Symbol) &&
+			!slices.Contains(assetsSymbols, quoteAssetSymbol) {
 			continue
 		}
 
