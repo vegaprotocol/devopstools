@@ -56,6 +56,10 @@ func NewChainClientForID(ctx context.Context, cfg config.Config, networkParams *
 		return nil, fmt.Errorf("could not get secondary ethereum configuration from network paramters: %w", err)
 	}
 
+	secondaryChainId := "UNKNOWN"
+	if len(evmChainConfig.Configs) > 0 {
+		secondaryChainId = evmChainConfig.Configs[0].ChainId
+	}
 	switch chainID {
 	case primaryEthConfig.ChainId:
 		primaryChainClient, err := NewPrimaryChainClient(ctx, cfg.Bridges.Primary, primaryEthConfig, logger.Named("primary-chain-client"))
@@ -63,7 +67,7 @@ func NewChainClientForID(ctx context.Context, cfg config.Config, networkParams *
 			return nil, fmt.Errorf("could not initialize primary ethereum chain client: %w", err)
 		}
 		return primaryChainClient, nil
-	case evmChainConfig.ChainId:
+	case secondaryChainId:
 		evmChainClient, err := NewEVMChainClient(ctx, cfg.Bridges.EVM, evmChainConfig, logger.Named("evm-chain-client"))
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize EVM chain client: %w", err)
@@ -153,20 +157,23 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 	}, nil
 }
 
-func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *vega.EVMChainConfig, logger *zap.Logger) (*ChainClient, error) {
+func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *vega.EVMBridgeConfigs, logger *zap.Logger) (*ChainClient, error) {
 	client, err := ethclient.DialContext(ctx, cfg.ClientURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize ethereum client: %w", err)
 	}
 
-	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.CollateralBridgeContract.Address, erc20bridge.V2)
+	if len(ethConfig.Configs) < 1 {
+		return nil, fmt.Errorf("missing config for the evm bridges")
+	}
+
+	collateralBridge, err := erc20bridge.NewERC20Bridge(client, ethConfig.Configs[0].CollateralBridgeContract.Address, erc20bridge.V2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}
-
 	multisigControl, err := multisigcontrol.NewMultisigControl(
 		client,
-		ethConfig.MultisigControlContract.Address,
+		ethConfig.Configs[0].MultisigControlContract.Address,
 		multisigcontrol.V2,
 		cfg.Signers,
 	)
@@ -192,6 +199,6 @@ func NewEVMChainClient(ctx context.Context, cfg config.EVMBridge, ethConfig *veg
 		collateralBridge: collateralBridge,
 		minterWallet:     minterWallet,
 		multisigControl:  multisigControl,
-		chainID:          ethConfig.ChainId,
+		chainID:          ethConfig.Configs[0].ChainId,
 	}, nil
 }
