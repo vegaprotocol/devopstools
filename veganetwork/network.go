@@ -45,7 +45,7 @@ type VegaNetwork struct {
 	PrimarySmartContractsManager *smartcontracts.Manager
 	PrimarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
 
-	EVMChainConfig                 *vega.EVMChainConfig
+	EVMChainConfig                 *vega.EVMBridgeConfigs
 	SecondaryEthNetwork            types.ETHNetwork
 	SecondaryEthClientManager      *ethutils.EthereumClientManager
 	SecondaryEthClient             *ethclient.Client
@@ -132,7 +132,7 @@ func (n *VegaNetwork) EthClientForChainID(chainID string) *ethclient.Client {
 	switch chainID {
 	case n.PrimaryEthereumConfig.ChainId:
 		return n.PrimaryEthClient
-	case n.EVMChainConfig.ChainId:
+	case n.EVMChainConfig.Configs[0].ChainId:
 		return n.SecondaryEthClient
 	default:
 		panic(fmt.Sprintf("no ethereum client for chain ID %q", chainID))
@@ -143,7 +143,7 @@ func (n *VegaNetwork) SmartContractManagerForChainID(chainID string) *smartcontr
 	switch chainID {
 	case n.PrimaryEthereumConfig.ChainId:
 		return n.PrimarySmartContractsManager
-	case n.EVMChainConfig.ChainId:
+	case n.EVMChainConfig.Configs[0].ChainId:
 		return n.SecondarySmartContractsManager
 	default:
 		panic(fmt.Sprintf("no smart contract manager for chain ID %q", chainID))
@@ -154,7 +154,7 @@ func (n *VegaNetwork) SmartContractForChainID(chainID string) *veganetworksmartc
 	switch chainID {
 	case n.PrimaryEthereumConfig.ChainId:
 		return n.PrimarySmartContracts
-	case n.EVMChainConfig.ChainId:
+	case n.EVMChainConfig.Configs[0].ChainId:
 		return n.SecondarySmartContracts
 	default:
 		panic(fmt.Sprintf("no smart contract for chain ID %q", chainID))
@@ -201,7 +201,7 @@ func (n *VegaNetwork) RefreshNetworkParams() error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve secondary ethereum config from network parameters: %w", err)
 	}
-	n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.EVMChainConfig.ChainId)
+	n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.EVMChainConfig.Configs[0].ChainId)
 	if err != nil {
 		return fmt.Errorf("could not resolve secondary ethereum network name from chain ID: %w", err)
 	}
@@ -213,8 +213,8 @@ func (n *VegaNetwork) RefreshNetworkParams() error {
 		n.SecondaryEthClient,
 		"", // will be taken from Staking Bridge
 		"", // will be taken from ERC20 Bridge
-		n.EVMChainConfig.CollateralBridgeContract.Address,
-		n.EVMChainConfig.MultisigControlContract.Address,
+		n.EVMChainConfig.Configs[0].CollateralBridgeContract.Address,
+		n.EVMChainConfig.Configs[0].MultisigControlContract.Address,
 		"",
 		n.logger.Named("secondary-smart-contracts"),
 	)

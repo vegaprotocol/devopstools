@@ -22,6 +22,7 @@ type Standard interface {
 	Transfer(opts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error)
 	TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, amount *big.Int) (*types.Transaction, error)
 	Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error)
+	IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error)
 }
 
 //
@@ -41,7 +42,6 @@ type Common interface {
 type Testing interface {
 	Faucet(opts *bind.TransactOpts) (*types.Transaction, error)
 	Mint(opts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error)
-	IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error)
 	SetBurnEnabled(opts *bind.TransactOpts, burnEnabled_ bool) (*types.Transaction, error)
 	BurnEnabled(opts *bind.CallOpts) (bool, error)
 	SetFaucetAmount(opts *bind.TransactOpts, faucetAmount_ *big.Int) (*types.Transaction, error)
