@@ -15,11 +15,14 @@ import (
 	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 	"github.com/vegaprotocol/devopstools/wallet"
 
+	"code.vegaprotocol.io/vega/core/netparams"
+	v2 "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 
@@ -115,6 +118,16 @@ func runReferral(args ReferralArgs) error {
 	}
 	logger.Info("Network file loaded", zap.String("name", cfg.Name))
 
+	whaleWallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
+		Id:             cfg.Network.Wallets.VegaTokenWhale.ID,
+		PublicKey:      cfg.Network.Wallets.VegaTokenWhale.PublicKey,
+		PrivateKey:     cfg.Network.Wallets.VegaTokenWhale.PrivateKey,
+		RecoveryPhrase: cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase,
+	})
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
@@ -143,6 +156,10 @@ func runReferral(args ReferralArgs) error {
 	}
 	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
+	if err := prepareNetworkParameters(ctx, whaleWallet, datanodeClient, !args.Setup, logger.Named("pepare network parameters")); err != nil {
+		return fmt.Errorf("failed prepare network parameters for referral")
+	}
+
 	logger.Info("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
 	wantedMarketsIds, err := findMarketsForAssets(ctx, datanodeClient, args.Assets)
 	if err != nil {
@@ -150,8 +167,15 @@ func runReferral(args ReferralArgs) error {
 	}
 	logger.Info("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
 
+	logger.Info("Getting referral sets")
+	referralSets, err := datanodeClient.ListReferralSets(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list referral sets: %w", err)
+	}
+	logger.Info("Referral sets got")
+
 	logger.Info("Building referral sets topology...")
-	newReferralSets, err := buildReferralSetsTopology(researchBots, int(args.NumberOfSets), int(args.NumberOfMembersPerSet), wantedMarketsIds)
+	newReferralSets, err := buildReferralSetsTopology(referralSets, researchBots, int(args.NumberOfSets), int(args.NumberOfMembersPerSet), wantedMarketsIds)
 	if err != nil {
 		return fmt.Errorf("could not build referral sets topology: %w", err)
 	}
@@ -215,6 +239,34 @@ func runReferral(args ReferralArgs) error {
 	logger.Info("Referees joined the referral sets")
 
 	logger.Info("Referral set created and joined by research bots successfully")
+
+	return nil
+}
+
+func prepareNetworkParameters(ctx context.Context, whaleWallet *wallet.VegaWallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
+	networkParameters, err := datanodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+
+	updateParams := map[string]string{
+		netparams.SpamProtectionApplyReferralMinFunds: "0",
+	}
+
+	if dryRun {
+		logger.Info("DRY RUN: Not updating network parameters")
+		return nil
+	}
+
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(updateParams, whaleWallet, networkParameters, datanodeClient, logger)
+	if err != nil {
+		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
+	}
+
+	if updateCount == 0 {
+		logger.Debug("No network parameter update is required before issuing transfers")
+		return nil
+	}
 
 	return nil
 }
@@ -284,7 +336,7 @@ func waitForReferralSets(ctx context.Context, referralSets []ReferralSet, dataNo
 }
 
 // buildReferralSetsTopology should generate deterministic referral set based on the response from the /traders endpoint
-func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numberOfReferees int, includedMarkets []string) ([]ReferralSet, error) {
+func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, traders bots.ResearchBots, numberOfSets int, numberOfReferees int, includedMarkets []string) ([]ReferralSet, error) {
 	if numberOfSets < 1 {
 		return nil, fmt.Errorf("you must create at least one referral set")
 	}
@@ -304,9 +356,20 @@ func buildReferralSetsTopology(traders bots.ResearchBots, numberOfSets int, numb
 		}
 	}
 
+	// TODO: Fetch teams which were already created earlier.
+	// teamOwners := []string{}
+	// for _, referralSet := range existingReferralSets {
+	// 	teamOwners = append(teamOwners, referralSet.Referrer)
+	// }
+
 	var referralSets []ReferralSet
-	// Create reams with leaders
+	// Create teams with leaders
 	for _, trader := range filteredTraders {
+		// Party is already owner of the team
+		// if slices.Contains(teamOwners, trader.PubKey) {
+		// 	continue
+		// }
+
 		if trader.IsMarketMaker() {
 			w, err := trader.GetWallet()
 			if err != nil {
@@ -463,10 +526,10 @@ func joinReferees(ctx context.Context, referralSets []ReferralSet, dataNodeClien
 		for _, member := range set.Referees {
 			refereeKey := member.Wallet.PublicKey
 
-			if referralSet, ok := referralSetReferees[refereeKey]; ok {
-				logger.Debug("Party already belong to a referral set",
+			if _, ok := referralSetReferees[refereeKey]; ok {
+				logger.Info("Party already belong to a referral set",
 					zap.String("party-id", refereeKey),
-					zap.String("referral-set-id", referralSet.ReferralSetId),
+					zap.String("referral-set-id", referralSetReferees[refereeKey].ReferralSetId),
 				)
 				continue
 			}

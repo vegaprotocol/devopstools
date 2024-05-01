@@ -91,3 +91,17 @@ func (p *NetworkParams) GetMinimumEthereumEventsForNewValidator() (int, error) {
 	}
 	return intVal, nil
 }
+
+func (p *NetworkParams) GetMinFundsForApplyReferral() int64 {
+	val, found := p.Params[netparams.SpamProtectionApplyReferralMinFunds]
+	if !found {
+		return 0
+	}
+
+	intVal, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return intVal
+}
