@@ -15,8 +15,8 @@ import (
 	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
-	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
@@ -120,12 +120,7 @@ func runReferral(args ReferralArgs) error {
 	}
 	logger.Info("Network file loaded", zap.String("name", cfg.Name))
 
-	whaleWallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
-		Id:             cfg.Network.Wallets.VegaTokenWhale.ID,
-		PublicKey:      cfg.Network.Wallets.VegaTokenWhale.PublicKey,
-		PrivateKey:     cfg.Network.Wallets.VegaTokenWhale.PrivateKey,
-		RecoveryPhrase: cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase,
-	})
+	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
 	if err != nil {
 		return fmt.Errorf("could not initialized whale wallet: %w", err)
 	}
@@ -245,7 +240,7 @@ func runReferral(args ReferralArgs) error {
 	return nil
 }
 
-func prepareNetworkParameters(ctx context.Context, whaleWallet *wallet.VegaWallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
+func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
 	_ = ctx
 
 	networkParameters, err := datanodeClient.GetAllNetworkParameters()
@@ -262,7 +257,12 @@ func prepareNetworkParameters(ctx context.Context, whaleWallet *wallet.VegaWalle
 		return nil
 	}
 
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(updateParams, whaleWallet, networkParameters, datanodeClient, logger)
+	publicKeys := whaleWallet.ListPublicKeys()
+	if len(publicKeys) < 1 {
+		return fmt.Errorf("failed to get public key for whale wallet: list public keys got empty list")
+	}
+
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, publicKeys[0].Key(), networkParameters, datanodeClient, logger)
 	if err != nil {
 		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
 	}
