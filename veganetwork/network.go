@@ -34,19 +34,11 @@ type VegaNetwork struct {
 	// clients
 	DataNodeClient vegaapi.DataNodeClient
 
-	PrimaryEthereumConfig        *vega.EthereumConfig
-	PrimaryEthNetwork            types.ETHNetwork
-	PrimaryEthClientManager      *ethutils.EthereumClientManager
-	PrimaryEthClient             *ethclient.Client
-	PrimarySmartContractsManager *smartcontracts.Manager
-	PrimarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
-
-	EVMChainConfig                 *vega.EVMBridgeConfigs
-	SecondaryEthNetwork            types.ETHNetwork
-	SecondaryEthClientManager      *ethutils.EthereumClientManager
-	SecondaryEthClient             *ethclient.Client
-	SecondarySmartContractsManager *smartcontracts.Manager
-	SecondarySmartContracts        *veganetworksmartcontracts.VegaNetworkSmartContracts
+	PrimaryEthereumConfig   *vega.EthereumConfig
+	PrimaryEthNetwork       types.ETHNetwork
+	PrimaryEthClientManager *ethutils.EthereumClientManager
+	PrimaryEthClient        *ethclient.Client
+	PrimarySmartContracts   *veganetworksmartcontracts.VegaNetworkSmartContracts
 
 	WalletManager *wallet.Manager
 
@@ -99,39 +91,6 @@ func NewVegaNetwork(network string, dataNodeClient vegaapi.DataNodeClient, nodeS
 	return n, nil
 }
 
-func (n *VegaNetwork) EthClientForChainID(chainID string) *ethclient.Client {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimaryEthClient
-	case n.EVMChainConfig.Configs[0].ChainId:
-		return n.SecondaryEthClient
-	default:
-		panic(fmt.Sprintf("no ethereum client for chain ID %q", chainID))
-	}
-}
-
-func (n *VegaNetwork) SmartContractManagerForChainID(chainID string) *smartcontracts.Manager {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimarySmartContractsManager
-	case n.EVMChainConfig.Configs[0].ChainId:
-		return n.SecondarySmartContractsManager
-	default:
-		panic(fmt.Sprintf("no smart contract manager for chain ID %q", chainID))
-	}
-}
-
-func (n *VegaNetwork) SmartContractForChainID(chainID string) *veganetworksmartcontracts.VegaNetworkSmartContracts {
-	switch chainID {
-	case n.PrimaryEthereumConfig.ChainId:
-		return n.PrimarySmartContracts
-	case n.EVMChainConfig.Configs[0].ChainId:
-		return n.SecondarySmartContracts
-	default:
-		panic(fmt.Sprintf("no smart contract for chain ID %q", chainID))
-	}
-}
-
 func (n *VegaNetwork) Disconnect() {
 }
 
@@ -168,29 +127,5 @@ func (n *VegaNetwork) RefreshNetworkParams() error {
 		return fmt.Errorf("could not create primary smart contract connector: %w", err)
 	}
 
-	n.EVMChainConfig, err = n.NetworkParams.EVMChainConfig()
-	if err != nil {
-		return fmt.Errorf("could not retrieve secondary ethereum config from network parameters: %w", err)
-	}
-	n.SecondaryEthNetwork, err = types.GetEthNetworkForId(n.EVMChainConfig.Configs[0].ChainId)
-	if err != nil {
-		return fmt.Errorf("could not resolve secondary ethereum network name from chain ID: %w", err)
-	}
-	n.SecondaryEthClient, err = n.SecondaryEthClientManager.GetEthClient(n.SecondaryEthNetwork)
-	if err != nil {
-		return fmt.Errorf("could not create secondary ethereum client: %w", err)
-	}
-	n.SecondarySmartContracts, err = veganetworksmartcontracts.NewVegaNetworkSmartContracts(
-		n.SecondaryEthClient,
-		"", // will be taken from Staking Bridge
-		"", // will be taken from ERC20 Bridge
-		n.EVMChainConfig.Configs[0].CollateralBridgeContract.Address,
-		n.EVMChainConfig.Configs[0].MultisigControlContract.Address,
-		"",
-		n.logger.Named("secondary-smart-contracts"),
-	)
-	if err != nil {
-		return fmt.Errorf("could not create secondary smart contract connector: %w", err)
-	}
 	return nil
 }
