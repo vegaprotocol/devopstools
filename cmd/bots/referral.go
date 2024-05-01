@@ -244,6 +244,8 @@ func runReferral(args ReferralArgs) error {
 }
 
 func prepareNetworkParameters(ctx context.Context, whaleWallet *wallet.VegaWallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
+	_ = ctx
+
 	networkParameters, err := datanodeClient.GetAllNetworkParameters()
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
@@ -337,6 +339,7 @@ func waitForReferralSets(ctx context.Context, referralSets []ReferralSet, dataNo
 
 // buildReferralSetsTopology should generate deterministic referral set based on the response from the /traders endpoint
 func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, traders bots.ResearchBots, numberOfSets int, numberOfReferees int, includedMarkets []string) ([]ReferralSet, error) {
+	_ = existingReferralSets
 	if numberOfSets < 1 {
 		return nil, fmt.Errorf("you must create at least one referral set")
 	}
