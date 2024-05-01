@@ -30,7 +30,7 @@ func ListZfsPools(parent string) ([]Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list zfs pools: %w", err)
 	}
-	result := []Pool{}
+	var result []Pool
 
 	tokens := strings.Fields(string(out))
 	if len(tokens)%2 != 0 {

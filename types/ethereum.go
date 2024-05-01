@@ -13,14 +13,6 @@ const (
 	ETHRopsten ETHNetwork = "ropsten"
 )
 
-func (n ETHNetwork) IsValid() error {
-	switch n {
-	case ETHMainnet, ETHSepolia, ETHGoerli, ETHRopsten:
-		return nil
-	}
-	return fmt.Errorf("invalid Ethereum network %s", n)
-}
-
 func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
 	switch chainId {
 	case "1":
@@ -38,8 +30,7 @@ func GetEthNetworkForId(chainId string) (ETHNetwork, error) {
 type ETHBridge string
 
 const (
-	PrimaryBridge   ETHBridge = "primary-bridge"
-	SecondaryBridge ETHBridge = "secondary-bridge"
+	PrimaryBridge ETHBridge = "primary-bridge"
 )
 
 func (b ETHBridge) String() string {

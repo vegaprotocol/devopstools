@@ -18,23 +18,7 @@ func (ra *RootArgs) ConnectToVegaNetwork(network string) (*veganetwork.VegaNetwo
 	if err != nil {
 		return nil, err
 	}
-	serviceSecretStore, err := ra.GetServiceSecretStore()
-	if err != nil {
-		return nil, err
-	}
 	primaryEthClientManager, err := ra.GetPrimaryEthereumClientManager()
-	if err != nil {
-		return nil, err
-	}
-	primarySmartContractsManager, err := ra.GetPrimarySmartContractsManager()
-	if err != nil {
-		return nil, err
-	}
-	secondaryEthClientManager, err := ra.GetSecondaryEthereumClientManager()
-	if err != nil {
-		return nil, err
-	}
-	secondarySmartContractsManager, err := ra.GetSecondarySmartContractsManager()
 	if err != nil {
 		return nil, err
 	}
@@ -42,16 +26,5 @@ func (ra *RootArgs) ConnectToVegaNetwork(network string) (*veganetwork.VegaNetwo
 	if err != nil {
 		return nil, err
 	}
-	return veganetwork.NewVegaNetwork(
-		network,
-		dataNodeClient,
-		nodeSecretStore,
-		serviceSecretStore,
-		primaryEthClientManager,
-		secondaryEthClientManager,
-		primarySmartContractsManager,
-		secondarySmartContractsManager,
-		walletManager,
-		ra.Logger,
-	)
+	return veganetwork.NewVegaNetwork(network, dataNodeClient, nodeSecretStore, primaryEthClientManager, walletManager, ra.Logger)
 }

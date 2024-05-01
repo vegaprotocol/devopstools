@@ -305,7 +305,7 @@ func (c *ChainClient) ListAsset(ctx context.Context, signers []*Wallet, assetID,
 func generateMultisig(signers []*Wallet, msg []byte) ([]byte, error) {
 	hash := crypto.Keccak256(msg)
 
-	signatures := []byte{}
+	var signatures []byte
 	for _, signerKey := range signers {
 		signature, err := signerKey.Sign(hash)
 		if err != nil {

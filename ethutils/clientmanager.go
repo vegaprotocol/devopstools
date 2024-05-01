@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/vegaprotocol/devopstools/etherscan"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
 
@@ -91,26 +90,4 @@ func (m *EthereumClientManager) GetEthClient(ethNetwork types.ETHNetwork) (*ethc
 	m.ethClientByNetwork[ethNetwork] = ethClient
 
 	return ethClient, nil
-}
-
-func (m *EthereumClientManager) GetEtherscanClient(ethNetwork types.ETHNetwork) (*etherscan.Client, error) {
-	switch ethNetwork {
-	case types.ETHMainnet, types.ETHSepolia, types.ETHGoerli, types.ETHRopsten:
-		if m.serviceSecrets == nil {
-			return nil, fmt.Errorf("failed to get Etherscan Client for %s, Service Secret Store not provided", ethNetwork)
-		}
-		etherscanApikey, err := m.serviceSecrets.GetEtherscanApikey(m.bridge)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get Etherscan Client for %s, cannot get Etherscan Apikey, %w", ethNetwork, err)
-		}
-		etherscanClient, err := etherscan.NewEtherscanClient(ethNetwork, etherscanApikey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get Etherscan Client for %s, %w", ethNetwork, err)
-		}
-
-		return etherscanClient, nil
-
-	default:
-		return nil, fmt.Errorf("failed to get etherscan client, not supported network '%s'", ethNetwork)
-	}
 }

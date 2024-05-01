@@ -61,7 +61,7 @@ type marketDetails struct {
 }
 
 func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
-	result := []marketDetails{}
+	var result []marketDetails
 
 	markets, err := dataNodeClient.GetAllMarkets(context2.Background())
 	if err != nil {
