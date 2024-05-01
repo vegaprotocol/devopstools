@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.21.5
 
 require (
+	code.vegaprotocol.io/protos v0.53.0
 	code.vegaprotocol.io/vega v0.76.0-preview.7
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6

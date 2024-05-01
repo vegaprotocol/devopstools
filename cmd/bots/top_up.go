@@ -19,10 +19,10 @@ import (
 	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
-	v1 "code.vegaprotocol.io/protos/vega/wallet/v1"
 	"code.vegaprotocol.io/vega/core/netparams"
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 	"code.vegaprotocol.io/vega/wallet/wallet"
 
@@ -239,7 +239,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 	return nil
 }
 
-func determineAmountsToTopUpByAsset(assets map[string]*vega.AssetDetails, botsMap map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
+func determineAmountsToTopUpByAsset(assets map[string]*vegapb.AssetDetails, botsMap map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
 	topUpRegistry := map[string]AssetToTopUp{}
 
 	wantedTokenEntries := []bots.BotTraderWantedToken{}
@@ -432,23 +432,16 @@ func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode
 	for assetID, entry := range registry {
 		for botPartyId, amount := range entry.AmountsByParty {
 			err := tools.RetryRun(15, 6*time.Second, func() error {
-				lastBlockData, err := datanodeClient.LastBlockData()
-				if err != nil {
-					return fmt.Errorf("failed to retrieve last block data: %w", err)
-				}
 
-				amountString := amount.StringWithDecimals()
-
-				signedTransaction, err := whaleWallet.SignTxWithPoW(&v1.SubmitTransactionRequest{
-					PubKey: whaleWallet.PublicKey,
-					Command: &v1.SubmitTransactionRequest_Transfer{
+				request := walletpb.SubmitTransactionRequest{
+					Command: &walletpb.SubmitTransactionRequest_Transfer{
 						Transfer: &vegacmd.Transfer{
 							Reference:       fmt.Sprintf("Transfer from whale to %s", botPartyId),
 							FromAccountType: vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
 							ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
 							To:              botPartyId,
 							Asset:           assetID,
-							Amount:          amountString,
+							Amount:          amount.StringWithDecimals(),
 							Kind: &vegacmd.Transfer_OneOff{
 								OneOff: &vegacmd.OneOffTransfer{
 									DeliverOn: 0,
@@ -456,7 +449,7 @@ func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode
 							},
 						},
 					},
-				})
+				}
 
 				resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &request, datanodeClient)
 				if err != nil {
