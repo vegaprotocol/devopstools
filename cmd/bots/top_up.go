@@ -215,7 +215,11 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 			return fmt.Errorf("asset with chain ID %q does not match any configured Ethereum chain", erc20Details.ChainId)
 		}
 
-		if err := chainClient.DepositERC20AssetFromMinter(ctx, erc20Details.ContractAddress, whaleClient.PartyID(), requiredAmount); err != nil {
+		deposits := map[string]*types.Amount{
+			whaleClient.PartyID(): requiredAmount,
+		}
+
+		if err := chainClient.DepositERC20AssetFromMinter(ctx, erc20Details.ContractAddress, deposits); err != nil {
 			return fmt.Errorf("failed to deposit asset %q on whale %s: %w", asset.Name, whaleClient.PartyID(), err)
 		}
 
