@@ -257,12 +257,9 @@ func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, da
 		return nil
 	}
 
-	publicKeys := whaleWallet.ListPublicKeys()
-	if len(publicKeys) < 1 {
-		return fmt.Errorf("failed to get public key for whale wallet: list public keys got empty list")
-	}
+	pubKey := vega.MustFirstKey(whaleWallet)
 
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, publicKeys[0].Key(), networkParameters, datanodeClient, logger)
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, pubKey, networkParameters, datanodeClient, logger)
 	if err != nil {
 		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
 	}
