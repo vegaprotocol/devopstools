@@ -118,7 +118,7 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Info("Network file loaded", zap.String("name", cfg.Name))
+	logger.Info("Network file loaded", zap.String("name", string(cfg.Name)))
 
 	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
 	if err != nil {

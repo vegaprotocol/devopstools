@@ -29,7 +29,9 @@ func Load(path string) (Config, error) {
 
 	_, fileName := filepath.Split(path)
 
-	cfg.Name = strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
+	rawName := strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
+
+	cfg.Name = NetworkName(rawName)
 
 	return cfg, nil
 }

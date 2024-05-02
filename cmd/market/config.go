@@ -1,8 +1,8 @@
 package market
 
 import (
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance/market"
-	"github.com/vegaprotocol/devopstools/types"
 
 	"code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
@@ -23,8 +23,8 @@ type networkAssetsIDs struct {
 	MainnetLikeAsset_USDT string
 }
 
-var l2Configs = map[string][]*vega.EthereumL2Config{
-	types.NetworkDevnet1: {
+var l2Configs = map[config.NetworkName][]*vega.EthereumL2Config{
+	config.NetworkDevnet1: {
 		&vega.EthereumL2Config{
 			NetworkId:     "100",
 			ChainId:       "100",
@@ -33,7 +33,7 @@ var l2Configs = map[string][]*vega.EthereumL2Config{
 			BlockInterval: 3,
 		},
 	},
-	types.NetworkStagnet1: {
+	config.NetworkStagnet1: {
 		&vega.EthereumL2Config{
 			NetworkId:     "100",
 			ChainId:       "100",
@@ -56,8 +56,8 @@ var l2Configs = map[string][]*vega.EthereumL2Config{
 			BlockInterval: 3,
 		},
 	},
-	types.NetworkStagnet3: {},
-	types.NetworkFairground: {
+	config.NetworkStagnet3: {},
+	config.NetworkFairground: {
 		&vega.EthereumL2Config{
 			NetworkId:     "100",
 			ChainId:       "100",
@@ -82,16 +82,8 @@ var l2Configs = map[string][]*vega.EthereumL2Config{
 	},
 }
 
-var settlementAssetIDs = map[string]networkAssetsIDs{
-	types.NetworkDevnet1: {
-		// AAPL:    "deadbeef00000000000000000000000000000000000000000000000000000008", // "fUSDC"
-		// AAVEDAI: "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
-		// BTCUSD:  "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
-		// ETHBTC:  "deadbeef00000000000000000000000000000000000000000000000000000009", // "fBTC"
-		// TSLA:    "deadbeef00000000000000000000000000000000000000000000000000000007", // "fEURO"
-		// UNIDAI:  "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
-		// ETHDAI:  "deadbeef00000000000000000000000000000000000000000000000000000006", // "fDAI"
-
+var settlementAssetIDs = map[config.NetworkName]networkAssetsIDs{
+	config.NetworkDevnet1: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		AAVEDAI: "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 		BTCUSD:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
@@ -103,7 +95,7 @@ var settlementAssetIDs = map[string]networkAssetsIDs{
 		SettlementAsset_USDC:  "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		MainnetLikeAsset_USDT: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d",
 	},
-	types.NetworkStagnet1: {
+	config.NetworkStagnet1: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		AAVEDAI: "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 		BTCUSD:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
@@ -115,7 +107,7 @@ var settlementAssetIDs = map[string]networkAssetsIDs{
 		SettlementAsset_USDC:  "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		MainnetLikeAsset_USDT: "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d",
 	},
-	types.NetworkStagnet3: {
+	config.NetworkStagnet3: {
 		AAPL:    "ede4076aef07fd79502d14326c54ab3911558371baaf697a19d077f4f89de399", // "tUSDC"
 		AAVEDAI: "16ae5dbb1fd7aa2ddef725703bfe66b3647a4da7b844bfdd04e985756f53d9d6", // "tDAI"
 		BTCUSD:  "16ae5dbb1fd7aa2ddef725703bfe66b3647a4da7b844bfdd04e985756f53d9d6", // "tDAI"
@@ -127,7 +119,7 @@ var settlementAssetIDs = map[string]networkAssetsIDs{
 		SettlementAsset_USDC:  "",
 		MainnetLikeAsset_USDT: "",
 	},
-	types.NetworkFairground: {
+	config.NetworkFairground: {
 		AAPL:    "c9fe6fc24fce121b2cc72680543a886055abb560043fda394ba5376203b7527d", // "tUSDC"
 		AAVEDAI: "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
 		BTCUSD:  "b340c130096819428a62e5df407fd6abe66e444b89ad64f670beb98621c9c663", // "tDAI"
@@ -141,26 +133,27 @@ var settlementAssetIDs = map[string]networkAssetsIDs{
 	},
 }
 
-func ProposalsForEnvironment(environment string) []*commandspb.ProposalSubmission {
+func ProposalsForEnvironment(environment config.NetworkName) []*commandspb.ProposalSubmission {
 	switch environment {
-	case types.NetworkDevnet1:
+	case config.NetworkDevnet1:
 		return []*commandspb.ProposalSubmission{
-			market.NewMainnetSimulationBitcoinTetherPerpetualWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
-			market.NewMainnetSimulationEtherTetherPerpetualWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
-			market.NewFutureBTCUSDTWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
-			market.NewFutureETHUSDTWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
-			market.NewMainnetSimulationSNXUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
-			market.NewMainnetSimulationLDOUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
-			market.NewMainnetSimulationINJUSDTPerpWithoutTime(settlementAssetIDs[types.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationBitcoinTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationEtherTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewFutureBTCUSDTWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
+			market.NewFutureETHUSDTWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT, CoinBaseOraclePubKey),
+			market.NewMainnetSimulationSNXUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationLDOUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationINJUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
 		}
-	case types.NetworkStagnet1:
-		// TODO: Add more markets
+	case config.NetworkStagnet1:
 		return []*commandspb.ProposalSubmission{}
-	case types.NetworkFairground:
-		// TODO: Add more markets
+	case config.NetworkStagnet3:
+		return []*commandspb.ProposalSubmission{}
+	case config.NetworkFairground:
+		return []*commandspb.ProposalSubmission{}
+	case config.NetworkMainnet:
+		return []*commandspb.ProposalSubmission{}
+	default:
 		return []*commandspb.ProposalSubmission{}
 	}
-
-	// unsupported network?
-	return []*commandspb.ProposalSubmission{}
 }

@@ -7,18 +7,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
+	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
-	"github.com/vegaprotocol/devopstools/veganetwork"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
+	"code.vegaprotocol.io/vega/wallet/wallet"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -30,11 +33,10 @@ type ProposeArgs struct {
 
 var proposeArgs ProposeArgs
 
-// proposeCmd represents the propose command
 var proposeCmd = &cobra.Command{
 	Use:   "propose",
 	Short: "Propose and vote on market",
-	Long:  `Propose and vote on market`,
+	Long:  "Propose and vote on market",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runPropose(proposeArgs); err != nil {
 			proposeArgs.Logger.Error("Error", zap.Error(err))
@@ -44,69 +46,114 @@ var proposeCmd = &cobra.Command{
 }
 
 func init() {
-	proposeArgs.Args = &marketArgs
+	proposeArgs.Args = &args
 
 	Cmd.AddCommand(proposeCmd)
 }
 
 func runPropose(args ProposeArgs) error {
-	// markets := governance.MainnetUpgradeBatchProposal(closeTime, enactTime)
-	network, err := args.ConnectToVegaNetwork(args.VegaNetworkName)
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
+
+	logger := args.Logger.Named("command")
+
+	cfg, err := config.Load(args.NetworkFile)
 	if err != nil {
-		return fmt.Errorf("failed to create vega network manager: %w", err)
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
+	}
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx) // blocking
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
 	}
 
-	allMarkets, err := network.DataNodeClient.GetAllMarkets(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get all markets from the data-node api: %w", err)
+	if err := vega.GenerateKeysUpToKey(whaleWallet, cfg.Network.Wallets.VegaTokenWhale.PublicKey); err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
 	}
-	missingMarketsProposals := filterMarkets(args.Logger, allMarkets, ProposalsForEnvironment(network.Network))
 
-	defer network.Disconnect()
+	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
-	networkParamsProposals, err := preMarketDeployProposals(network.Network, network.NetworkParams)
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+	logger.Debug("Network parameters retrieved")
+
+	networkParamsProposals, err := preMarketDeployProposals(cfg.Name, networkParams)
 	if err != nil {
 		return fmt.Errorf("failed to determine network parameters to update before markets are proposed: %w", err)
 	}
 
-	if len(missingMarketsProposals) > 0 && len(networkParamsProposals) > 0 {
-		closeTime := time.Now().Add(30 * time.Second)
+	if len(networkParamsProposals) > 0 {
+		logger.Debug("Updating network parameters...")
 		networkParamsBatchProposal := governance.NewBatchProposal(
-			fmt.Sprintf("%s devopstools network params proposal", network.Network),
+			fmt.Sprintf("%q devopstools network params proposal", cfg.Name.String()),
 			"Update network parameters before markets are proposed",
-			closeTime,
+			time.Now().Add(30*time.Second),
 			networkParamsProposals,
 			nil,
 		)
-		args.Logger.Info("Updating network parameters")
 
-		if err := sendBatchProposal(network, networkParamsBatchProposal); err != nil {
+		if err := sendBatchProposal(ctx, datanodeClient, whaleWallet, whalePublicKey, networkParamsBatchProposal); err != nil {
 			return fmt.Errorf("failed to send batch proposal to update network parameters: %w", err)
 		}
+		logger.Debug("Network parameters updated")
 	} else {
-		args.Logger.Info("No network parameters need to be updated")
+		logger.Debug("Network parameters do not need to be updated")
 	}
 
-	closeTime := time.Now().Add(30 * time.Second)
-	// enactTime := closeTime.Add(60 * time.Second)
+	allMarkets, err := datanodeClient.GetAllMarkets(ctx)
+	if err != nil {
+		return fmt.Errorf("could not retrieve markets from datanode: %w", err)
+	}
+
+	missingMarketsProposals := collectMissingMarkets(allMarkets, ProposalsForEnvironment(cfg.Name), logger)
+
+	if len(missingMarketsProposals) > 0 {
+		logger.Info("No market to propose")
+		return nil
+	}
 
 	marketsBatchProposal := governance.NewBatchProposal(
-		fmt.Sprintf("%s devopstools markets proposal", network.Network),
+		fmt.Sprintf("%q devopstools markets proposal", cfg.Name.String()),
 		"Create all markets managed by devopstools",
-		closeTime,
+		time.Now().Add(30*time.Second),
 		missingMarketsProposals,
 		nil,
 	)
 
 	if len(missingMarketsProposals) < 1 {
-		args.Logger.Info("All required markets exist")
+		logger.Info("All required markets exist")
 		return nil
 	}
 
-	return sendBatchProposal(network, marketsBatchProposal)
+	return sendBatchProposal(ctx, datanodeClient, whaleWallet, whalePublicKey, marketsBatchProposal)
 }
 
-func filterMarkets(logger *zap.Logger, allMarkets []*vegapb.Market, allNetworkProposals []*commandspb.ProposalSubmission) []*commandspb.ProposalSubmission {
+func collectMissingMarkets(allMarkets []*vegapb.Market, allNetworkProposals []*commandspb.ProposalSubmission, logger *zap.Logger) []*commandspb.ProposalSubmission {
 	var result []*commandspb.ProposalSubmission
 
 	for idx, proposal := range allNetworkProposals {
@@ -115,7 +162,6 @@ func filterMarkets(logger *zap.Logger, allMarkets []*vegapb.Market, allNetworkPr
 			continue
 		}
 
-		// TODO: check if fields are not nill
 		marketCode := newMarketProposal.NewMarket.Changes.Instrument.Code
 		found := false
 		for _, market := range allMarkets {
@@ -128,28 +174,23 @@ func filterMarkets(logger *zap.Logger, allMarkets []*vegapb.Market, allNetworkPr
 
 		if !found {
 			result = append(result, allNetworkProposals[idx])
-			logger.Sugar().Infof("Market %s will be created. Adding proposal to batch", marketCode)
+			logger.Debug("Adding proposal for market creation to batch", zap.String("market-code", marketCode))
 		} else {
-			logger.Sugar().Infof("Market %s found on the network. No need to recreate it", marketCode)
+			logger.Debug("Market already existing on the network", zap.String("market-code", marketCode))
 		}
 	}
 
 	return result
 }
 
-func sendBatchProposal(network *veganetwork.VegaNetwork, proposals *commandspb.BatchProposalSubmission) error {
-	ctx := context.Background()
-	whaleWallet := network.VegaTokenWhale
-	whalePublicKey := vega.MustFirstKey(whaleWallet)
-
-	// Prepare vegawallet Transaction Request
+func sendBatchProposal(ctx context.Context, datanodeClient *datanode.DataNode, whaleWallet wallet.Wallet, whaleKey string, proposals *commandspb.BatchProposalSubmission) error {
 	walletTxReq := walletpb.SubmitTransactionRequest{
 		Command: &walletpb.SubmitTransactionRequest_BatchProposalSubmission{
 			BatchProposalSubmission: proposals,
 		},
 	}
 
-	resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &walletTxReq, network.DataNodeClient)
+	resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whaleKey, &walletTxReq, datanodeClient)
 	if err != nil {
 		return fmt.Errorf("failed to submit batch proposal with signature: %w", err)
 	}
@@ -157,15 +198,15 @@ func sendBatchProposal(network *veganetwork.VegaNetwork, proposals *commandspb.B
 	proposalId := resp.TxHash
 
 	if err = tools.RetryRun(10, 6*time.Second, func() error {
-		return governance.VoteOnProposal(ctx, "BatchProposal vote", proposalId, whaleWallet, whalePublicKey, network.DataNodeClient)
+		return governance.VoteOnProposal(ctx, "BatchProposal vote", proposalId, whaleWallet, whaleKey, datanodeClient)
 	}); err != nil {
-		return fmt.Errorf("failed to vote on batch proposal(%s): %w", proposalId, err)
+		return fmt.Errorf("failed to vote for batch proposal %q: %w", proposalId, err)
 	}
 
 	return nil
 }
 
-func preMarketDeployProposals(environment string, currentNetworkParams *types.NetworkParams) ([]*commandspb.ProposalSubmission, error) {
+func preMarketDeployProposals(environment config.NetworkName, currentNetworkParams *types.NetworkParams) ([]*commandspb.ProposalSubmission, error) {
 	var commonProposals []*commandspb.ProposalSubmission
 
 	isTradingEnabled, ok := currentNetworkParams.Params[netparams.PerpsMarketTradingEnabled]
@@ -175,7 +216,7 @@ func preMarketDeployProposals(environment string, currentNetworkParams *types.Ne
 
 	currentL2Config, err := currentNetworkParams.GetEthereumL2Configs()
 	if err != nil {
-		return nil, fmt.Errorf("faled to get eth l2 config from network params: %w", err)
+		return nil, fmt.Errorf("could not get Ethereum L2 configuration from network paramters: %w", err)
 	}
 
 	newL2Config := networkparameters.CloneEthereumL2Config(currentL2Config)
@@ -183,14 +224,14 @@ func preMarketDeployProposals(environment string, currentNetworkParams *types.Ne
 	for _, l2Config := range l2Configs[environment] {
 		newL2Config, err = networkparameters.AppendEthereumL2Config(newL2Config, l2Config, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to append ethereum sepolia config to the l2 config: %w", err)
+			return nil, fmt.Errorf("could not add new Ethereum L2 configuration to existing ones: %w", err)
 		}
 	}
 
 	if len(l2Configs[environment]) > 0 {
 		l2ConfigJSON, err := json.Marshal(newL2Config)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert l2 config from proto to json: %w", err)
+			return nil, fmt.Errorf("could not serialize Ethereum L2 configuration to JSON: %w", err)
 		}
 		currentL2ConfigString, ok := currentNetworkParams.Params[netparams.BlockchainsEthereumL2Configs]
 		if !ok || string(l2ConfigJSON) != currentL2ConfigString {

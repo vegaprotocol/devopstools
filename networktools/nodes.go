@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/tools"
-	"github.com/vegaprotocol/devopstools/types"
 
 	"golang.org/x/exp/slices"
 )
@@ -23,7 +23,7 @@ const (
 )
 
 func (network *NetworkTools) ListNodes(kind []NodeType) []string {
-	if network.Name == types.NetworkMainnet {
+	if network.Name == config.NetworkMainnet.String() {
 		var result []string
 
 		for i := 0; i < 10; i++ {
@@ -69,7 +69,7 @@ func (network *NetworkTools) checkNodes(nodes []string, healthyOnly bool) []stri
 	for _, host := range nodes {
 		if _, err := tools.GetIP(host); err != nil {
 			// We want to check all of the servers for mainnet
-			if previousMissing && network.Name != types.NetworkMainnet {
+			if previousMissing && network.Name != config.NetworkMainnet.String() {
 				break
 			} else {
 				previousMissing = true
@@ -127,7 +127,7 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 	}
 	for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
 		if _, err := tools.GetIP(host); err != nil {
-			if previousMissing && network.Name != types.NetworkMainnet {
+			if previousMissing && network.Name != config.NetworkMainnet.String() {
 				break // There is no DNS for this and previous nodes, there is no reason to check other nodes
 			} else {
 				previousMissing = true
@@ -204,7 +204,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 	httpClient := http.Client{
 		Timeout: network.restTimeout,
 	}
-	if network.Name == types.NetworkMainnet {
+	if network.Name == string(config.NetworkMainnet) {
 		result := []string{}
 		for _, host := range network.ListNodes([]NodeType{TypeDataNode, TypeExplorer}) {
 			url := fmt.Sprintf("http://%s:26657", host)

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/programs"
-	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 
@@ -118,7 +118,7 @@ func setupNetworkParametersToSetupVolumeDiscountProgram(ctx context.Context, net
 		"volumeDiscountProgram.maxVolumeDiscountFactor":      "0.4",
 	}
 
-	if network.Network == types.NetworkDevnet1 {
+	if network.Network == config.NetworkDevnet1.String() {
 		updateParams["governance.proposal.VolumeDiscountProgram.requiredParticipation"] = "0.0001"
 	}
 
