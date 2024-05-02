@@ -11,71 +11,49 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-func (n *DataNode) ListGovernanceData(req *dataapipb.ListGovernanceDataRequest) (response *dataapipb.ListGovernanceDataResponse, err error) {
-	msg := "gRPC call failed (data-node): ListGovernanceData: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) ListGovernanceData(ctx context.Context, req *dataapipb.ListGovernanceDataRequest) (*dataapipb.ListGovernanceDataResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
-
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err = c.ListGovernanceData(ctx, req)
+	response, err := c.ListGovernanceData(reqCtx, req)
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	return
+	return response, nil
 }
 
-func (n *DataNode) ListVotes(req *dataapipb.ListVotesRequest) (response *dataapipb.ListVotesResponse, err error) {
-	msg := "gRPC call failed (data-node): ListVotes: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) ListVotes(ctx context.Context, req *dataapipb.ListVotesRequest) (*dataapipb.ListVotesResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err = c.ListVotes(ctx, req)
+	response, err := c.ListVotes(reqCtx, req)
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	return
+	return response, nil
 }
 
-func (n *DataNode) GetGovernanceData(req *dataapipb.GetGovernanceDataRequest) (response *dataapipb.GetGovernanceDataResponse, err error) {
-	msg := "gRPC call failed (data-node): GetGovernanceData: %w"
-	if n == nil {
-		err = fmt.Errorf(msg, e.ErrNil)
-		return
-	}
-
+func (n *DataNode) GetGovernanceData(ctx context.Context, req *dataapipb.GetGovernanceDataRequest) (*dataapipb.GetGovernanceDataResponse, error) {
 	if n.Conn.GetState() != connectivity.Ready {
-		err = fmt.Errorf(msg, e.ErrConnectionNotReady)
-		return
+		return nil, e.ErrConnectionNotReady
 	}
 
 	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 
-	response, err = c.GetGovernanceData(ctx, req)
+	response, err := c.GetGovernanceData(reqCtx, req)
 	if err != nil {
-		err = fmt.Errorf(msg, e.ErrorDetail(err))
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	return
+	return response, nil
 }

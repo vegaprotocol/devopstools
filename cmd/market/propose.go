@@ -1,7 +1,7 @@
 package market
 
 import (
-	context2 "context"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,12 +11,14 @@ import (
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/veganetwork"
 
 	"code.vegaprotocol.io/vega/core/netparams"
-	"code.vegaprotocol.io/vega/protos/vega"
+	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -54,7 +56,7 @@ func runPropose(args ProposeArgs) error {
 		return fmt.Errorf("failed to create vega network manager: %w", err)
 	}
 
-	allMarkets, err := network.DataNodeClient.GetAllMarkets(context2.Background())
+	allMarkets, err := network.DataNodeClient.GetAllMarkets(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to get all markets from the data-node api: %w", err)
 	}
@@ -78,7 +80,7 @@ func runPropose(args ProposeArgs) error {
 		)
 		args.Logger.Info("Updating network parameters")
 
-		if err := sendBatchProposal(args.Logger, network, networkParamsBatchProposal); err != nil {
+		if err := sendBatchProposal(network, networkParamsBatchProposal); err != nil {
 			return fmt.Errorf("failed to send batch proposal to update network parameters: %w", err)
 		}
 	} else {
@@ -101,14 +103,14 @@ func runPropose(args ProposeArgs) error {
 		return nil
 	}
 
-	return sendBatchProposal(args.Logger, network, marketsBatchProposal)
+	return sendBatchProposal(network, marketsBatchProposal)
 }
 
-func filterMarkets(logger *zap.Logger, allMarkets []*vega.Market, allNetworkProposals []*commandspb.ProposalSubmission) []*commandspb.ProposalSubmission {
+func filterMarkets(logger *zap.Logger, allMarkets []*vegapb.Market, allNetworkProposals []*commandspb.ProposalSubmission) []*commandspb.ProposalSubmission {
 	var result []*commandspb.ProposalSubmission
 
 	for idx, proposal := range allNetworkProposals {
-		newMarketProposal, ok := proposal.Terms.Change.(*vega.ProposalTerms_NewMarket)
+		newMarketProposal, ok := proposal.Terms.Change.(*vegapb.ProposalTerms_NewMarket)
 		if !ok {
 			continue
 		}
@@ -135,24 +137,27 @@ func filterMarkets(logger *zap.Logger, allMarkets []*vega.Market, allNetworkProp
 	return result
 }
 
-func sendBatchProposal(logger *zap.Logger, network *veganetwork.VegaNetwork, proposals *commandspb.BatchProposalSubmission) error {
-	proposerVegawallet := network.VegaTokenWhale
+func sendBatchProposal(network *veganetwork.VegaNetwork, proposals *commandspb.BatchProposalSubmission) error {
+	ctx := context.Background()
+	whaleWallet := network.VegaTokenWhale
+	whalePublicKey := vega.MustFirstKey(whaleWallet)
 
 	// Prepare vegawallet Transaction Request
 	walletTxReq := walletpb.SubmitTransactionRequest{
-		PubKey: proposerVegawallet.PublicKey,
 		Command: &walletpb.SubmitTransactionRequest_BatchProposalSubmission{
 			BatchProposalSubmission: proposals,
 		},
 	}
 
-	proposalId, err := governance.SubmitTxWithSignature("BatchProposal", network.DataNodeClient, proposerVegawallet, logger, &walletTxReq)
+	resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &walletTxReq, network.DataNodeClient)
 	if err != nil {
 		return fmt.Errorf("failed to submit batch proposal with signature: %w", err)
 	}
 
+	proposalId := resp.TxHash
+
 	if err = tools.RetryRun(10, 6*time.Second, func() error {
-		return governance.VoteOnProposal("BatchProposal vote", proposalId, proposerVegawallet, network.DataNodeClient, logger)
+		return governance.VoteOnProposal(ctx, "BatchProposal vote", proposalId, whaleWallet, whalePublicKey, network.DataNodeClient)
 	}); err != nil {
 		return fmt.Errorf("failed to vote on batch proposal(%s): %w", proposalId, err)
 	}

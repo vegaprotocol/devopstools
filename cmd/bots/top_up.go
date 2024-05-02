@@ -14,17 +14,17 @@ import (
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
-	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
+	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
-	"github.com/vegaprotocol/devopstools/wallet"
 
 	"code.vegaprotocol.io/vega/core/netparams"
-	"code.vegaprotocol.io/vega/protos/vega"
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	vegacmd "code.vegaprotocol.io/vega/protos/vega/commands/v1"
-	v1 "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
+	"code.vegaprotocol.io/vega/wallet/wallet"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
@@ -142,7 +142,18 @@ func TopUpBots(args TopUpArgs) error {
 		return nil
 	}
 
-	whaleClient := api.NewPartyClient(datanodeClient, cfg.Network.Wallets.VegaTokenWhale.PublicKey)
+	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
+	if err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+
+	if err := vega.GenerateKeysUpToKey(whaleWallet, cfg.Network.Wallets.VegaTokenWhale.PublicKey); err != nil {
+		return fmt.Errorf("could not initialized whale wallet: %w", err)
+	}
+
+	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
+
+	whaleClient := api.NewPartyClient(datanodeClient, whalePublicKey)
 
 	logger.Debug("Determining amounts to top up for whale...")
 	whaleTopUpsByAsset, err := determineAmountsToTopUpForWhale(ctx, whaleClient, assets, topUpsByAsset, logger)
@@ -161,25 +172,15 @@ func TopUpBots(args TopUpArgs) error {
 		logger.Debug("Whale has now enough funds to transfer to trading bots")
 	}
 
-	whaleWallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
-		Id:             cfg.Network.Wallets.VegaTokenWhale.ID,
-		PublicKey:      cfg.Network.Wallets.VegaTokenWhale.PublicKey,
-		PrivateKey:     cfg.Network.Wallets.VegaTokenWhale.PrivateKey,
-		RecoveryPhrase: cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase,
-	})
-	if err != nil {
-		return fmt.Errorf("could not initialized whale wallet: %w", err)
-	}
-
 	logger.Debug("Preparing network for transfers from whale to trading bots...")
 	numberOfTransfers := countTransfersToDo(topUpsByAsset)
-	if err := prepareNetworkForTransfers(whaleWallet, datanodeClient, numberOfTransfers, logger); err != nil {
+	if err := prepareNetworkForTransfers(ctx, whaleWallet, whalePublicKey, datanodeClient, numberOfTransfers, logger); err != nil {
 		return fmt.Errorf("failed to prepare network for transfers: %w", err)
 	}
 	logger.Debug("Network ready for transfers from whale to trading bots")
 
 	logger.Debug("Transferring assets from whale to trading bots...")
-	if err := transferAssetsFromWhaleToBots(datanodeClient, whaleWallet, topUpsByAsset, logger); err != nil {
+	if err := transferAssetsFromWhaleToBots(ctx, datanodeClient, whaleWallet, whalePublicKey, topUpsByAsset, logger); err != nil {
 		return fmt.Errorf("failed to transfer assets from whale to one or more bots: %w", err)
 	}
 	logger.Debug("Transfers done")
@@ -189,7 +190,7 @@ func TopUpBots(args TopUpArgs) error {
 	return nil
 }
 
-func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*types.Amount, assets map[string]*vega.AssetDetails, whaleClient *api.PartyClient, chainClients *ethereum.ChainsClient, logger *zap.Logger) error {
+func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*types.Amount, assets map[string]*vegapb.AssetDetails, whaleClient *api.PartyClient, chainClients *ethereum.ChainsClient, logger *zap.Logger) error {
 	for assetID, requiredAmount := range whaleTopUpsByAsset {
 		asset := assets[assetID]
 
@@ -238,7 +239,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 	return nil
 }
 
-func determineAmountsToTopUpByAsset(assets map[string]*vega.AssetDetails, botsMap map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
+func determineAmountsToTopUpByAsset(assets map[string]*vegapb.AssetDetails, botsMap map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
 	topUpRegistry := map[string]AssetToTopUp{}
 
 	wantedTokenEntries := []bots.BotTraderWantedToken{}
@@ -317,7 +318,7 @@ func computeRequiredAmount(currentBalance, wantedBalance float64) *big.Float {
 	return big.NewFloat(0)
 }
 
-func determineAmountsToTopUpForWhale(ctx context.Context, whaleClient *api.PartyClient, assets map[string]*vega.AssetDetails, topUpsByAsset map[string]AssetToTopUp, logger *zap.Logger) (map[string]*types.Amount, error) {
+func determineAmountsToTopUpForWhale(ctx context.Context, whaleClient *api.PartyClient, assets map[string]*vegapb.AssetDetails, topUpsByAsset map[string]AssetToTopUp, logger *zap.Logger) (map[string]*types.Amount, error) {
 	result := map[string]*types.Amount{}
 
 	for _, assetToTopUp := range topUpsByAsset {
@@ -367,7 +368,7 @@ func countTransfersToDo(topUpRegistry map[string]AssetToTopUp) int {
 	return transferNumbers + (10 * transferNumbers / 100)
 }
 
-func prepareNetworkForTransfers(whaleWallet *wallet.VegaWallet, datanodeClient *datanode.DataNode, numberOfTransferToBeDone int, logger *zap.Logger) error {
+func prepareNetworkForTransfers(ctx context.Context, whaleWallet wallet.Wallet, whalePublicKey string, datanodeClient *datanode.DataNode, numberOfTransferToBeDone int, logger *zap.Logger) error {
 	networkParameters, err := datanodeClient.GetAllNetworkParameters()
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
@@ -377,7 +378,7 @@ func prepareNetworkForTransfers(whaleWallet *wallet.VegaWallet, datanodeClient *
 		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", numberOfTransferToBeDone*6),
 	}
 
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(updateParams, whaleWallet, networkParameters, datanodeClient, logger)
+	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, whalePublicKey, networkParameters, datanodeClient, logger)
 	if err != nil {
 		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
 	}
@@ -425,29 +426,21 @@ func ensureWhaleReceivedFunds(ctx context.Context, whaleClient *api.PartyClient,
 	return nil
 }
 
-func transferAssetsFromWhaleToBots(datanodeClient *datanode.DataNode, whaleWallet *wallet.VegaWallet, registry map[string]AssetToTopUp, logger *zap.Logger) error {
+func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode.DataNode, whaleWallet wallet.Wallet, whalePublicKey string, registry map[string]AssetToTopUp, logger *zap.Logger) error {
 	result := &multierror.Error{}
 
 	for assetID, entry := range registry {
 		for botPartyId, amount := range entry.AmountsByParty {
 			err := tools.RetryRun(15, 6*time.Second, func() error {
-				lastBlockData, err := datanodeClient.LastBlockData()
-				if err != nil {
-					return fmt.Errorf("failed to retrieve last block data: %w", err)
-				}
-
-				amountString := amount.StringWithDecimals()
-
-				signedTransaction, err := whaleWallet.SignTxWithPoW(&v1.SubmitTransactionRequest{
-					PubKey: whaleWallet.PublicKey,
-					Command: &v1.SubmitTransactionRequest_Transfer{
+				request := walletpb.SubmitTransactionRequest{
+					Command: &walletpb.SubmitTransactionRequest_Transfer{
 						Transfer: &vegacmd.Transfer{
 							Reference:       fmt.Sprintf("Transfer from whale to %s", botPartyId),
-							FromAccountType: vega.AccountType_ACCOUNT_TYPE_GENERAL,
-							ToAccountType:   vega.AccountType_ACCOUNT_TYPE_GENERAL,
+							FromAccountType: vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
+							ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
 							To:              botPartyId,
 							Asset:           assetID,
-							Amount:          amountString,
+							Amount:          amount.StringWithDecimals(),
 							Kind: &vegacmd.Transfer_OneOff{
 								OneOff: &vegacmd.OneOffTransfer{
 									DeliverOn: 0,
@@ -455,15 +448,9 @@ func transferAssetsFromWhaleToBots(datanodeClient *datanode.DataNode, whaleWalle
 							},
 						},
 					},
-				}, lastBlockData)
-				if err != nil {
-					return fmt.Errorf("failed to sign the transfer transaction for bot %q: %w", botPartyId, err)
 				}
 
-				resp, err := datanodeClient.SubmitTransaction(&vegaapipb.SubmitTransactionRequest{
-					Tx:   signedTransaction,
-					Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
-				})
+				resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whalePublicKey, &request, datanodeClient)
 				if err != nil {
 					return fmt.Errorf("failed to send the submit transfer transaction for bot %q: %w", botPartyId, err)
 				}

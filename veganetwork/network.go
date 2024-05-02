@@ -9,9 +9,10 @@ import (
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vegaapi"
 	"github.com/vegaprotocol/devopstools/veganetworksmartcontracts"
-	"github.com/vegaprotocol/devopstools/wallet"
+	wwallet "github.com/vegaprotocol/devopstools/wallet"
 
 	"code.vegaprotocol.io/vega/protos/vega"
+	"code.vegaprotocol.io/vega/wallet/wallet"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
@@ -26,7 +27,7 @@ type VegaNetwork struct {
 	NodeSecrets       map[string]*secrets.VegaNodePrivate
 	NetworkMainWallet *ethereum.Wallet
 
-	VegaTokenWhale *wallet.VegaWallet
+	VegaTokenWhale wallet.Wallet
 
 	// network params/config
 	NetworkParams *types.NetworkParams
@@ -40,12 +41,12 @@ type VegaNetwork struct {
 	PrimaryEthClient        *ethclient.Client
 	PrimarySmartContracts   *veganetworksmartcontracts.VegaNetworkSmartContracts
 
-	WalletManager *wallet.Manager
+	WalletManager *wwallet.Manager
 
 	logger *zap.Logger
 }
 
-func NewVegaNetwork(network string, dataNodeClient vegaapi.DataNodeClient, nodeSecretStore secrets.NodeSecretStore, primaryEthClientManager *ethutils.EthereumClientManager, walletManager *wallet.Manager, logger *zap.Logger) (*VegaNetwork, error) {
+func NewVegaNetwork(network string, dataNodeClient vegaapi.DataNodeClient, nodeSecretStore secrets.NodeSecretStore, primaryEthClientManager *ethutils.EthereumClientManager, walletManager *wwallet.Manager, logger *zap.Logger) (*VegaNetwork, error) {
 	var (
 		n = &VegaNetwork{
 			Network:                 network,

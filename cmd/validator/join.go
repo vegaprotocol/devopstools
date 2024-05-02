@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,12 +11,12 @@ import (
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/secrets"
 	"github.com/vegaprotocol/devopstools/types"
-	"github.com/vegaprotocol/devopstools/wallet"
+	"github.com/vegaprotocol/devopstools/vega"
 
-	"code.vegaprotocol.io/vega/protos/vega"
-	vegaapipb "code.vegaprotocol.io/vega/protos/vega/api/v1"
+	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -79,6 +80,8 @@ func RunJoin(args JoinArgs) error {
 		secretStore   secrets.NodeSecretStore
 		err           error
 	)
+
+	ctx := context.Background()
 
 	if args.GetEthAddressToSubmitBundle {
 		return printEthAddressToSubmitBundle(args)
@@ -185,7 +188,7 @@ func RunJoin(args JoinArgs) error {
 
 	if args.SelfDelegate {
 		var (
-			epochValidator   *vega.Node
+			epochValidator   *vegapb.Node
 			stakedByOperator = big.NewInt(0)
 			pendingStake     = big.NewInt(0)
 			ok               bool
@@ -241,42 +244,31 @@ func RunJoin(args JoinArgs) error {
 			// Submit Delegate Transaction
 			//
 			args.Logger.Info("data", zap.String("VegaId", currentNodeSecrets.VegaId), zap.String("VegaPubKey", currentNodeSecrets.VegaPubKey))
-			vegawallet, err := wallet.NewVegaWallet(&secrets.VegaWalletPrivate{
-				Id:             currentNodeSecrets.VegaId,
-				PublicKey:      currentNodeSecrets.VegaPubKey,
-				PrivateKey:     currentNodeSecrets.VegaPrivateKey,
-				RecoveryPhrase: currentNodeSecrets.VegaRecoveryPhrase,
-			})
+			vegawallet, err := vega.LoadWallet(currentNodeSecrets.VegaId, currentNodeSecrets.VegaRecoveryPhrase)
 			if err != nil {
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
-			lastBlockData, err := dataNodeClient.LastBlockData()
-			if err != nil {
-				return fmt.Errorf("failed to self-delegate, %w", err)
+
+			if err := vega.GenerateKeysUpToKey(vegawallet, currentNodeSecrets.VegaPubKey); err != nil {
+				return fmt.Errorf("could not generate keys: %w", err)
 			}
-			signedTx, err := vegawallet.SignTxWithPoW(&walletpb.SubmitTransactionRequest{
-				PubKey: currentNodeSecrets.VegaPubKey,
+
+			request := walletpb.SubmitTransactionRequest{
 				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
 					DelegateSubmission: &commandspb.DelegateSubmission{
 						NodeId: currentNodeSecrets.VegaId,
 						Amount: minValidatorStake.String(),
 					},
 				},
-			}, lastBlockData)
-			if err != nil {
-				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
 
-			submitResponse, err := dataNodeClient.SubmitTransaction(&vegaapipb.SubmitTransactionRequest{
-				Tx:   signedTx,
-				Type: vegaapipb.SubmitTransactionRequest_TYPE_SYNC,
-			})
+			response, err := walletpkg.SendTransaction(ctx, vegawallet, currentNodeSecrets.VegaPubKey, &request, dataNodeClient)
 			if err != nil {
-				args.Logger.Error("failed to submit a trasnaction", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
-				return fmt.Errorf("failed to self-delegate, %w", err)
+				return err
 			}
-			args.Logger.Info("tx", zap.Any("submitResponse", submitResponse))
-			if !submitResponse.Success {
+
+			args.Logger.Info("tx", zap.Any("submitResponse", response))
+			if !response.Success {
 				args.Logger.Error("transaction submission failure", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
@@ -301,22 +293,25 @@ func RunJoin(args JoinArgs) error {
 		if err != nil {
 			return err
 		}
-		faucetVegaWallet, err := wallet.NewVegaWallet(faucetSecrets)
+		faucetVegaWallet, err := vega.LoadWallet(faucetSecrets.Id, faucetSecrets.RecoveryPhrase)
 		if err != nil {
 			return err
 		}
+
+		if err := vega.GenerateKeysUpToKey(faucetVegaWallet, faucetSecrets.PublicKey); err != nil {
+			return err
+		}
+
 		var (
 			vegaAssetId = "XYZepsilon"
 			partyId     = currentNodeSecrets.VegaPubKey
 			amount      = "3"
 		)
 		for i := 0; i < eventNum+10; i += 1 {
-			result, err := coreClient.DepositBuiltinAsset(
-				vegaAssetId,
-				partyId,
-				amount,
-				faucetVegaWallet.SignAny,
-			)
+			result, err := coreClient.DepositBuiltinAsset(vegaAssetId, partyId, amount, func(data []byte) ([]byte, string, error) {
+				sig, err := faucetVegaWallet.SignAny(faucetSecrets.PublicKey, data)
+				return sig, faucetSecrets.PublicKey, err
+			})
 			if err != nil {
 				return err
 			}
