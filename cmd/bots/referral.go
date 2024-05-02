@@ -439,10 +439,10 @@ func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, 
 
 		trader := filteredTraders[candidateId]
 		w, err := trader.GetWallet()
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to get wallet for %s trader when assigning members to the referral sets: %w", trader.PubKey, err)
 		}
+
 		referralSets[referralSetIndex].Referees = append(referralSets[referralSetIndex].Referees, Party{
 			Name:      trader.Name,
 			Wallet:    w,

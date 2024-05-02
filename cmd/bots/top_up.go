@@ -432,7 +432,6 @@ func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode
 	for assetID, entry := range registry {
 		for botPartyId, amount := range entry.AmountsByParty {
 			err := tools.RetryRun(15, 6*time.Second, func() error {
-
 				request := walletpb.SubmitTransactionRequest{
 					Command: &walletpb.SubmitTransactionRequest_Transfer{
 						Transfer: &vegacmd.Transfer{
