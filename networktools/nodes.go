@@ -204,7 +204,7 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 	httpClient := http.Client{
 		Timeout: network.restTimeout,
 	}
-	if network.Name == types.NetworkMainnet {
+	if network.Name == string(config.NetworkMainnet) {
 		result := []string{}
 		for _, host := range network.ListNodes([]NodeType{TypeDataNode, TypeExplorer}) {
 			url := fmt.Sprintf("http://%s:26657", host)

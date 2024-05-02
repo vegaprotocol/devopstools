@@ -5,7 +5,6 @@ go 1.21
 toolchain go1.21.5
 
 require (
-	code.vegaprotocol.io/protos v0.53.0
 	code.vegaprotocol.io/vega v0.76.0-preview.7
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d
 	github.com/ethereum/go-ethereum v1.11.6
@@ -198,5 +197,4 @@ replace (
 	github.com/shopspring/decimal => github.com/vegaprotocol/decimal v1.3.1-uint256
 	github.com/tendermint/tendermint => github.com/vegaprotocol/cometbft v0.34.29-patch.1
 	github.com/tendermint/tm-db => github.com/cometbft/cometbft-db v0.6.7
-	code.vegaprotocol.io/vega => /Users/valentin/Developer/vega/vega
 )
