@@ -60,6 +60,15 @@ type Bots struct {
 	Research BotsAPI `toml:"research"`
 }
 
+// Etherscan describes the Etherscan block explorer API connection.
+type Etherscan struct {
+	// RESTURL defines the REST endpoint used to query the block explorer API.
+	RESTURL string `toml:"rest_url"`
+
+	// APIKey defines the authentication key used to query the block explorer API.
+	APIKey string `toml:"api_key"`
+}
+
 type BotsAPI struct {
 	// RESTURL defines the REST endpoint used to query the bots API.
 	RESTURL string `toml:"rest_url"`
