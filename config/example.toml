@@ -5,6 +5,10 @@ recovery_phrase = "xxx"
 [bridges.primary]
 client_url = "https://mainnet.infura.io/v3/xxx"
 
+[bridges.primary.etherscan]
+rest_url = "be.testnet.vega.rocks"
+api_key = "xxx"
+
 [bridges.primary.wallets.minter]
 address = "xxx"
 mnemonic = "xxx xxx xxx"
@@ -23,9 +27,10 @@ rest_url = "be.testnet.vega.rocks"
 
 [[nodes]]
 [nodes.api]
-blockchain_rest_url = "api.n00.testnet.vega.rocks:26657"
-vega_grpc_url = "n00.testnet.vega.rocks:3002"
-datanode_rest_url = "api.n00.testnet.vega.rocks"
+blockchain_rest_url = "https://tm.n00.testnet.vega.rocks:26657"
+vega_rest_url = "https://n00.testnet.vega.rocks"
+vega_grpc_url = "n00.testnet.vega.rocks"
+datanode_rest_url = "https://api.n00.testnet.vega.rocks"
 datanode_grpc_url = "api.n00.testnet.vega.rocks:3007"
 
 [bots]
