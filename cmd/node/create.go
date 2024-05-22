@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/generation"
 
 	"github.com/spf13/cobra"
@@ -13,10 +14,9 @@ import (
 
 type CreateArgs struct {
 	*Args
-	VegaNetworkName string
-	NodeId          string
-	Force           bool
-	Stake           bool
+	NodeID string
+	Force  bool
+	Stake  bool
 }
 
 var createArgs CreateArgs
@@ -37,11 +37,8 @@ func init() {
 	createArgs.Args = &args
 
 	Cmd.AddCommand(createCmd)
-	createCmd.PersistentFlags().StringVar(&createArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := createCmd.MarkPersistentFlagRequired("network"); err != nil {
-		log.Fatalf("%v\n", err)
-	}
-	createCmd.PersistentFlags().StringVar(&createArgs.NodeId, "node", "", "Node for which create secrets, e.g. n01")
+
+	createCmd.PersistentFlags().StringVar(&createArgs.NodeID, "node", "", "Node ID for which create secrets, e.g. n01")
 	if err := createCmd.MarkPersistentFlagRequired("node"); err != nil {
 		log.Fatalf("%v\n", err)
 	}
@@ -49,37 +46,56 @@ func init() {
 }
 
 func RunCreateNode(args CreateArgs) error {
-	secretStore, err := args.GetNodeSecretStore()
+	logger := args.Logger.Named("command")
+
+	cfg, err := config.Load(args.NetworkFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	oldNodeData, err := secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
-	if err == nil && oldNodeData != nil && !args.Force {
-		return fmt.Errorf("secrets for node %s already exists, use --force to override and put new secrets for it", args.NodeId)
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+
+	for _, node := range cfg.Nodes {
+		if node.ID == args.NodeID && !args.Force {
+			return fmt.Errorf("node %s already exists, use --force to override and put new secrets for it", args.NodeID)
+		}
 	}
 
-	newSecrets, err := generation.GenerateVegaNodeSecrets()
+	newNode, err := generation.GenerateVegaNodeSecrets2()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate vega node: %w", err)
 	}
 
-	if err = secretStore.StoreVegaNode(args.VegaNetworkName, args.NodeId, newSecrets); err != nil {
-		return err
+	newNode.ID = args.NodeID
+
+	replaced := false
+	for i, node := range cfg.Nodes {
+		if node.ID == newNode.ID {
+			cfg.Nodes[i] = newNode
+			replaced = true
+		}
 	}
 
-	args.Logger.Info("Generated new secrets for node", zap.String("network", args.VegaNetworkName), zap.String("nodeId", args.NodeId),
-		zap.String("Name", newSecrets.Name),
-		zap.String("Country", newSecrets.Country),
-		zap.String("InfoURL", newSecrets.InfoURL),
-		zap.String("AvatarURL", newSecrets.AvatarURL),
-		zap.String("VegaPubKey", newSecrets.VegaPubKey),
-		zap.String("VegaId", newSecrets.VegaId),
-		zap.Uint64("VegaPubKeyIndex", *newSecrets.VegaPubKeyIndex),
-		zap.String("EthereumAddress", newSecrets.EthereumAddress),
-		zap.String("TendermintNodeId", newSecrets.TendermintNodeId),
-		zap.String("TendermintNodePubKey", newSecrets.TendermintNodePubKey),
-		zap.String("TendermintValidatorAddress", newSecrets.TendermintValidatorAddress),
-		zap.String("TendermintValidatorPubKey", newSecrets.TendermintValidatorPubKey),
+	if !replaced {
+		cfg.Nodes = append(cfg.Nodes, newNode)
+	}
+
+	if err := config.SaveConfig(args.NetworkFile, cfg); err != nil {
+		return fmt.Errorf("could not save network file at %q: %w", args.NetworkFile, err)
+	}
+
+	args.Logger.Info("Generated new secrets for node", zap.String("network", cfg.Name.String()), zap.String("nodeId", args.NodeID),
+		zap.String("Name", newNode.Metadata.Name),
+		zap.String("Country", newNode.Metadata.Country),
+		zap.String("InfoURL", newNode.Metadata.InfoURL),
+		zap.String("AvatarURL", newNode.Metadata.AvatarURL),
+		zap.String("VegaPubKey", newNode.Secrets.VegaPubKey),
+		zap.String("VegaId", newNode.Secrets.VegaId),
+		zap.Uint64("VegaPubKeyIndex", *newNode.Secrets.VegaPubKeyIndex),
+		zap.String("EthereumAddress", newNode.Secrets.EthereumAddress),
+		zap.String("TendermintNodeId", newNode.Secrets.TendermintNodeId),
+		zap.String("TendermintNodePubKey", newNode.Secrets.TendermintNodePubKey),
+		zap.String("TendermintValidatorAddress", newNode.Secrets.TendermintValidatorAddress),
+		zap.String("TendermintValidatorPubKey", newNode.Secrets.TendermintValidatorPubKey),
 	)
 
 	return nil

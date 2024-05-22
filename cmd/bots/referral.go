@@ -129,13 +129,16 @@ func runReferral(args ReferralArgs) error {
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
+
 	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Info("Looking for healthy gRPC endpoints...")
+
 	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
+
 	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
@@ -151,6 +154,7 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve research bots: %w", err)
 	}
+
 	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
 	if err := prepareNetworkParameters(ctx, whaleWallet, datanodeClient, !args.Setup, logger.Named("pepare network parameters")); err != nil {
@@ -158,10 +162,12 @@ func runReferral(args ReferralArgs) error {
 	}
 
 	logger.Info("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
+
 	wantedMarketsIds, err := findMarketsForAssets(ctx, datanodeClient, args.Assets)
 	if err != nil {
 		return fmt.Errorf("failed to find markets for wanted assets")
 	}
+
 	logger.Info("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
 
 	logger.Info("Getting referral sets")
@@ -467,6 +473,7 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 	var result []string
 	for _, market := range allMarkets {
 		settlementAsset := ""
+
 		quoteAsset := ""
 
 		if market.GetTradableInstrument() != nil && market.GetTradableInstrument().GetInstrument() != nil {
