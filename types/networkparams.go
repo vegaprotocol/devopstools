@@ -51,13 +51,13 @@ func (p *NetworkParams) PrimaryEthereumConfig() (*vega.EthereumConfig, error) {
 	return result, nil
 }
 
-func (p *NetworkParams) EVMChainConfig() (*vega.EVMChainConfig, error) {
-	param := netparams.BlockchainsEVMChainConfig
+func (p *NetworkParams) EVMChainConfig() (*vega.EVMBridgeConfigs, error) {
+	param := netparams.BlockchainsEVMBridgeConfigs
 	val, ok := p.Params[param]
 	if !ok {
 		return nil, fmt.Errorf("missing network parameter %q", param)
 	}
-	result := &vega.EVMChainConfig{}
+	result := &vega.EVMBridgeConfigs{}
 	if err := json.Unmarshal([]byte(val), result); err != nil {
 		return nil, fmt.Errorf("could not deserialize network parameter %q: %w", param, err)
 	}
@@ -90,4 +90,18 @@ func (p *NetworkParams) GetMinimumEthereumEventsForNewValidator() (int, error) {
 		return -1, fmt.Errorf("failed to get MinimumEthereumEventsForNewValidator, value '%s' is not an integer", val)
 	}
 	return intVal, nil
+}
+
+func (p *NetworkParams) GetMinFundsForApplyReferral() int64 {
+	val, found := p.Params[netparams.SpamProtectionApplyReferralMinFunds]
+	if !found {
+		return 0
+	}
+
+	intVal, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return intVal
 }

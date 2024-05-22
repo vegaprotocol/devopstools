@@ -124,7 +124,7 @@ func TopUpBots(args TopUpArgs) error {
 	}
 	logger.Debug("Assets found", zap.Strings("assets", maps.Keys(assets)))
 
-	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Trading.RESTURL, cfg.Bots.Trading.APIKey, logger.Named("trading-bots"))
+	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Research.RESTURL, cfg.Bots.Research.APIKey, logger.Named("trading-bots"))
 	if err != nil {
 		return fmt.Errorf("failed to retrieve trading bots: %w", err)
 	}
@@ -239,57 +239,70 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 	return nil
 }
 
-func determineAmountsToTopUpByAsset(assets map[string]*vegapb.AssetDetails, bots map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
+func determineAmountsToTopUpByAsset(assets map[string]*vegapb.AssetDetails, botsMap map[string]bots.TradingBot, logger *zap.Logger) (map[string]AssetToTopUp, error) {
 	topUpRegistry := map[string]AssetToTopUp{}
 
-	for _, bot := range bots {
-		assetDetails, assetExists := assets[bot.Parameters.SettlementVegaAssetID]
+	wantedTokenEntries := []bots.BotTraderWantedToken{}
+
+	for _, bot := range botsMap {
+		wantedTokenEntries = append(wantedTokenEntries, bot.Parameters.WantedTokens...)
+	}
+
+	for _, wantedToken := range wantedTokenEntries {
+		assetDetails, assetExists := assets[wantedToken.VegaAssetId]
 		if !assetExists {
 			return nil, fmt.Errorf(
 				"trading bot is using the asset %q but it does not exist on the network",
-				bot.Parameters.SettlementVegaAssetID,
+				wantedToken.VegaAssetId,
 			)
 		}
 
-		if _, registryExists := topUpRegistry[bot.Parameters.SettlementVegaAssetID]; !registryExists {
-			topUpRegistry[bot.Parameters.SettlementVegaAssetID] = AssetToTopUp{
+		if _, assetRegistryExists := topUpRegistry[wantedToken.VegaAssetId]; !assetRegistryExists {
+			topUpRegistry[wantedToken.VegaAssetId] = AssetToTopUp{
 				Symbol:          assetDetails.Symbol,
-				ContractAddress: bot.Parameters.SettlementEthereumContractAddress,
-				VegaAssetId:     bot.Parameters.SettlementVegaAssetID,
+				ContractAddress: wantedToken.AssetERC20Asset,
+				VegaAssetId:     wantedToken.VegaAssetId,
 				TotalAmount:     types.NewAmount(assetDetails.Decimals),
 				AmountsByParty:  map[string]*types.Amount{},
 			}
 		}
 
-		currentEntry := topUpRegistry[bot.Parameters.SettlementVegaAssetID]
-
-		requiredTopUp := computeRequiredAmount(bot.Parameters.CurrentBalance, bot.Parameters.WantedTokens)
+		requiredTopUp := computeRequiredAmount(
+			wantedToken.Balance,
+			wantedToken.WantedTokens,
+		)
 
 		if requiredTopUp.Cmp(big.NewFloat(0)) == 0 {
 			logger.Debug(
 				"Party does not need a top up for the asset",
-				zap.String("party-id", bot.PubKey),
-				zap.Float64("current-funds", bot.Parameters.CurrentBalance),
-				zap.Float64("required-funds", bot.Parameters.WantedTokens),
+				zap.String("party-id", wantedToken.PartyId),
+				zap.Float64("current-funds", wantedToken.Balance),
+				zap.Float64("required-funds", wantedToken.WantedTokens),
 				zap.String("asset", assetDetails.Name),
 			)
 
 			continue
 		}
 
-		currentEntry.AmountsByParty[bot.PubKey] = types.NewAmountFromMainUnit(requiredTopUp, assetDetails.Decimals)
+		currentEntry := topUpRegistry[wantedToken.VegaAssetId]
+
+		if _, partyForAssetExist := topUpRegistry[wantedToken.VegaAssetId].AmountsByParty[wantedToken.PartyId]; !partyForAssetExist {
+			currentEntry.AmountsByParty[wantedToken.PartyId] = types.NewAmountFromMainUnit(big.NewFloat(0), assetDetails.Decimals)
+		}
+
+		currentEntry.AmountsByParty[wantedToken.PartyId].Add(requiredTopUp)
 		currentEntry.TotalAmount.Add(requiredTopUp)
 
 		logger.Info(
 			"Party requires a top up for the asset",
-			zap.String("party-id", bot.PubKey),
-			zap.Float64("current-funds", bot.Parameters.CurrentBalance),
-			zap.Float64("required-funds", bot.Parameters.WantedTokens),
+			zap.String("party-id", wantedToken.PartyId),
+			zap.Float64("current-funds", wantedToken.Balance),
+			zap.Float64("required-funds", wantedToken.WantedTokens),
 			zap.String("asset", assetDetails.Name),
 			zap.String("top-up", requiredTopUp.String()),
 		)
 
-		topUpRegistry[bot.Parameters.SettlementVegaAssetID] = currentEntry
+		topUpRegistry[wantedToken.VegaAssetId] = currentEntry
 	}
 
 	return topUpRegistry, nil
@@ -362,7 +375,7 @@ func prepareNetworkForTransfers(ctx context.Context, whaleWallet wallet.Wallet, 
 	}
 
 	updateParams := map[string]string{
-		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", numberOfTransferToBeDone),
+		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", numberOfTransferToBeDone*6),
 	}
 
 	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, whalePublicKey, networkParameters, datanodeClient, logger)
@@ -427,7 +440,7 @@ func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode
 							ToAccountType:   vegapb.AccountType_ACCOUNT_TYPE_GENERAL,
 							To:              botPartyId,
 							Asset:           assetID,
-							Amount:          amount.String(),
+							Amount:          amount.StringWithDecimals(),
 							Kind: &vegacmd.Transfer_OneOff{
 								OneOff: &vegacmd.OneOffTransfer{
 									DeliverOn: 0,
@@ -443,7 +456,7 @@ func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode
 				}
 
 				if !resp.Success {
-					return fmt.Errorf("the transfer transaction failed for bot %q: %w", botPartyId, err)
+					return fmt.Errorf("the transfer transaction(%s) failed for bot %q with reason %s: %w", resp.TxHash, botPartyId, resp.Data, err)
 				}
 
 				logger.Info("Assets have been sent from whale to the trading bot",

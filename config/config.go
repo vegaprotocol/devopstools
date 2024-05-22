@@ -35,13 +35,17 @@ type Bridges struct {
 }
 
 type PrimaryBridge struct {
-	ClientURL string        `toml:"client_url"`
-	Wallets   BridgeWallets `toml:"wallets"`
+	ClientURL     string        `toml:"client_url"`
+	BlockExplorer Etherscan     `toml:"block_explorer"`
+	Wallets       BridgeWallets `toml:"wallets"`
+	Signers       []string      `toml:"signers"`
 }
 
 type EVMBridge struct {
-	ClientURL string        `toml:"client_url"`
-	Wallets   BridgeWallets `toml:"wallets"`
+	ClientURL     string        `toml:"client_url"`
+	BlockExplorer Etherscan     `toml:"block_explorer"`
+	Wallets       BridgeWallets `toml:"wallets"`
+	Signers       []string      `toml:"signers"`
 }
 
 // Node describes a node on the network.
@@ -53,8 +57,17 @@ type Node struct {
 }
 
 type Bots struct {
-	Trading  BotsAPI
-	Research BotsAPI
+	Trading  BotsAPI `toml:"trading"`
+	Research BotsAPI `toml:"research"`
+}
+
+// Etherscan describes the Etherscan block explorer API connection.
+type Etherscan struct {
+	// RESTURL defines the REST endpoint used to query the block explorer API.
+	RESTURL string `toml:"rest_url"`
+
+	// APIKey defines the authentication key used to query the block explorer API.
+	APIKey string `toml:"api_key"`
 }
 
 type BotsAPI struct {

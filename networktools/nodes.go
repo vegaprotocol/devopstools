@@ -142,10 +142,23 @@ func (network *NetworkTools) GetNetworkDataNodes(healthyOnly bool) []string {
 			return err
 		}); err != nil {
 			network.logger.Sugar().Debugf("Node %s missing", host)
+
+			if healthyOnly {
+				continue
+			}
 		}
 
-		if !healthyOnly {
-			continue
+		// Check if data-node really has statistics available for given DNS.
+		if err := tools.RetryRun(3, 500*time.Millisecond, func() error {
+			_, err := httpClient.Get(fmt.Sprintf("https://%s/api/v2/info", host))
+
+			return err
+		}); err != nil {
+			network.logger.Sugar().Debugf("Node %s missing", host)
+
+			if healthyOnly {
+				continue
+			}
 		}
 
 		hosts = append(hosts, host)
@@ -191,9 +204,10 @@ func (network *NetworkTools) GetNetworkTendermintRESTEndpoints(healthyOnly bool)
 	httpClient := http.Client{
 		Timeout: network.restTimeout,
 	}
-	if network.Name == config.NetworkMainnet.String() {
-		var result []string
-		for _, host := range network.ListNodes([]NodeType{TypeDataNode}) {
+
+	if network.Name == string(config.NetworkMainnet) {
+		result := []string{}
+		for _, host := range network.ListNodes([]NodeType{TypeDataNode, TypeExplorer}) {
 			url := fmt.Sprintf("http://%s:26657", host)
 
 			if _, err := httpClient.Get(fmt.Sprintf("%s/abci_info", url)); err != nil {
