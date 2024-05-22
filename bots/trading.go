@@ -18,7 +18,6 @@ type TradingBot struct {
 	Name       string `json:"name"`
 	PubKey     string `json:"pubKey"`
 	Parameters struct {
-
 		Base         string                 `json:"marketBase"`
 		Quote        string                 `json:"marketQuote"`
 		WantedTokens []BotTraderWantedToken `json:"wantedTokens"`

@@ -138,7 +138,7 @@ func runReferral(args ReferralArgs) error {
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
-  
+
 	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
@@ -154,7 +154,7 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve research bots: %w", err)
 	}
-  
+
 	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
 	if err := prepareNetworkParameters(ctx, whaleWallet, datanodeClient, !args.Setup, logger.Named("pepare network parameters")); err != nil {
@@ -162,12 +162,12 @@ func runReferral(args ReferralArgs) error {
 	}
 
 	logger.Info("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
-  
+
 	wantedMarketsIds, err := findMarketsForAssets(ctx, datanodeClient, args.Assets)
 	if err != nil {
 		return fmt.Errorf("failed to find markets for wanted assets")
 	}
-  
+
 	logger.Info("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
 
 	logger.Info("Getting referral sets")
@@ -363,7 +363,7 @@ func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, 
 			}
 		}
 	}
-  
+
 	// TODO: Fetch teams which were already created earlier.
 	// teamOwners := []string{}
 	// for _, referralSet := range existingReferralSets {

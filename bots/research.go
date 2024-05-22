@@ -39,7 +39,7 @@ func (b *ResearchBot) GetWallet() (wallet.Wallet, error) {
 		if err := vega.GenerateKeysUpToIndex(w, uint32(b.WalletData.Index)+1); err != nil {
 			return nil, fmt.Errorf("could not generate keys: %w", err)
 		}
-    
+
 		b.wallet = w
 	}
 	return b.wallet, nil
