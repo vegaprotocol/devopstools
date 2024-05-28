@@ -32,6 +32,7 @@ type DataNodeClient interface {
 	GetCurrentEpoch() (*vega.Epoch, error)
 	ListAssets(ctx context.Context) (map[string]*vega.AssetDetails, error)
 	GetAllMarkets(ctx context.Context) ([]*vega.Market, error)
+	GetAllMarketsWithState(ctx context.Context, states []vega.Market_State) ([]*vega.Market, error)
 	GetMarketById(marketId string) (*vega.Market, error)
 	GetPartyTotalStake(partyId string) (*big.Int, error)
 	ListAccounts(ctx context.Context, partyID string, accountType vega.AccountType, assetId *string) ([]datanode.AccountFunds, error)

@@ -26,7 +26,7 @@ type ResearchBot struct {
 }
 
 func (b *ResearchBot) IsMarketMaker() bool {
-	return b.WalletData.Index != marketMakerWalletIndex
+	return b.WalletData.Index == marketMakerWalletIndex
 }
 
 func (b *ResearchBot) GetWallet() (wallet.Wallet, error) {
@@ -36,11 +36,15 @@ func (b *ResearchBot) GetWallet() (wallet.Wallet, error) {
 			return nil, fmt.Errorf("could not retrieve singleton wallet: %w", err)
 		}
 
-		if err := vega.GenerateKeysUpToIndex(w, uint32(b.WalletData.Index)); err != nil {
+		if err := vega.GenerateKeysUpToIndex(w, uint32(b.WalletData.Index)+1); err != nil {
 			return nil, fmt.Errorf("could not generate keys: %w", err)
 		}
 
 		b.wallet = w
 	}
 	return b.wallet, nil
+}
+
+func (b *ResearchBot) GetPublicKey() string {
+	return b.WalletData.PublicKey
 }

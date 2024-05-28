@@ -3,6 +3,7 @@ package datanode
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	e "github.com/vegaprotocol/devopstools/errors"
 
@@ -11,6 +12,11 @@ import (
 
 	"google.golang.org/grpc/connectivity"
 )
+
+var ActiveMarkets = []vega.Market_State{
+	vega.Market_STATE_ACTIVE,
+	vega.Market_STATE_SUSPENDED,
+}
 
 func (n *DataNode) GetAllMarkets(ctx context.Context) ([]*vega.Market, error) {
 	res, err := n.ListMarkets(ctx, &dataapipb.ListMarketsRequest{})
@@ -45,6 +51,26 @@ func (n *DataNode) GetMarket(req *dataapipb.GetMarketRequest) (response *dataapi
 		err = fmt.Errorf(msg, e.ErrorDetail(err))
 	}
 	return
+}
+
+func (n *DataNode) GetAllMarketsWithState(ctx context.Context, states []vega.Market_State) ([]*vega.Market, error) {
+	res, err := n.ListMarkets(ctx, &dataapipb.ListMarketsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all markets, %w", err)
+	}
+	result := []*vega.Market{}
+
+	for _, edge := range res.Markets.Edges {
+		if edge.Node == nil {
+			continue
+		}
+		if !slices.Contains(states, edge.Node.State) {
+			continue
+		}
+
+		result = append(result, edge.Node)
+	}
+	return result, nil
 }
 
 func (n *DataNode) GetMarketById(marketId string) (*vega.Market, error) {
