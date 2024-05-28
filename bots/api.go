@@ -57,12 +57,12 @@ func RetrieveTradingBots(ctx context.Context, apiURL, apiKey string, logger *zap
 
 func retrieveBots(ctx context.Context, apiURL string, apiKey string, payload any) error {
 	httpClient := &http.Client{
-		Timeout: time.Second * 30,
+		Timeout: time.Second * 60,
 		Transport: &http.Transport{
 			IdleConnTimeout:       15 * time.Second,
 			DisableCompression:    true,
 			TLSHandshakeTimeout:   15 * time.Second,
-			ResponseHeaderTimeout: 15 * time.Second,
+			ResponseHeaderTimeout: 35 * time.Second,
 		},
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)

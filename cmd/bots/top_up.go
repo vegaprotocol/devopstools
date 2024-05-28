@@ -76,42 +76,42 @@ func TopUpBots(args TopUpArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+	logger.Info("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Debug("Looking for healthy gRPC endpoints...")
 	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
 
-	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	logger.Info("Connecting to a datanode's gRPC endpoint...")
 	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelDialing()
 	datanodeClient.MustDialConnection(dialCtx) // blocking
-	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+	logger.Info("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
 	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
-	logger.Debug("Network parameters retrieved")
+	logger.Info("Network parameters retrieved")
 
 	chainClients, err := ethereum.NewChainClients(ctx, cfg, networkParams, logger)
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("Listing assets from datanode...")
+	logger.Info("Listing assets from datanode...")
 	assets, err := datanodeClient.ListAssets(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list assets from datanode: %w", err)
@@ -119,20 +119,20 @@ func TopUpBots(args TopUpArgs) error {
 	if len(assets) == 0 {
 		return errors.New("no asset found on datanode")
 	}
-	logger.Debug("Assets found", zap.Strings("assets", maps.Keys(assets)))
-
+	logger.Info("Assets found", zap.Strings("assets", maps.Keys(assets)))
+	logger.Sugar().Info("Getting traders from bots API: %s", cfg.Bots.Research.RESTURL)
 	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Research.RESTURL, cfg.Bots.Research.APIKey, logger.Named("trading-bots"))
 	if err != nil {
 		return fmt.Errorf("failed to retrieve trading bots: %w", err)
 	}
-	logger.Debug("Trading bots found", zap.Strings("traders", maps.Keys(tradingBots)))
+	logger.Info("Trading bots found", zap.Strings("traders", maps.Keys(tradingBots)))
 
-	logger.Debug("Determining amounts to top up for trading bots...")
+	logger.Info("Determining amounts to top up for trading bots...")
 	topUpsByAsset, err := determineAmountsToTopUpByAsset(assets, tradingBots, logger)
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the each traders: %w", err)
 	}
-	logger.Debug("Amounts to top up for trading bots computed")
+	logger.Info("Amounts to top up for trading bots computed")
 
 	if len(topUpsByAsset) == 0 {
 		logger.Info("No top-up required for the trading bots")
@@ -155,16 +155,17 @@ func TopUpBots(args TopUpArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the whale: %w", err)
 	}
-	logger.Debug("Amounts to top up for whale computed")
+	logger.Info("Amounts to top up for whale computed")
 
 	if len(whaleTopUpsByAsset) == 0 {
-		logger.Debug("No top-up required for the whale")
+		logger.Info("No top-up required for the whale")
 	} else {
+
 		logger.Debug("Depositing assets to whale...")
 		if err := depositAssetsToWhale(ctx, whaleTopUpsByAsset, assets, datanodeClient, whalePublicKey, chainClients, logger); err != nil {
 			return err
 		}
-		logger.Debug("Whale has now enough funds to transfer to trading bots")
+		logger.Info("Whale has now enough funds to transfer to trading bots")
 	}
 
 	logger.Debug("Preparing network for transfers from whale to trading bots...")
@@ -174,13 +175,13 @@ func TopUpBots(args TopUpArgs) error {
 	if _, err := vega.UpdateNetworkParameters(ctx, whaleWallet, whalePublicKey, datanodeClient, updateParams, logger); err != nil {
 		return fmt.Errorf("failed to prepare network for transfers: %w", err)
 	}
-	logger.Debug("Network ready for transfers from whale to trading bots")
+	logger.Info("Network ready for transfers from whale to trading bots")
 
-	logger.Debug("Transferring assets from whale to trading bots...")
+	logger.Info("Transferring assets from whale to trading bots...")
 	if err := transferAssetsFromWhaleToBots(ctx, datanodeClient, whaleWallet, whalePublicKey, topUpsByAsset, logger); err != nil {
 		return fmt.Errorf("failed to transfer assets from whale to one or more bots: %w", err)
 	}
-	logger.Debug("Transfers done")
+	logger.Info("Transfers done")
 
 	logger.Info("Trading bots have been topped up successfully")
 
@@ -196,7 +197,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 			return fmt.Errorf("asset %q is not an ERC20 token", asset.Name)
 		}
 
-		logger.Debug("Depositing asset on whale wallet...",
+		logger.Info("Depositing asset on whale wallet...",
 			zap.String("asset-name", asset.Name),
 			zap.String("asset-contract-address", erc20Details.ContractAddress),
 			zap.String("amount-to-deposit", requiredAmount.String()),
@@ -270,7 +271,7 @@ func determineAmountsToTopUpByAsset(assets map[string]*vegapb.AssetDetails, bots
 		)
 
 		if requiredTopUp.Cmp(big.NewFloat(0)) == 0 {
-			logger.Debug(
+			logger.Info(
 				"Party does not need a top up for the asset",
 				zap.String("party-id", wantedToken.PartyId),
 				zap.Float64("current-funds", wantedToken.Balance),
@@ -331,7 +332,7 @@ func determineAmountsToTopUpForWhale(ctx context.Context, datanodeClient *datano
 		whaleFunds := types.NewAmountFromSubUnit(whaleFundsAsSubUnit, assetDetails.Decimals)
 
 		if whaleFunds.Cmp(assetToTopUp.TotalAmount) > -1 {
-			logger.Debug("Whale does not need a top up the asset",
+			logger.Info("Whale does not need a top up the asset",
 				zap.String("asset", assetToTopUp.Symbol),
 				zap.String("current-funds", whaleFunds.String()),
 				zap.String("required-funds", assetToTopUp.TotalAmount.String()),
