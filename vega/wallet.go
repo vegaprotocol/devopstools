@@ -20,6 +20,14 @@ func LoadWallet(name, recoveryPhrase string) (wallet.Wallet, error) {
 	return w, nil
 }
 
+func MustFirstKey(w wallet.Wallet) string {
+	keys := w.ListKeyPairs()
+	if len(keys) == 0 {
+		panic("wallet must have keys")
+	}
+	return keys[0].PublicKey()
+}
+
 func LoadWalletAsSingleton(recoveryPhrase string) (wallet.Wallet, error) {
 	if _, ok := walletSingletons[recoveryPhrase]; !ok {
 		name := fmt.Sprintf("wallet no %d", len(walletSingletons)+1)
