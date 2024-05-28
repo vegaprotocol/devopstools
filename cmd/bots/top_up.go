@@ -12,7 +12,6 @@ import (
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
-	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
@@ -173,8 +172,10 @@ func TopUpBots(args TopUpArgs) error {
 	}
 
 	logger.Debug("Preparing network for transfers from whale to trading bots...")
-	numberOfTransfers := countTransfersToDo(topUpsByAsset)
-	if err := prepareNetworkForTransfers(ctx, whaleWallet, whalePublicKey, datanodeClient, numberOfTransfers, logger); err != nil {
+	updateParams := map[string]string{
+		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", countTransfersToDo(topUpsByAsset)),
+	}
+	if _, err := vega.UpdateNetworkParameters(ctx, whaleWallet, whalePublicKey, datanodeClient, updateParams, logger); err != nil {
 		return fmt.Errorf("failed to prepare network for transfers: %w", err)
 	}
 	logger.Debug("Network ready for transfers from whale to trading bots")
@@ -366,41 +367,6 @@ func countTransfersToDo(topUpRegistry map[string]AssetToTopUp) int {
 	}
 
 	return transferNumbers + (10 * transferNumbers / 100)
-}
-
-func prepareNetworkForTransfers(ctx context.Context, whaleWallet wallet.Wallet, whalePublicKey string, datanodeClient *datanode.DataNode, numberOfTransferToBeDone int, logger *zap.Logger) error {
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
-	if err != nil {
-		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
-	}
-
-	updateParams := map[string]string{
-		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", numberOfTransferToBeDone*6),
-	}
-
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, whalePublicKey, networkParameters, datanodeClient, logger)
-	if err != nil {
-		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
-	}
-
-	if updateCount == 0 {
-		logger.Debug("No network parameter update is required before issuing transfers")
-		return nil
-	}
-
-	updatedNetworkParameters, err := datanodeClient.GetAllNetworkParameters()
-	if err != nil {
-		return fmt.Errorf("could not retrieve updated network parameters from datanode: %w", err)
-	}
-
-	for name, expectedValue := range updateParams {
-		updatedValue := updatedNetworkParameters.Params[name]
-		if updatedValue != expectedValue {
-			return fmt.Errorf("failed to update network parameter %q, current value: %q, expected value: %q", name, updatedValue, expectedValue)
-		}
-	}
-
-	return nil
 }
 
 func ensureWhaleReceivedFunds(ctx context.Context, whaleClient *api.PartyClient, whaleTopUpsByAsset map[string]*types.Amount) error {
