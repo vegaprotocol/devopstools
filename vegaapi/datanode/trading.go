@@ -36,7 +36,6 @@ func (n *DataNode) GetAllMarketsWithState(ctx context.Context, states []vega.Mar
 }
 
 func (n *DataNode) ListMarkets(ctx context.Context) ([]*vega.Market, error) {
-
 	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}

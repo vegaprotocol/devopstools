@@ -461,7 +461,6 @@ func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, 
 
 func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, assetsSymbols []string) ([]string, error) {
 	allMarkets, err := dataNodeClient.GetAllMarketsWithState(ctx, datanode.ActiveMarkets)
-
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
