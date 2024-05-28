@@ -249,7 +249,7 @@ func runReferral(args ReferralArgs) error {
 func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
 	_ = ctx
 
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
+	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}

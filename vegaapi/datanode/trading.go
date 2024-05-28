@@ -13,22 +13,24 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
+var ActiveMarkets = []vega.Market_State{
+	vega.Market_STATE_ACTIVE,
+	vega.Market_STATE_SUSPENDED,
+}
+
 func (n *DataNode) GetAllMarketsWithState(ctx context.Context, states []vega.Market_State) ([]*vega.Market, error) {
-	res, err := n.ListMarkets(ctx, &dataapipb.ListMarketsRequest{})
+	res, err := n.ListMarkets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all markets, %w", err)
 	}
 	result := []*vega.Market{}
 
-	for _, edge := range res.Markets.Edges {
-		if edge.Node == nil {
-			continue
-		}
-		if !slices.Contains(states, edge.Node.State) {
+	for _, edge := range res {
+		if !slices.Contains(states, edge.State) {
 			continue
 		}
 
-		result = append(result, edge.Node)
+		result = append(result, edge)
 	}
 	return result, nil
 }
