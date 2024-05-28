@@ -28,7 +28,46 @@ var (
 	ErrStakingBridgeDisabled = errors.New("staking bridge is disabled for this client")
 )
 
-func (c *ChainClient) StakeVegaTokenFromMinter(ctx context.Context, stakes map[string]*types.Amount) error {
+func (c *ChainClient) RemoveMinterStake(ctx context.Context, partyPubKey string) error {
+	logger := c.logger.With(
+		zap.Int("flow", rand.Int()),
+		zap.String("minter", c.minterWallet.Address.Hex()),
+		zap.String("bridge", c.stakingBridge.Address.Hex()),
+		zap.String("party", partyPubKey),
+	)
+
+	currentStake, err := c.stakingBridge.StakeBalance(&bind.CallOpts{Context: ctx}, c.minterWallet.Address, partyPubKey)
+	if err != nil {
+		return fmt.Errorf("could not retrieve stake balance: %w", err)
+	}
+
+	if currentStake.Cmp(big.NewInt(0)) > 0 {
+		opts := c.minterWallet.GetTransactOpts(ctx)
+		tx, err := c.stakingBridge.RemoveStake(opts, currentStake, partyPubKey)
+		if err != nil {
+			return fmt.Errorf("failed to remove stake from party %s: %w", partyPubKey, err)
+		}
+
+		logger.Debug("Waiting for stake to be removed...",
+			zap.String("stake", currentStake.String()),
+			zap.String("tx-hash", tx.Hash().Hex()),
+		)
+		if err := WaitForTransaction(ctx, c.client, tx, time.Minute*2); err != nil {
+			return fmt.Errorf("transaction to remove stake from party %s failed: %w", partyPubKey, err)
+		} else {
+			logger.Debug("Stake removed successfully",
+				zap.String("stake", currentStake.String()),
+				zap.String("tx-hash", tx.Hash().Hex()),
+			)
+		}
+	} else {
+		logger.Debug("No stake to remove")
+	}
+
+	return nil
+}
+
+func (c *ChainClient) StakeFromMinter(ctx context.Context, stakes map[string]*types.Amount) error {
 	if c.stakingBridge == nil {
 		return ErrStakingBridgeDisabled
 	}

@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 	"os"
+	"time"
 
+	"github.com/vegaprotocol/devopstools/config"
+	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/generation"
-	"github.com/vegaprotocol/devopstools/networktools"
-	"github.com/vegaprotocol/devopstools/secrets"
+	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
+	"github.com/vegaprotocol/devopstools/vegaapi/core"
+	"github.com/vegaprotocol/devopstools/vegaapi/datanode"
 
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	commandspb "code.vegaprotocol.io/vega/protos/vega/commands/v1"
@@ -24,7 +27,6 @@ import (
 
 type JoinArgs struct {
 	*Args
-	VegaNetworkName             string
 	NodeId                      string
 	GenerateSecrets             bool
 	UnstakeFromOld              bool
@@ -50,13 +52,9 @@ var joinCmd = &cobra.Command{
 }
 
 func init() {
-	joinArgs.Args = &validatorArgs
+	joinArgs.Args = &args
 
 	Cmd.AddCommand(joinCmd)
-	joinCmd.PersistentFlags().StringVar(&joinArgs.VegaNetworkName, "network", "", "Vega Network name")
-	if err := joinCmd.MarkPersistentFlagRequired("network"); err != nil {
-		log.Fatalf("%v\n", err)
-	}
 	joinCmd.PersistentFlags().StringVar(&joinArgs.NodeId, "node", "", "Node for which execute actions, e.g. n01")
 	if err := joinCmd.MarkPersistentFlagRequired("node"); err != nil {
 		log.Fatalf("%v\n", err)
@@ -70,207 +68,191 @@ func init() {
 }
 
 func RunJoin(args JoinArgs) error {
-	var (
-		oldNodeSecrets     *secrets.VegaNodePrivate
-		currentNodeSecrets *secrets.VegaNodePrivate
-		minValidatorStake  *big.Int
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelCommand()
 
-		networkParams *types.NetworkParams
-		network       *networktools.NetworkTools
-		secretStore   secrets.NodeSecretStore
-		err           error
-	)
+	logger := args.Logger.Named("command")
 
-	ctx := context.Background()
-
-	if args.GetEthAddressToSubmitBundle {
-		return printEthAddressToSubmitBundle(args)
+	cfg, err := config.Load(args.NetworkFile)
+	if err != nil {
+		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
+	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	args.Logger.Info("executing Join",
-		zap.String("network", args.VegaNetworkName), zap.String("node", args.NodeId), zap.Bool("generate secrets", args.GenerateSecrets),
-		zap.Bool("unstake from old vegaPubKey", args.UnstakeFromOld), zap.Bool("stake", args.Stake), zap.Bool("self delegate", args.SelfDelegate),
+		zap.String("node", args.NodeId),
+		zap.Bool("generate secrets", args.GenerateSecrets),
+		zap.Bool("unstake from old vegaPubKey", args.UnstakeFromOld),
+		zap.Bool("stake", args.Stake),
+		zap.Bool("self delegate", args.SelfDelegate),
 		zap.Bool("send ethereum events", args.SendEthereumEvents),
 	)
 
-	//
-	// Prepare
-	//
-	network, err = networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
-	if err != nil {
-		return err
+	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
+	if len(endpoints) == 0 {
+		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
-	// Get Minimum Validator Stake
-	networkParams, err = network.GetNetworkParams()
-	if err != nil {
-		return err
-	}
-	minValidatorStake1, err := networkParams.GetMinimumValidatorStake()
-	if err != nil {
-		return err
-	}
-	minValidatorStake = minValidatorStake1.AsSubUnit()
-	// Get Node Secrets
-	secretStore, err = args.GetNodeSecretStore()
-	if err != nil {
-		return err
-	}
-	currentNodeSecrets, err = secretStore.GetVegaNode(args.VegaNetworkName, args.NodeId)
+	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
-	//
-	// Node Secrets
-	//
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
+	if len(healthyEndpoints) == 0 {
+		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+	}
+	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+
+	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
+
+	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelDialing()
+	datanodeClient.MustDialConnection(dialCtx) // blocking
+	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	if err != nil {
+		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
+	}
+	logger.Debug("Network parameters retrieved")
+
+	minValidatorStake, err := networkParams.GetMinimumValidatorStake()
+	if err != nil {
+		return err
+	}
+
+	currentNodeSecrets, nodeAlreadyExists := config.FindNodeByID(cfg, args.NodeId)
+
 	if !args.GenerateSecrets {
-		if err != nil || currentNodeSecrets == nil {
-			return fmt.Errorf("failed to get secrets for node %s in %s network, please use --generate-new-secrets to generate secrets for node, %w",
-				args.NodeId, args.VegaNetworkName, err)
+		if !nodeAlreadyExists {
+			return fmt.Errorf("failed to get secrets for node %q in %q network, please use --generate-new-secrets to generate secrets for node, %w", args.NodeId, cfg.Name, err)
 		}
 	} else {
-		//
-		// Generate new secrets for node
-		//
-		oldNodeSecrets = currentNodeSecrets
-		currentNodeSecrets, err = generation.GenerateVegaNodeSecrets()
+		previousNodeSecrets := currentNodeSecrets
+		currentNodeSecrets, err := generation.GenerateVegaNodeSecrets()
 		if err != nil {
 			return err
 		}
-		if err = secretStore.StoreVegaNode(args.VegaNetworkName, args.NodeId, currentNodeSecrets); err != nil {
-			return err
+
+		currentNodeSecrets.ID = previousNodeSecrets.ID
+
+		cfg = config.UpsertNode(cfg, currentNodeSecrets)
+
+		if err := config.SaveConfig(args.NetworkFile, cfg); err != nil {
+			return fmt.Errorf("could not save network file at %q: %w", args.NetworkFile, err)
 		}
+
 		args.Logger.Info("generated and stored new secrets for node",
-			zap.String("new vegaPubKey", currentNodeSecrets.VegaPubKey),
-			zap.String("new eth wallet", currentNodeSecrets.EthereumAddress),
+			zap.String("new vegaPubKey", currentNodeSecrets.Secrets.VegaPubKey),
+			zap.String("new eth wallet", currentNodeSecrets.Secrets.EthereumAddress),
 		)
 
-		//
-		// Get Smart Contracts for Network
-		//
-		ethClientManager, err := args.GetPrimaryEthereumClientManager()
+		primaryEthConfig, err := networkParams.PrimaryEthereumConfig()
 		if err != nil {
-			return err
+			return fmt.Errorf("could not get primary ethereum configuration from network paramters: %w", err)
 		}
-		smartContracts, err := network.GetSmartContracts(ethClientManager)
+
+		primaryChainClient, err := ethereum.NewPrimaryChainClient(ctx, cfg.Bridges.Primary, primaryEthConfig, logger.Named("primary-chain-client"))
 		if err != nil {
-			return err
-		}
-		//
-		// Get Ethereum Wallet
-		//
-		walletManager, err := args.GetWalletManager()
-		if err != nil {
-			return err
-		}
-		ethNetwork, err := network.GetEthNetwork()
-		if err != nil {
-			return err
-		}
-		mainWallet, err := walletManager.GetNetworkMainEthWallet(ethNetwork, args.VegaNetworkName)
-		if err != nil {
-			return err
+			return fmt.Errorf("could not initialize primary ethereum chain client: %w", err)
 		}
 
 		if args.UnstakeFromOld {
-			if oldNodeSecrets == nil {
+			if !nodeAlreadyExists {
 				args.Logger.Info("Skip unstake from old: there was no previous vegaPubKey")
 			} else {
-				if err = smartContracts.RemoveStake(mainWallet, oldNodeSecrets.VegaPubKey); err != nil {
-					return fmt.Errorf("failed to remove stake from old vega pub key %s, %w", oldNodeSecrets.VegaPubKey, err)
+				if err = primaryChainClient.RemoveMinterStake(ctx, previousNodeSecrets.Secrets.VegaPubKey); err != nil {
+					return fmt.Errorf("failed to remove stake from old vega public key %s: %w", previousNodeSecrets.Secrets.VegaPubKey, err)
 				}
-				args.Logger.Info("Removed stake from old vega pub key", zap.String("old vegaPubKey", oldNodeSecrets.VegaPubKey))
+				args.Logger.Info("Removed stake from old vega pub key",
+					zap.String("old vegaPubKey", previousNodeSecrets.Secrets.VegaPubKey),
+				)
 			}
 		}
 
-		if err = smartContracts.TopUpStakeForOne(mainWallet, currentNodeSecrets.VegaPubKey, minValidatorStake); err != nil {
+		missingStakes := map[string]*types.Amount{currentNodeSecrets.Secrets.VegaPubKey: minValidatorStake}
+		if err = primaryChainClient.StakeFromMinter(ctx, missingStakes); err != nil {
 			return fmt.Errorf("failed to top up stake, %w", err)
 		}
-		args.Logger.Info("Staked to new vega pub key", zap.String("vegaPubKey", currentNodeSecrets.VegaPubKey),
-			zap.String("amount", minValidatorStake.String()))
+
+		args.Logger.Info("Staked to new vega pub key",
+			zap.String("public-key", currentNodeSecrets.Secrets.VegaPubKey),
+			zap.String("amount", minValidatorStake.String()),
+		)
 	}
 
 	if args.SelfDelegate {
-		var (
-			epochValidator   *vegapb.Node
-			stakedByOperator = big.NewInt(0)
-			pendingStake     = big.NewInt(0)
-			ok               bool
-		)
-		dataNodeClient, err := network.GetDataNodeClient()
+		var epochValidator *vegapb.Node
+
+		stakedByOperator := types.NewAmount(18)
+
+		epoch, err := datanodeClient.GetCurrentEpoch()
 		if err != nil {
 			return fmt.Errorf("failed to self-delegate, %w", err)
 		}
-		//
-		// Get current delegation
-		//
-		epoch, err := dataNodeClient.GetCurrentEpoch()
-		if err != nil {
-			return fmt.Errorf("failed to self-delegate, %w", err)
-		}
+
 		for _, v := range epoch.Validators {
-			if v.Id == currentNodeSecrets.VegaId {
+			if v.Id == currentNodeSecrets.Secrets.VegaId {
 				epochValidator = v
 				break
 			}
 		}
+
 		if epochValidator != nil {
-			stakedByOperator, ok = stakedByOperator.SetString(epochValidator.StakedByOperator, 0)
-			if !ok {
-				args.Logger.Error("failed to parse StakedByOperator", zap.String("node", currentNodeSecrets.Name),
-					zap.String("StakedByOperator", epochValidator.StakedByOperator), zap.Error(err))
-			}
-			pendingStake, ok = pendingStake.SetString(epochValidator.PendingStake, 0)
-			if !ok {
-				args.Logger.Error("failed to parse PendingStake", zap.String("node", currentNodeSecrets.Name),
-					zap.String("PendingStake", epochValidator.PendingStake), zap.Error(err))
-			}
-			args.Logger.Info("found validator", zap.String("vega Id", currentNodeSecrets.VegaId),
-				zap.String("vega pub key", currentNodeSecrets.VegaPubKey), zap.String("stakedByOperator", stakedByOperator.String()),
-				zap.String("pendingStake", pendingStake.String()), zap.String("minValidatorStake", minValidatorStake.String()))
-			stakedByOperator = stakedByOperator.Add(stakedByOperator, pendingStake)
+			stakedByOperator = types.ParseAmountFromSubUnit(epochValidator.StakedByOperator, 18)
+			pendingStake := types.ParseAmountFromSubUnit(epochValidator.PendingStake, 18)
+
+			args.Logger.Info("found validator",
+				zap.String("vega Id", currentNodeSecrets.Secrets.VegaId),
+				zap.String("vega pub key", currentNodeSecrets.Secrets.VegaPubKey),
+				zap.String("stakedByOperator", stakedByOperator.String()),
+				zap.String("pendingStake", pendingStake.String()),
+				zap.String("minValidatorStake", minValidatorStake.String()),
+			)
+			stakedByOperator.Add(pendingStake.AsMainUnit())
 		}
+
 		if stakedByOperator.Cmp(minValidatorStake) >= 0 {
-			args.Logger.Info("no need to stake", zap.String("validator", currentNodeSecrets.Name))
+			args.Logger.Info("no need to stake", zap.String("validator", currentNodeSecrets.Metadata.Name))
 		} else {
-			//
-			// Get Current Total Stake
-			//
-			partyTotalStake, err := dataNodeClient.GetPartyTotalStake(currentNodeSecrets.VegaPubKey)
-			if err != nil {
-				return fmt.Errorf("failed to self-delegate, %w", err)
-			}
-			if partyTotalStake.Cmp(minValidatorStake) < 0 {
-				return fmt.Errorf("failed to self-delegate, party %s has %s stake which is less than required min %s",
-					currentNodeSecrets.VegaPubKey, partyTotalStake.String(), minValidatorStake.String())
-			}
-			//
-			// Submit Delegate Transaction
-			//
-			args.Logger.Info("data", zap.String("VegaId", currentNodeSecrets.VegaId), zap.String("VegaPubKey", currentNodeSecrets.VegaPubKey))
-			vegawallet, err := vega.LoadWallet(currentNodeSecrets.VegaId, currentNodeSecrets.VegaRecoveryPhrase)
+			partyTotalStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(currentNodeSecrets.Secrets.VegaPubKey)
 			if err != nil {
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
 
-			if err := vega.GenerateKeysUpToKey(vegawallet, currentNodeSecrets.VegaPubKey); err != nil {
+			partyTotalStake := types.NewAmountFromSubUnit(partyTotalStakeAsSubUnit, 18)
+
+			if partyTotalStake.Cmp(minValidatorStake) < 0 {
+				return fmt.Errorf("failed to self-delegate, party %s has %s stake which is less than required min %s",
+					currentNodeSecrets.Secrets.VegaPubKey, partyTotalStake.String(), minValidatorStake.String())
+			}
+
+			vegawallet, err := vega.LoadWallet(currentNodeSecrets.Secrets.VegaId, currentNodeSecrets.Secrets.VegaRecoveryPhrase)
+			if err != nil {
+				return fmt.Errorf("failed to self-delegate, %w", err)
+			}
+
+			if err := vega.GenerateKeysUpToKey(vegawallet, currentNodeSecrets.Secrets.VegaPubKey); err != nil {
 				return fmt.Errorf("could not generate keys: %w", err)
 			}
 
 			request := walletpb.SubmitTransactionRequest{
 				Command: &walletpb.SubmitTransactionRequest_DelegateSubmission{
 					DelegateSubmission: &commandspb.DelegateSubmission{
-						NodeId: currentNodeSecrets.VegaId,
+						NodeId: currentNodeSecrets.Secrets.VegaId,
 						Amount: minValidatorStake.String(),
 					},
 				},
 			}
 
-			response, err := walletpkg.SendTransaction(ctx, vegawallet, currentNodeSecrets.VegaPubKey, &request, dataNodeClient)
+			response, err := walletpkg.SendTransaction(ctx, vegawallet, currentNodeSecrets.Secrets.VegaPubKey, &request, datanodeClient)
 			if err != nil {
 				return err
 			}
 
 			args.Logger.Info("tx", zap.Any("submitResponse", response))
 			if !response.Success {
-				args.Logger.Error("transaction submission failure", zap.String("node", currentNodeSecrets.Name), zap.Error(err))
+				args.Logger.Error("transaction submission failure", zap.String("node", currentNodeSecrets.Metadata.Name), zap.Error(err))
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
 		}
@@ -281,20 +263,18 @@ func RunJoin(args JoinArgs) error {
 		if err != nil {
 			return err
 		}
-		coreClient, err := network.GetVegaCoreClientForNode(args.NodeId)
-		if err != nil {
-			return err
-		}
-		// Get Faucet Secrets & wallet
-		walletecretStore, err := args.GetWalletSecretStore()
-		if err != nil {
-			return err
-		}
-		faucetSecrets, err := walletecretStore.GetVegaWallet("faucet")
-		if err != nil {
-			return err
-		}
-		faucetVegaWallet, err := vega.LoadWallet(faucetSecrets.Id, faucetSecrets.RecoveryPhrase)
+
+		coreClient := core.NewClient([]string{currentNodeSecrets.API.VegaGRPCURL}, 3*time.Second, args.Logger.Named("core"))
+
+		logger.Debug("Connecting to a datanode's gRPC endpoint...")
+		dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
+		defer cancelDialing()
+		datanodeClient.MustDialConnection(dialCtx) // blocking
+		logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+
+		faucetSecrets := cfg.Network.Wallets.Faucet
+
+		faucetVegaWallet, err := vega.LoadWallet(faucetSecrets.Name, faucetSecrets.RecoveryPhrase)
 		if err != nil {
 			return err
 		}
@@ -303,11 +283,10 @@ func RunJoin(args JoinArgs) error {
 			return err
 		}
 
-		var (
-			vegaAssetId = "XYZepsilon"
-			partyId     = currentNodeSecrets.VegaPubKey
-			amount      = "3"
-		)
+		vegaAssetId := "XYZepsilon"
+		partyId := currentNodeSecrets.Secrets.VegaPubKey
+		amount := "3"
+
 		for i := 0; i < eventNum+10; i += 1 {
 			result, err := coreClient.DepositBuiltinAsset(vegaAssetId, partyId, amount, func(data []byte) ([]byte, string, error) {
 				sig, err := faucetVegaWallet.SignAny(faucetSecrets.PublicKey, data)
@@ -326,26 +305,5 @@ func RunJoin(args JoinArgs) error {
 		}
 	}
 
-	return nil
-}
-
-func printEthAddressToSubmitBundle(args JoinArgs) error {
-	network, err := networktools.NewNetworkTools(args.VegaNetworkName, args.Logger)
-	if err != nil {
-		return err
-	}
-	ethNetwork, err := network.GetEthNetwork()
-	if err != nil {
-		return err
-	}
-	walletManager, err := args.GetWalletManager()
-	if err != nil {
-		return err
-	}
-	wallet, err := walletManager.GetNetworkMainEthWallet(ethNetwork, args.VegaNetworkName)
-	if err != nil {
-		return err
-	}
-	fmt.Println(wallet.Address)
 	return nil
 }

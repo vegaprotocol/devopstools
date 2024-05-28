@@ -1,19 +1,20 @@
 package tools
 
 import (
-	"fmt"
 	"net"
+	"time"
 )
 
-func GetIP(host string) (string, error) {
-	ips, err := net.LookupIP(host)
-	if err != nil {
-		return "", fmt.Errorf("failed to get IP for %s, %w", host, err)
-	}
-	for _, ip := range ips {
-		if ipv4 := ip.To4(); ipv4 != nil {
-			return string(ipv4), nil
+const MaximumDialDuration = 2 * time.Second
+
+func FilterHealthyGRPCEndpoints(endpoints []string) []string {
+	var healthy []string
+	for _, endpoint := range endpoints {
+		conn, err := net.DialTimeout("tcp", endpoint, MaximumDialDuration)
+		if err == nil && conn != nil {
+			_ = conn.Close()
+			healthy = append(healthy, endpoint)
 		}
 	}
-	return "", fmt.Errorf("no IP assigned to %s", host)
+	return healthy
 }
