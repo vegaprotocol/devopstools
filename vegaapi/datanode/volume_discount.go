@@ -12,12 +12,12 @@ import (
 )
 
 func (n *DataNode) GetCurrentVolumeDiscountProgram(ctx context.Context) (*dataapipb.VolumeDiscountProgram, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.GetCurrentVolumeDiscountProgram(reqCtx, &dataapipb.GetCurrentVolumeDiscountProgramRequest{})

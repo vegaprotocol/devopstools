@@ -12,12 +12,12 @@ import (
 )
 
 func (n *DataNode) ListGovernanceData(ctx context.Context, req *dataapipb.ListGovernanceDataRequest) (*dataapipb.ListGovernanceDataResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListGovernanceData(reqCtx, req)
@@ -29,12 +29,12 @@ func (n *DataNode) ListGovernanceData(ctx context.Context, req *dataapipb.ListGo
 }
 
 func (n *DataNode) ListVotes(ctx context.Context, req *dataapipb.ListVotesRequest) (*dataapipb.ListVotesResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListVotes(reqCtx, req)
@@ -46,12 +46,12 @@ func (n *DataNode) ListVotes(ctx context.Context, req *dataapipb.ListVotesReques
 }
 
 func (n *DataNode) GetGovernanceData(ctx context.Context, req *dataapipb.GetGovernanceDataRequest) (*dataapipb.GetGovernanceDataResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.GetGovernanceData(reqCtx, req)

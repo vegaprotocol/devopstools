@@ -11,11 +11,11 @@ import (
 )
 
 func (n *DataNode) ListProtocolUpgradeProposals(ctx context.Context) ([]vegaeventspb.ProtocolUpgradeEvent, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, fmt.Errorf("data-node connection is not ready")
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
 	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
 	defer cancel()
 

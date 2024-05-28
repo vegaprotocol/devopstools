@@ -14,12 +14,12 @@ import (
 )
 
 func (n *DataNode) GetPartyTotalStake(ctx context.Context, partyId string) (*big.Int, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.GetStake(reqCtx, &dataapipb.GetStakeRequest{
@@ -40,12 +40,12 @@ func (n *DataNode) GetPartyTotalStake(ctx context.Context, partyId string) (*big
 
 // ListDelegations returns delegations for the given party.
 func (n *DataNode) ListDelegations(req *dataapipb.ListDelegationsRequest) (*dataapipb.ListDelegationsResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(context.Background(), n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	ctx, cancel := context.WithTimeout(context.Background(), n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListDelegations(ctx, req)
@@ -64,7 +64,7 @@ type AccountFunds struct {
 }
 
 func (n *DataNode) ListAccounts(ctx context.Context, partyID string, accountType vega.AccountType, assetID *string) ([]AccountFunds, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
@@ -73,8 +73,8 @@ func (n *DataNode) ListAccounts(ctx context.Context, partyID string, accountType
 		assetIDFilter = *assetID
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	requestCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	requestCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 	response, err := c.ListAccounts(requestCtx, &dataapipb.ListAccountsRequest{
 		Filter: &dataapipb.AccountFilter{

@@ -13,12 +13,12 @@ import (
 )
 
 func (n *DataNode) GetCurrentReferralProgram(ctx context.Context) (*v2.ReferralProgram, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancelRequest()
 
 	response, err := c.GetCurrentReferralProgram(reqCtx, &dataapipb.GetCurrentReferralProgramRequest{})
@@ -30,12 +30,12 @@ func (n *DataNode) GetCurrentReferralProgram(ctx context.Context) (*v2.ReferralP
 }
 
 func (n *DataNode) ListReferralSets(ctx context.Context) (map[string]*v2.ReferralSet, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancelRequest()
 
 	response, err := c.ListReferralSets(reqCtx, &dataapipb.ListReferralSetsRequest{})
@@ -51,12 +51,12 @@ func (n *DataNode) ListReferralSets(ctx context.Context) (map[string]*v2.Referra
 }
 
 func (n *DataNode) ListReferralSetReferees(ctx context.Context) (map[string]v2.ReferralSetReferee, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancelRequest()
 
 	referralSetReferees := map[string]v2.ReferralSetReferee{}

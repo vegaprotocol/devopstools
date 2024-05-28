@@ -12,12 +12,12 @@ import (
 )
 
 func (n *DataNode) LastNetworkHistorySegment(ctx context.Context) (*dataapipb.HistorySegment, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.GetMostRecentNetworkHistorySegment(reqCtx, &dataapipb.GetMostRecentNetworkHistorySegmentRequest{})

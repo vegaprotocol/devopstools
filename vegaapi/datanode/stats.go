@@ -32,12 +32,12 @@ func (n *DataNode) GeneralAccountBalance(ctx context.Context, partyID, assetID s
 }
 
 func (n *DataNode) ListNetworkParameters(ctx context.Context) (*types.NetworkParams, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListNetworkParameters(reqCtx, &dataapipb.ListNetworkParametersRequest{})
@@ -53,12 +53,12 @@ func (n *DataNode) ListNetworkParameters(ctx context.Context) (*types.NetworkPar
 }
 
 func (n *DataNode) GetCurrentEpoch(ctx context.Context) (*vega.Epoch, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.GetEpoch(reqCtx, &dataapipb.GetEpochRequest{})
@@ -70,12 +70,12 @@ func (n *DataNode) GetCurrentEpoch(ctx context.Context) (*vega.Epoch, error) {
 }
 
 func (n *DataNode) ListAssets(ctx context.Context) (map[string]*vega.AssetDetails, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	ctx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	ctx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListAssets(ctx, &dataapipb.ListAssetsRequest{})

@@ -11,16 +11,16 @@ import (
 )
 
 func (n *DataNode) ListCoreSnapshots(ctx context.Context) ([]vegaeventspb.CoreSnapshotData, error) {
-	if n == nil || n.Conn == nil {
+	if n == nil || n.Client.Conn == nil {
 		return nil, fmt.Errorf("data-node object cannot be nil")
 	}
 
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, fmt.Errorf("data-node connection is not ready")
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancel := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancel := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancel()
 
 	response, err := c.ListCoreSnapshots(reqCtx, &dataapipb.ListCoreSnapshotsRequest{})
