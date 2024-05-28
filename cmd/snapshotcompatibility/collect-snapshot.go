@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vegacapsule"
@@ -90,7 +91,9 @@ func runCollectSnapshot(
 		zap.String("source", snapshotDbSource),
 		zap.String("destiantion", tempDir),
 	)
-	if err := tools.CopyDir(snapshotDbSource, tempDir); err != nil {
+	if err := tools.RetryRun(3, 30*time.Second, func() error {
+		return tools.CopyDir(snapshotDbSource, tempDir)
+	}); err != nil {
 		return fmt.Errorf("failed to copy db snapshot path: %w", err)
 	}
 	logger.Info("The snapshot db copied")

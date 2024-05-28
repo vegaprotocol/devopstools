@@ -33,6 +33,7 @@ func (n *Client) SendTransaction(ctx context.Context, tx *commandspb.Transaction
 }
 
 func (n *Client) LastBlock(ctx context.Context) (*vegaapipb.LastBlockHeightResponse, error) {
+
 	if n.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}

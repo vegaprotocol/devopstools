@@ -56,6 +56,5 @@ func (n *Client) DepositBuiltinAsset(ctx context.Context, vegaAssetId string, pa
 	if err != nil {
 		return false, fmt.Errorf("failed to deposit built-in asset, %w", err)
 	}
-
 	return resp.Success, nil
 }
