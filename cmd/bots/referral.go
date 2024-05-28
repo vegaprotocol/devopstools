@@ -198,8 +198,8 @@ func runReferral(args ReferralArgs) error {
 		)
 	}
 
-	logger.Info("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -249,7 +249,7 @@ func runReferral(args ReferralArgs) error {
 func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
 	_ = ctx
 
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
+	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -526,7 +526,7 @@ func joinReferees(ctx context.Context, referralSets []ReferralSet, dataNodeClien
 		return fmt.Errorf("failed to retrieve current referral sets, %w", err)
 	}
 
-	referralSetReferees, err := dataNodeClient.GetReferralSetReferees(ctx)
+	referralSetReferees, err := dataNodeClient.ListReferralSetReferees(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve current referees: %w", err)
 	}
@@ -605,7 +605,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 		logger.Debug("Retrieving current stake for party...",
 			zap.String("party-id", referralSet.Leader.PublicKey),
 		)
-		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(referralSet.Leader.PublicKey)
+		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, referralSet.Leader.PublicKey)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve current stake for party %s: %w", referralSet.Leader.PublicKey, err)
 		}

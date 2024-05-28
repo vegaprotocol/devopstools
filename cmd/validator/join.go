@@ -110,7 +110,7 @@ func RunJoin(args JoinArgs) error {
 	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -186,7 +186,7 @@ func RunJoin(args JoinArgs) error {
 
 		stakedByOperator := types.NewAmount(18)
 
-		epoch, err := datanodeClient.GetCurrentEpoch()
+		epoch, err := datanodeClient.GetCurrentEpoch(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to self-delegate, %w", err)
 		}
@@ -215,7 +215,7 @@ func RunJoin(args JoinArgs) error {
 		if stakedByOperator.Cmp(minValidatorStake) >= 0 {
 			args.Logger.Info("no need to stake", zap.String("validator", currentNodeSecrets.Metadata.Name))
 		} else {
-			partyTotalStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(currentNodeSecrets.Secrets.VegaPubKey)
+			partyTotalStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, currentNodeSecrets.Secrets.VegaPubKey)
 			if err != nil {
 				return fmt.Errorf("failed to self-delegate, %w", err)
 			}
@@ -288,7 +288,7 @@ func RunJoin(args JoinArgs) error {
 		amount := "3"
 
 		for i := 0; i < eventNum+10; i += 1 {
-			result, err := coreClient.DepositBuiltinAsset(vegaAssetId, partyId, amount, func(data []byte) ([]byte, string, error) {
+			result, err := coreClient.DepositBuiltinAsset(ctx, vegaAssetId, partyId, amount, func(data []byte) ([]byte, string, error) {
 				sig, err := faucetVegaWallet.SignAny(faucetSecrets.PublicKey, data)
 				return sig, faucetSecrets.PublicKey, err
 			})

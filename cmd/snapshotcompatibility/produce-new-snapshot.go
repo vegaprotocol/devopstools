@@ -50,10 +50,10 @@ func init() {
 		StringVar(&produceNewSnapshotArgs.VegacapsuleBinary, "vegacapsule-binary", "vegacapsule", "The vegacapsule binary path")
 }
 
-func runProduceNewSnapshot(
-	logger *zap.Logger,
-	vegacapsuleBinary, vegacapsuleHome string,
-) error {
+func runProduceNewSnapshot(logger *zap.Logger, vegacapsuleBinary, vegacapsuleHome string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	fmt.Println(vegacapsuleBinary)
 	nodes, err := vegacapsule.ListNodes(vegacapsuleBinary, vegacapsuleHome)
 	if err != nil {
@@ -79,7 +79,7 @@ func runProduceNewSnapshot(
 	logger.Info(fmt.Sprintf("Found validator node %s", validatorNode.Name))
 
 	logger.Info("Moving network forward until new snapshot is produced")
-	err = moveNullChainNetworkForward(logger, *validatorNode)
+	err = moveNullChainNetworkForward(ctx, logger, *validatorNode)
 	if err != nil {
 		return fmt.Errorf("failed to move network forward: %w", err)
 	}
@@ -88,11 +88,7 @@ func runProduceNewSnapshot(
 	return nil
 }
 
-func moveNullChainNetworkForward(
-	logger *zap.Logger,
-
-	nodeDetails vegacapsule.NodeDetails,
-) error {
+func moveNullChainNetworkForward(ctx context.Context, logger *zap.Logger, nodeDetails vegacapsule.NodeDetails) error {
 	coreConfigPath := filepath.Join(nodeDetails.Vega.HomeDir, VegaCoreConfigPath)
 
 	nullchainPort, err := tools.ReadStructuredFileValue(
@@ -116,18 +112,18 @@ func moveNullChainNetworkForward(
 		return fmt.Errorf("the core gprc port is invalid: empty port")
 	}
 
-	logger.Info("Crateing Core GRPC client")
+	logger.Info("Creating Core GRPC client")
 	coreClient := core.NewClient(
 		[]string{fmt.Sprintf("localhost:%s", coreGRPCPort)},
 		5*time.Second,
 		logger,
 	)
-	dialContext, dialCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	dialContext, dialCancel := context.WithTimeout(ctx, 15*time.Second)
 	defer dialCancel()
 	coreClient.MustDialConnectionIgnoreTime(dialContext)
 
 	logger.Info("Getting snapshot.interval.length from network parameters")
-	networkParameters, err := coreClient.CoreNetworkParameters("snapshot.interval.length")
+	networkParameters, err := coreClient.CoreNetworkParameters(ctx, "snapshot.interval.length")
 	if err != nil {
 		return fmt.Errorf("failed to get network parameters from core api: %w", err)
 	}
@@ -153,7 +149,7 @@ func moveNullChainNetworkForward(
 	logger.Info(fmt.Sprintf("Snapsgot interval is %d", snapshotLength))
 
 	logger.Info("Fetching current network height")
-	initialNetworkHeight, err := getNetworkHeight(coreClient)
+	initialNetworkHeight, err := getNetworkHeight(ctx, coreClient)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial network height: %w", err)
 	}
@@ -171,7 +167,7 @@ func moveNullChainNetworkForward(
 			)
 		}
 
-		currentnetworkHeight, err = getNetworkHeight(coreClient)
+		currentnetworkHeight, err = getNetworkHeight(ctx, coreClient)
 		if err != nil {
 			return fmt.Errorf("failed to get network height: %w", err)
 		}
@@ -201,9 +197,9 @@ func moveNullChainNetworkForward(
 	return nil
 }
 
-func getNetworkHeight(coreClient vegaapi.VegaCoreClient) (int, error) {
+func getNetworkHeight(ctx context.Context, coreClient vegaapi.VegaCoreClient) (int, error) {
 	statistics, err := tools.RetryReturn(3, 3*time.Second, func() (*vegaapipb.StatisticsResponse, error) {
-		return coreClient.Statistics()
+		return coreClient.Statistics(ctx)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get output from the statistic core api: %w", err)
