@@ -95,8 +95,35 @@ func (c *ChainClient) StakeFromMinter(ctx context.Context, stakes map[string]*ty
 		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", stakingTokenHexAddress, err)
 	}
 
-	if err := c.mintWallet(ctx, c.minterWallet, token, requiredAmountAsSubUnit, logger); err != nil {
-		return err
+	currentWalletBalance, err := token.BalanceOf(&bind.CallOpts{}, c.minterWallet.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get token balance for %s: %w", c.minterWallet.Address, err)
+	}
+
+	if currentWalletBalance.Cmp(requiredAmountAsSubUnit) >= 0 {
+		c.logger.Info("Minting not required")
+	} else {
+		if err := c.mintWallet(ctx, c.minterWallet, token, requiredAmountAsSubUnit, false, logger); err != nil {
+			return err
+		}
+	}
+
+	allowance, err := token.Allowance(&bind.CallOpts{}, c.minterWallet.Address, c.stakingBridge.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get current allowance for staking bridge on %s: %w", token.Address, err)
+	}
+
+	if allowance.Cmp(requiredAmountAsSubUnit) >= 0 {
+		c.logger.Info("Increase allowance not required")
+	} else {
+		c.logger.Sugar().Infof("Increasing allowance. Current allowance: %s, required allowance: %s", allowance.String(), requiredAmountAsSubUnit)
+		tx, err := token.IncreaseAllowance(c.minterWallet.GetTransactOpts(ctx), c.stakingBridge.Address, requiredAmountAsSubUnit)
+		if err != nil {
+			return fmt.Errorf("failed to increase allowance for staking: %w", err)
+		}
+		if err := WaitForTransaction(ctx, c.client, tx, time.Minute); err != nil {
+			return fmt.Errorf("failed to wait for increase allowance: %w", err)
+		}
 	}
 
 	txs := map[string]*ethtypes.Transaction{}
@@ -173,7 +200,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 		return fmt.Errorf("could not initialize ERC20 token contract client (%s): %w", assetContractHexAddress, err)
 	}
 
-	if err := c.mintWallet(ctx, minterWallet, token, requiredAmountAsSubUnit, logger); err != nil {
+	if err := c.mintWallet(ctx, minterWallet, token, requiredAmountAsSubUnit, true, logger); err != nil {
 		return err
 	}
 
@@ -212,7 +239,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 	return nil
 }
 
-func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, token *erc20token.ERC20Token, requiredAmountAsSubUnit *big.Int, logger *zap.Logger) error {
+func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, token *erc20token.ERC20Token, requiredAmountAsSubUnit *big.Int, withAllowanceToCollateral bool, logger *zap.Logger) error {
 	logger.Debug("Retrieving wallet's balance...")
 	balanceAsSubUnit, err := token.BalanceOf(&bind.CallOpts{Context: ctx}, minterWallet.Address)
 	if err != nil {
@@ -262,21 +289,25 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 	}
 
 	allowanceToIncrease := new(big.Int).Sub(requiredAmountAsSubUnit, allowanceAsSubUnit)
-	logger.Info("Allowance increase required",
-		zap.String("current-allowance-su", allowanceAsSubUnit.String()),
-		zap.String("required-allowance-su", requiredAmountAsSubUnit.String()),
-		zap.String("increase-by-su", allowanceToIncrease.String()),
-	)
+	if !withAllowanceToCollateral || allowanceToIncrease.Cmp(big.NewInt(0)) >= 0 {
+		logger.Info("allowance increase not required")
+	} else {
+		logger.Info("Allowance increase required",
+			zap.String("current-allowance-su", allowanceAsSubUnit.String()),
+			zap.String("required-allowance-su", requiredAmountAsSubUnit.String()),
+			zap.String("increase-by-su", allowanceToIncrease.String()),
+		)
 
-	logger.Debug("Increasing allowance...", zap.String("increase-by-su", allowanceToIncrease.String()))
+		logger.Debug("Increasing allowance...", zap.String("increase-by-su", allowanceToIncrease.String()))
 
-	allowanceTx, err := token.IncreaseAllowance(minterWallet.GetTransactOpts(ctx), c.collateralBridge.Address, allowanceToIncrease)
-	if err != nil {
-		return fmt.Errorf("could not send transaction to increase bridge's allowance: %w", err)
-	}
+		allowanceTx, err := token.IncreaseAllowance(minterWallet.GetTransactOpts(ctx), c.collateralBridge.Address, allowanceToIncrease)
+		if err != nil {
+			return fmt.Errorf("could not send transaction to increase bridge's allowance: %w", err)
+		}
 
-	if err := WaitForTransaction(ctx, c.client, allowanceTx, time.Minute); err != nil {
-		return fmt.Errorf("failed to increase bridge's allowance: %w", err)
+		if err := WaitForTransaction(ctx, c.client, allowanceTx, time.Minute); err != nil {
+			return fmt.Errorf("failed to increase bridge's allowance: %w", err)
+		}
 	}
 
 	logger.Info("Allowance increase successful", zap.String("increased-by-su", allowanceToIncrease.String()))
