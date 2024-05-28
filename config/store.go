@@ -35,3 +35,10 @@ func Load(path string) (Config, error) {
 
 	return cfg, nil
 }
+
+func SaveConfig(path string, cfg Config) error {
+	if err := paths.WriteStructuredFile(path, cfg); err != nil {
+		return err
+	}
+	return nil
+}

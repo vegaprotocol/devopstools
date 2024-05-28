@@ -8,12 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/api"
 	"github.com/vegaprotocol/devopstools/bots"
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/ethereum"
-	"github.com/vegaprotocol/devopstools/governance"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
@@ -87,8 +84,8 @@ func TopUpBots(args TopUpArgs) error {
 	}
 	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
-	logger.Info("Looking for healthy gRPC endpoints...")
-	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	logger.Debug("Looking for healthy gRPC endpoints...")
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
@@ -102,8 +99,8 @@ func TopUpBots(args TopUpArgs) error {
 	datanodeClient.MustDialConnection(dialCtx) // blocking
 	logger.Info("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
-	logger.Info("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -153,10 +150,8 @@ func TopUpBots(args TopUpArgs) error {
 
 	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
-	whaleClient := api.NewPartyClient(datanodeClient, whalePublicKey)
-
-	logger.Info("Determining amounts to top up for whale...")
-	whaleTopUpsByAsset, err := determineAmountsToTopUpForWhale(ctx, whaleClient, assets, topUpsByAsset, logger)
+	logger.Debug("Determining amounts to top up for whale...")
+	whaleTopUpsByAsset, err := determineAmountsToTopUpForWhale(ctx, datanodeClient, whalePublicKey, assets, topUpsByAsset, logger)
 	if err != nil {
 		return fmt.Errorf("failed to determine top up amounts for the whale: %w", err)
 	}
@@ -165,16 +160,19 @@ func TopUpBots(args TopUpArgs) error {
 	if len(whaleTopUpsByAsset) == 0 {
 		logger.Info("No top-up required for the whale")
 	} else {
-		logger.Info("Depositing assets to whale...")
-		if err := depositAssetsToWhale(ctx, whaleTopUpsByAsset, assets, whaleClient, chainClients, logger); err != nil {
+
+		logger.Debug("Depositing assets to whale...")
+		if err := depositAssetsToWhale(ctx, whaleTopUpsByAsset, assets, datanodeClient, whalePublicKey, chainClients, logger); err != nil {
 			return err
 		}
 		logger.Info("Whale has now enough funds to transfer to trading bots")
 	}
 
-	logger.Info("Preparing network for transfers from whale to trading bots...")
-	numberOfTransfers := countTransfersToDo(topUpsByAsset)
-	if err := prepareNetworkForTransfers(ctx, whaleWallet, whalePublicKey, datanodeClient, numberOfTransfers, logger); err != nil {
+	logger.Debug("Preparing network for transfers from whale to trading bots...")
+	updateParams := map[string]string{
+		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", countTransfersToDo(topUpsByAsset)),
+	}
+	if _, err := vega.UpdateNetworkParameters(ctx, whaleWallet, whalePublicKey, datanodeClient, updateParams, logger); err != nil {
 		return fmt.Errorf("failed to prepare network for transfers: %w", err)
 	}
 	logger.Info("Network ready for transfers from whale to trading bots")
@@ -190,7 +188,7 @@ func TopUpBots(args TopUpArgs) error {
 	return nil
 }
 
-func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*types.Amount, assets map[string]*vegapb.AssetDetails, whaleClient *api.PartyClient, chainClients *ethereum.ChainsClient, logger *zap.Logger) error {
+func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*types.Amount, assets map[string]*vegapb.AssetDetails, datanodeClient *datanode.DataNode, publicKey string, chainClients *ethereum.ChainsClient, logger *zap.Logger) error {
 	for assetID, requiredAmount := range whaleTopUpsByAsset {
 		asset := assets[assetID]
 
@@ -217,11 +215,11 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 		}
 
 		deposits := map[string]*types.Amount{
-			whaleClient.PartyID(): requiredAmount,
+			publicKey: requiredAmount,
 		}
 
 		if err := chainClient.DepositERC20AssetFromMinter(ctx, erc20Details.ContractAddress, deposits); err != nil {
-			return fmt.Errorf("failed to deposit asset %q on whale %s: %w", asset.Name, whaleClient.PartyID(), err)
+			return fmt.Errorf("failed to deposit asset %q on whale %s: %w", asset.Name, publicKey, err)
 		}
 
 		logger.Info("Asset deposited on whale wallet",
@@ -232,7 +230,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 		)
 	}
 
-	if err := ensureWhaleReceivedFunds(ctx, whaleClient, whaleTopUpsByAsset); err != nil {
+	if err := ensureWhaleReceivedFunds(ctx, datanodeClient, publicKey, whaleTopUpsByAsset); err != nil {
 		return err
 	}
 
@@ -318,7 +316,7 @@ func computeRequiredAmount(currentBalance, wantedBalance float64) *big.Float {
 	return big.NewFloat(0)
 }
 
-func determineAmountsToTopUpForWhale(ctx context.Context, whaleClient *api.PartyClient, assets map[string]*vegapb.AssetDetails, topUpsByAsset map[string]AssetToTopUp, logger *zap.Logger) (map[string]*types.Amount, error) {
+func determineAmountsToTopUpForWhale(ctx context.Context, datanodeClient *datanode.DataNode, publicKey string, assets map[string]*vegapb.AssetDetails, topUpsByAsset map[string]AssetToTopUp, logger *zap.Logger) (map[string]*types.Amount, error) {
 	result := map[string]*types.Amount{}
 
 	for _, assetToTopUp := range topUpsByAsset {
@@ -327,7 +325,7 @@ func determineAmountsToTopUpForWhale(ctx context.Context, whaleClient *api.Party
 			return nil, fmt.Errorf("whale needs to topup the asset %q but it does not exist on the network", assetToTopUp.VegaAssetId)
 		}
 
-		whaleFundsAsSubUnit, err := whaleClient.GeneralAccountBalanceForAsset(ctx, assetToTopUp.VegaAssetId)
+		whaleFundsAsSubUnit, err := datanodeClient.GeneralAccountBalance(ctx, publicKey, assetToTopUp.VegaAssetId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve whale's general account balance for asset %q: %w", assetToTopUp.VegaAssetId, err)
 		}
@@ -368,46 +366,11 @@ func countTransfersToDo(topUpRegistry map[string]AssetToTopUp) int {
 	return transferNumbers + (10 * transferNumbers / 100)
 }
 
-func prepareNetworkForTransfers(ctx context.Context, whaleWallet wallet.Wallet, whalePublicKey string, datanodeClient *datanode.DataNode, numberOfTransferToBeDone int, logger *zap.Logger) error {
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
-	if err != nil {
-		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
-	}
-
-	updateParams := map[string]string{
-		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", numberOfTransferToBeDone*6),
-	}
-
-	updateCount, err := governance.ProposeAndVoteOnNetworkParameters(ctx, updateParams, whaleWallet, whalePublicKey, networkParameters, datanodeClient, logger)
-	if err != nil {
-		return fmt.Errorf("failed to propose and vote for network parameter update proposals: %w", err)
-	}
-
-	if updateCount == 0 {
-		logger.Info("No network parameter update is required before issuing transfers")
-		return nil
-	}
-
-	updatedNetworkParameters, err := datanodeClient.GetAllNetworkParameters()
-	if err != nil {
-		return fmt.Errorf("could not retrieve updated network parameters from datanode: %w", err)
-	}
-
-	for name, expectedValue := range updateParams {
-		updatedValue := updatedNetworkParameters.Params[name]
-		if updatedValue != expectedValue {
-			return fmt.Errorf("failed to update network parameter %q, current value: %q, expected value: %q", name, updatedValue, expectedValue)
-		}
-	}
-
-	return nil
-}
-
-func ensureWhaleReceivedFunds(ctx context.Context, whaleClient *api.PartyClient, whaleTopUpsByAsset map[string]*types.Amount) error {
+func ensureWhaleReceivedFunds(ctx context.Context, datanodeClient *datanode.DataNode, publicKey string, whaleTopUpsByAsset map[string]*types.Amount) error {
 	for assetID, requiredAmount := range whaleTopUpsByAsset {
 		requiredAmountAsSubUnit := requiredAmount.AsSubUnit()
 		err := tools.RetryRun(15, 6*time.Second, func() error {
-			balanceAsSubUnit, err := whaleClient.GeneralAccountBalanceForAsset(ctx, assetID)
+			balanceAsSubUnit, err := datanodeClient.GeneralAccountBalance(ctx, publicKey, assetID)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve whale's general account balance for asset %q: %w", assetID, err)
 			}

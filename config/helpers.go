@@ -47,3 +47,25 @@ func ListValidatorRESTEndpoints(cfg Config) []string {
 
 	return endpoints
 }
+
+func FindNodeByID(cfg Config, id string) (Node, bool) {
+	for _, node := range cfg.Nodes {
+		if node.ID == id {
+			return node, true
+		}
+	}
+
+	return Node{}, false
+}
+
+func UpsertNode(cfg Config, node Node) Config {
+	for i, n := range cfg.Nodes {
+		if n.ID == node.ID {
+			cfg.Nodes[i] = node
+			return cfg
+		}
+	}
+
+	cfg.Nodes = append(cfg.Nodes, node)
+	return cfg
+}

@@ -3,34 +3,34 @@ package generation
 import (
 	"fmt"
 
-	"github.com/vegaprotocol/devopstools/secrets"
+	"github.com/vegaprotocol/devopstools/config"
 )
 
-func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
+func GenerateVegaNodeSecrets() (config.Node, error) {
 	metadata, err := GenerateNodeMetadata()
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
-
 	ethereumWallet, err := GenerateNewEthereumWallet()
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
 	vegaWallet, err := GenerateVegaWallet()
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
+
 	vegaPubKeyIndex := uint64(1)
 	deHistory, err := GenerateDeHistoryIdentity(vegaWallet.RecoveryPhrase)
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
 	tendermintNodeKeys := GenerateTendermintKeys()
 	tendermintValidatorKeys := GenerateTendermintKeys()
 
 	walletBinaryPassphrase, err := Password()
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
 	binaryWallets, err := CreateBinaryWallets(
 		tendermintValidatorKeys.PublicKey,
@@ -39,37 +39,40 @@ func GenerateVegaNodeSecrets() (*secrets.VegaNodePrivate, error) {
 		walletBinaryPassphrase,
 	)
 	if err != nil {
-		return nil, err
+		return config.Node{}, err
 	}
 
-	newNodeSecrets := &secrets.VegaNodePrivate{
-		Name:                          metadata.Name,
-		Country:                       metadata.Country,
-		InfoURL:                       metadata.InfoURL,
-		AvatarURL:                     metadata.AvatarURL,
-		EthereumAddress:               ethereumWallet.Address,
-		EthereumPrivateKey:            ethereumWallet.PrivateKey,
-		EthereumMnemonic:              ethereumWallet.Mnemonic,
-		VegaId:                        vegaWallet.Id,
-		VegaPubKey:                    vegaWallet.PublicKey,
-		VegaPrivateKey:                vegaWallet.PrivateKey,
-		VegaRecoveryPhrase:            vegaWallet.RecoveryPhrase,
-		VegaPubKeyIndex:               &vegaPubKeyIndex,
-		DeHistoryPeerId:               deHistory.PeerID,
-		DeHistoryPrivateKey:           deHistory.PrivKey,
-		NetworkHistoryPeerId:          deHistory.PeerID,
-		NetworkHistoryPrivateKey:      deHistory.PrivKey,
-		TendermintNodeId:              tendermintNodeKeys.Address,
-		TendermintNodePubKey:          tendermintNodeKeys.PublicKey,
-		TendermintNodePrivateKey:      tendermintNodeKeys.PrivateKey,
-		TendermintValidatorAddress:    tendermintValidatorKeys.Address,
-		TendermintValidatorPubKey:     tendermintValidatorKeys.PublicKey,
-		TendermintValidatorPrivateKey: tendermintValidatorKeys.PrivateKey,
-		WalletBinaryPassphrase:        walletBinaryPassphrase,
-		BinaryWallets:                 binaryWallets,
-	}
-
-	return newNodeSecrets, nil
+	return config.Node{
+		Metadata: config.NodeMetadata{
+			Name:      metadata.Name,
+			Country:   metadata.Country,
+			InfoURL:   metadata.InfoURL,
+			AvatarURL: metadata.AvatarURL,
+		},
+		Secrets: config.NodeSecrets{
+			EthereumAddress:               ethereumWallet.Address,
+			EthereumPrivateKey:            ethereumWallet.PrivateKey,
+			EthereumMnemonic:              ethereumWallet.Mnemonic,
+			VegaId:                        vegaWallet.Id,
+			VegaPubKey:                    vegaWallet.PublicKey,
+			VegaPrivateKey:                vegaWallet.PrivateKey,
+			VegaRecoveryPhrase:            vegaWallet.RecoveryPhrase,
+			VegaPubKeyIndex:               &vegaPubKeyIndex,
+			DeHistoryPeerId:               deHistory.PeerID,
+			DeHistoryPrivateKey:           deHistory.PrivKey,
+			NetworkHistoryPeerId:          deHistory.PeerID,
+			NetworkHistoryPrivateKey:      deHistory.PrivKey,
+			TendermintNodeId:              tendermintNodeKeys.Address,
+			TendermintNodePubKey:          tendermintNodeKeys.PublicKey,
+			TendermintNodePrivateKey:      tendermintNodeKeys.PrivateKey,
+			TendermintValidatorAddress:    tendermintValidatorKeys.Address,
+			TendermintValidatorPubKey:     tendermintValidatorKeys.PublicKey,
+			TendermintValidatorPrivateKey: tendermintValidatorKeys.PrivateKey,
+			WalletBinaryPassphrase:        walletBinaryPassphrase,
+			BinaryWallets:                 binaryWallets,
+		},
+		API: config.NodeAPI{},
+	}, nil
 }
 
 type VegaNodeMetadata struct {

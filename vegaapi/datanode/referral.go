@@ -13,37 +13,29 @@ import (
 )
 
 func (n *DataNode) GetCurrentReferralProgram(ctx context.Context) (*v2.ReferralProgram, error) {
-	res, err := n.getCurrentReferralProgramRaw(ctx, &dataapipb.GetCurrentReferralProgramRequest{})
-	if err != nil {
-		return nil, err
-	}
-	return res.CurrentReferralProgram, nil
-}
-
-func (n *DataNode) getCurrentReferralProgramRaw(ctx context.Context, req *v2.GetCurrentReferralProgramRequest) (*v2.GetCurrentReferralProgramResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancelRequest()
 
-	response, err := c.GetCurrentReferralProgram(reqCtx, req)
+	response, err := c.GetCurrentReferralProgram(reqCtx, &dataapipb.GetCurrentReferralProgramRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 	}
 
-	return response, nil
+	return response.CurrentReferralProgram, nil
 }
 
 func (n *DataNode) ListReferralSets(ctx context.Context) (map[string]*v2.ReferralSet, error) {
-	if n.Conn.GetState() != connectivity.Ready {
+	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}
 
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
 	defer cancelRequest()
 
 	response, err := c.ListReferralSets(reqCtx, &dataapipb.ListReferralSetsRequest{})
@@ -58,16 +50,25 @@ func (n *DataNode) ListReferralSets(ctx context.Context) (map[string]*v2.Referra
 	return referralSets, nil
 }
 
-func (n *DataNode) GetReferralSetReferees(ctx context.Context) (map[string]v2.ReferralSetReferee, error) {
+func (n *DataNode) ListReferralSetReferees(ctx context.Context) (map[string]v2.ReferralSetReferee, error) {
+	if n.Client.Conn.GetState() != connectivity.Ready {
+		return nil, e.ErrConnectionNotReady
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
+	defer cancelRequest()
+
 	referralSetReferees := map[string]v2.ReferralSetReferee{}
 	var pagination *v2.Pagination = nil
 	for {
-		res, err := n.ListReferralSetReferees(ctx, &dataapipb.ListReferralSetRefereesRequest{
+		res, err := c.ListReferralSetReferees(reqCtx, &dataapipb.ListReferralSetRefereesRequest{
 			Pagination: pagination,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
 		}
+
 		for _, edge := range res.ReferralSetReferees.Edges {
 			referralSetReferees[edge.Node.Referee] = *edge.Node
 		}
@@ -80,20 +81,4 @@ func (n *DataNode) GetReferralSetReferees(ctx context.Context) (map[string]v2.Re
 		}
 	}
 	return referralSetReferees, nil
-}
-
-func (n *DataNode) ListReferralSetReferees(ctx context.Context, req *v2.ListReferralSetRefereesRequest) (*v2.ListReferralSetRefereesResponse, error) {
-	if n.Conn.GetState() != connectivity.Ready {
-		return nil, e.ErrConnectionNotReady
-	}
-
-	c := dataapipb.NewTradingDataServiceClient(n.Conn)
-	reqCtx, cancelRequest := context.WithTimeout(ctx, n.CallTimeout)
-	defer cancelRequest()
-
-	response, err := c.ListReferralSetReferees(reqCtx, req)
-	if err != nil {
-		return nil, fmt.Errorf("gRPC call failed: %w", e.ErrorDetail(err))
-	}
-	return response, nil
 }

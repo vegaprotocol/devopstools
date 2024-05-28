@@ -8,7 +8,6 @@ import (
 
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi"
@@ -64,10 +63,10 @@ type marketDetails struct {
 	id   string
 }
 
-func findMarkets(dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
+func findMarkets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
 	var result []marketDetails
 
-	markets, err := dataNodeClient.GetAllMarkets(context.Background())
+	markets, err := dataNodeClient.ListMarkets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all markets")
 	}
@@ -142,7 +141,7 @@ func RunTerminate(args *TerminateArgs) error {
 	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Debug("Looking for healthy gRPC endpoints...")
-	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
@@ -157,7 +156,7 @@ func RunTerminate(args *TerminateArgs) error {
 	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -173,7 +172,7 @@ func RunTerminate(args *TerminateArgs) error {
 		return fmt.Errorf("failed to parse duration for %q: %w", netparams.GovernanceProposalMarketMinEnact, err)
 	}
 
-	marketsToRemove, err := findMarkets(datanodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
+	marketsToRemove, err := findMarkets(ctx, datanodeClient, args.AllMarkets, args.ManagedMarkets, args.MarketIds)
 	if err != nil {
 		return fmt.Errorf("failed to find markets to remove: %w", err)
 	}

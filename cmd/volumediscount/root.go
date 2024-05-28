@@ -1,4 +1,4 @@
-package node
+package volumediscount
 
 import (
 	"log"
@@ -10,16 +10,15 @@ import (
 
 type Args struct {
 	*rootCmd.RootArgs
-
 	NetworkFile string
 }
 
 var args Args
 
 var Cmd = &cobra.Command{
-	Use:   "node",
-	Short: "Manage a node on the network",
-	Long:  "Manage a node on the network",
+	Use:   "propose",
+	Short: "Manage volume-discounts on the network",
+	Long:  "Submit and vote on Vega Network Proposals",
 }
 
 func init() {

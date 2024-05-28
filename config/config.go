@@ -50,6 +50,7 @@ type EVMBridge struct {
 
 // Node describes a node on the network.
 type Node struct {
+	ID       string       `toml:"id"`
 	Metadata NodeMetadata `toml:"metadata"`
 	Secrets  NodeSecrets  `toml:"secrets"`
 	API      NodeAPI      `toml:"api"`
@@ -94,6 +95,7 @@ type Network struct {
 
 type NetworkWallets struct {
 	VegaTokenWhale VegaWallet `toml:"vega_token_whale"`
+	Faucet         VegaWallet `toml:"faucet"`
 }
 
 type VegaWallet struct {

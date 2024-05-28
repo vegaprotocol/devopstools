@@ -3,12 +3,17 @@ package generation
 import (
 	"fmt"
 
-	"github.com/vegaprotocol/devopstools/secrets"
-
 	"code.vegaprotocol.io/vega/wallet/wallet"
 )
 
-func GenerateVegaWallet() (*secrets.VegaWalletPrivate, error) {
+type VegaWalletPrivate struct {
+	Id             string `json:"id"`
+	PublicKey      string `json:"public_key"`
+	PrivateKey     string `json:"private_key"`
+	RecoveryPhrase string `json:"recovery_phrase"`
+}
+
+func GenerateVegaWallet() (*VegaWalletPrivate, error) {
 	vegaWallet, recoveryPhrase, err := wallet.NewHDWallet("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate vegawallet recovery phrase %w", err)
@@ -18,7 +23,7 @@ func GenerateVegaWallet() (*secrets.VegaWalletPrivate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key pair %w", err)
 	}
-	return &secrets.VegaWalletPrivate{
+	return &VegaWalletPrivate{
 		Id:             id,
 		PublicKey:      keyPair.PublicKey(),
 		PrivateKey:     keyPair.PrivateKey(),

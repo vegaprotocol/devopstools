@@ -10,7 +10,6 @@ import (
 	"github.com/vegaprotocol/devopstools/config"
 	"github.com/vegaprotocol/devopstools/governance"
 	"github.com/vegaprotocol/devopstools/governance/networkparameters"
-	"github.com/vegaprotocol/devopstools/networktools"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
@@ -70,7 +69,7 @@ func runPropose(args ProposeArgs) error {
 	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Debug("Looking for healthy gRPC endpoints...")
-	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
@@ -96,7 +95,7 @@ func runPropose(args ProposeArgs) error {
 	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
 	logger.Debug("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -125,7 +124,7 @@ func runPropose(args ProposeArgs) error {
 		logger.Debug("Network parameters do not need to be updated")
 	}
 
-	allMarkets, err := datanodeClient.GetAllMarkets(ctx)
+	allMarkets, err := datanodeClient.ListMarkets(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}

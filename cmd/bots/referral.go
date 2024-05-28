@@ -14,7 +14,7 @@ import (
 	"github.com/vegaprotocol/devopstools/ethereum"
 	"github.com/vegaprotocol/devopstools/generation"
 	"github.com/vegaprotocol/devopstools/governance"
-	"github.com/vegaprotocol/devopstools/networktools"
+	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
 	"github.com/vegaprotocol/devopstools/vega"
 	"github.com/vegaprotocol/devopstools/vegaapi"
@@ -129,13 +129,16 @@ func runReferral(args ReferralArgs) error {
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
+
 	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
 	logger.Info("Looking for healthy gRPC endpoints...")
-	healthyEndpoints := networktools.FilterHealthyGRPCEndpoints(endpoints)
+
+	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
+
 	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
@@ -151,6 +154,7 @@ func runReferral(args ReferralArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve research bots: %w", err)
 	}
+
 	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
 	if err := prepareNetworkParameters(ctx, whaleWallet, datanodeClient, !args.Setup, logger.Named("pepare network parameters")); err != nil {
@@ -158,10 +162,12 @@ func runReferral(args ReferralArgs) error {
 	}
 
 	logger.Info("Retrieving markets for filtered assets...", zap.Strings("assets", args.Assets))
+
 	wantedMarketsIds, err := findMarketsForAssets(ctx, datanodeClient, args.Assets)
 	if err != nil {
 		return fmt.Errorf("failed to find markets for wanted assets")
 	}
+
 	logger.Info("Markets retrieved", zap.Strings("market-ids", wantedMarketsIds))
 
 	logger.Info("Getting referral sets")
@@ -192,8 +198,8 @@ func runReferral(args ReferralArgs) error {
 		)
 	}
 
-	logger.Info("Retrieving network parameters...")
-	networkParams, err := datanodeClient.GetAllNetworkParameters()
+	logger.Debug("Retrieving network parameters...")
+	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -243,7 +249,7 @@ func runReferral(args ReferralArgs) error {
 func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
 	_ = ctx
 
-	networkParameters, err := datanodeClient.GetAllNetworkParameters()
+	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
@@ -467,6 +473,7 @@ func findMarketsForAssets(ctx context.Context, dataNodeClient vegaapi.DataNodeCl
 	var result []string
 	for _, market := range allMarkets {
 		settlementAsset := ""
+
 		quoteAsset := ""
 
 		if market.GetTradableInstrument() != nil && market.GetTradableInstrument().GetInstrument() != nil {
@@ -519,7 +526,7 @@ func joinReferees(ctx context.Context, referralSets []ReferralSet, dataNodeClien
 		return fmt.Errorf("failed to retrieve current referral sets, %w", err)
 	}
 
-	referralSetReferees, err := dataNodeClient.GetReferralSetReferees(ctx)
+	referralSetReferees, err := dataNodeClient.ListReferralSetReferees(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve current referees: %w", err)
 	}
@@ -598,7 +605,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 		logger.Debug("Retrieving current stake for party...",
 			zap.String("party-id", referralSet.Leader.PublicKey),
 		)
-		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(referralSet.Leader.PublicKey)
+		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, referralSet.Leader.PublicKey)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve current stake for party %s: %w", referralSet.Leader.PublicKey, err)
 		}
@@ -634,7 +641,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 	}
 
 	logger.Debug("Staking Vega token to parties", zap.Strings("parties", maps.Keys(missingStakeByPubKey)))
-	if err := chainClient.StakeVegaTokenFromMinter(ctx, missingStakeByPubKey); err != nil {
+	if err := chainClient.StakeFromMinter(ctx, missingStakeByPubKey); err != nil {
 		return fmt.Errorf("failed to stake Vega token from minter wallet: %w", err)
 	}
 	logger.Debug("Staking Vega token successful", zap.Strings("parties", maps.Keys(missingStakeByPubKey)))

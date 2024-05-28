@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vegaprotocol/devopstools/ethutils"
 	"github.com/vegaprotocol/devopstools/smartcontracts/erc20token"
 	"github.com/vegaprotocol/devopstools/tools"
 	"github.com/vegaprotocol/devopstools/types"
@@ -28,7 +27,46 @@ var (
 	ErrStakingBridgeDisabled = errors.New("staking bridge is disabled for this client")
 )
 
-func (c *ChainClient) StakeVegaTokenFromMinter(ctx context.Context, stakes map[string]*types.Amount) error {
+func (c *ChainClient) RemoveMinterStake(ctx context.Context, partyPubKey string) error {
+	logger := c.logger.With(
+		zap.Int("flow", rand.Int()),
+		zap.String("minter", c.minterWallet.Address.Hex()),
+		zap.String("bridge", c.stakingBridge.Address.Hex()),
+		zap.String("party", partyPubKey),
+	)
+
+	currentStake, err := c.stakingBridge.StakeBalance(&bind.CallOpts{Context: ctx}, c.minterWallet.Address, partyPubKey)
+	if err != nil {
+		return fmt.Errorf("could not retrieve stake balance: %w", err)
+	}
+
+	if currentStake.Cmp(big.NewInt(0)) > 0 {
+		opts := c.minterWallet.GetTransactOpts(ctx)
+		tx, err := c.stakingBridge.RemoveStake(opts, currentStake, partyPubKey)
+		if err != nil {
+			return fmt.Errorf("failed to remove stake from party %s: %w", partyPubKey, err)
+		}
+
+		logger.Debug("Waiting for stake to be removed...",
+			zap.String("stake", currentStake.String()),
+			zap.String("tx-hash", tx.Hash().Hex()),
+		)
+		if err := WaitForTransaction(ctx, c.client, tx, time.Minute*2); err != nil {
+			return fmt.Errorf("transaction to remove stake from party %s failed: %w", partyPubKey, err)
+		} else {
+			logger.Debug("Stake removed successfully",
+				zap.String("stake", currentStake.String()),
+				zap.String("tx-hash", tx.Hash().Hex()),
+			)
+		}
+	} else {
+		logger.Debug("No stake to remove")
+	}
+
+	return nil
+}
+
+func (c *ChainClient) StakeFromMinter(ctx context.Context, stakes map[string]*types.Amount) error {
 	if c.stakingBridge == nil {
 		return ErrStakingBridgeDisabled
 	}
@@ -141,7 +179,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 
 	txs := map[string]*ethtypes.Transaction{}
 	for partyID, amount := range deposits {
-		partyKeyB32, err := ethutils.VegaPubKeyToByte32(partyID)
+		partyKeyB32, err := tools.KeyAsByte32(partyID)
 		if err != nil {
 			return fmt.Errorf("could not convert party ID to byte32: %w", err)
 		}
@@ -260,13 +298,13 @@ func (c *ChainClient) Signers(ctx context.Context) ([]common.Address, error) {
 }
 
 func (c *ChainClient) ListAsset(ctx context.Context, signers []*Wallet, assetID, assetHexAddress string, lifetimeLimit, withdrawThreshold *big.Int) error {
-	assetIDB32, err := ethutils.VegaPubKeyToByte32(assetID)
+	assetIDB32, err := tools.KeyAsByte32(assetID)
 	if err != nil {
 		return fmt.Errorf("could not convert asset ID to byte32: %w", err)
 	}
 
 	assetAddress := common.HexToAddress(assetHexAddress)
-	nonce := num.NewUint(ethutils.TimestampNonce()).BigInt()
+	nonce := num.NewUint(timestampNonce()).BigInt()
 
 	msg, err := buildListAssetMsg(c.collateralBridge.Address, assetAddress, assetIDB32, lifetimeLimit, withdrawThreshold, nonce)
 	if err != nil {
@@ -404,4 +442,8 @@ func packBufAndSubmitter(buf []byte, submitter common.Address) ([]byte, error) {
 	})
 
 	return args2.Pack(buf, submitter)
+}
+
+func timestampNonce() uint64 {
+	return uint64(time.Now().UnixNano() / int64(time.Millisecond))
 }
