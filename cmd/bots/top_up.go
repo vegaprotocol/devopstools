@@ -160,7 +160,6 @@ func TopUpBots(args TopUpArgs) error {
 	if len(whaleTopUpsByAsset) == 0 {
 		logger.Info("No top-up required for the whale")
 	} else {
-
 		logger.Debug("Depositing assets to whale...")
 		if err := depositAssetsToWhale(ctx, whaleTopUpsByAsset, assets, datanodeClient, whalePublicKey, chainClients, logger); err != nil {
 			return err
