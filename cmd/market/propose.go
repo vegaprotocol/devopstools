@@ -60,7 +60,7 @@ func runPropose(args ProposeArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Info("Network file loaded", zap.String("name", cfg.Name.String()))
+	logger.Info("Network file loaded", zap.String("name", cfg.EnvironmentName.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
@@ -101,7 +101,7 @@ func runPropose(args ProposeArgs) error {
 	}
 	logger.Info("Network parameters retrieved")
 
-	networkParamsProposals, err := preMarketDeployProposals(cfg.Name, networkParams)
+	networkParamsProposals, err := preMarketDeployProposals(cfg.EnvironmentName, networkParams)
 	if err != nil {
 		return fmt.Errorf("failed to determine network parameters to update before markets are proposed: %w", err)
 	}
@@ -109,7 +109,7 @@ func runPropose(args ProposeArgs) error {
 	if len(networkParamsProposals) > 0 {
 		logger.Info("Updating network parameters...")
 		networkParamsBatchProposal := governance.NewBatchProposal(
-			fmt.Sprintf("%q devopstools network params proposal", cfg.Name.String()),
+			fmt.Sprintf("%q devopstools network params proposal", cfg.EnvironmentName.String()),
 			"Update network parameters before markets are proposed",
 			time.Now().Add(30*time.Second),
 			networkParamsProposals,
@@ -129,7 +129,7 @@ func runPropose(args ProposeArgs) error {
 		return fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
 
-	missingMarketsProposals := collectMissingMarkets(allMarkets, ProposalsForEnvironment(cfg.Name), logger)
+	missingMarketsProposals := collectMissingMarkets(allMarkets, ProposalsForEnvironment(cfg.EnvironmentName), logger)
 
 	if len(missingMarketsProposals) < 1 {
 		logger.Info("No market to propose")
@@ -137,7 +137,7 @@ func runPropose(args ProposeArgs) error {
 	}
 
 	marketsBatchProposal := governance.NewBatchProposal(
-		fmt.Sprintf("%q devopstools markets proposal", cfg.Name.String()),
+		fmt.Sprintf("%q devopstools markets proposal", cfg.EnvironmentName.String()),
 		"Create all markets managed by devopstools",
 		time.Now().Add(30*time.Second),
 		missingMarketsProposals,
