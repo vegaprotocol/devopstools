@@ -22,6 +22,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const IgnoreProposer = ""
+
 func SubmitProposalList(ctx context.Context, descriptionToProposalConfig map[string]*commandspb.ProposalSubmission, proposer wallet.Wallet, proposerPublicKey string, dataNodeClient vegaapi.DataNodeClient) (map[string]string, error) {
 	for description, proposalConfig := range descriptionToProposalConfig {
 		request := walletpb.SubmitTransactionRequest{
@@ -140,4 +142,38 @@ func ProposeAndVoteOnNetworkParameters(ctx context.Context, desiredValues map[st
 	}
 
 	return int64(len(descriptionToProposalConfig)), nil
+}
+
+func FindProposalID(ctx context.Context, proposerPubKey string, reference string, client vegaapi.DataNodeClient) (string, error) {
+	res, err := client.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
+		Reference: &reference,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to find any proposal with the %s reference: %w", reference, err)
+	}
+
+	if res != nil {
+		proposal := res.Data.Proposal
+		if slices.Contains(
+			[]vegapb.Proposal_State{vegapb.Proposal_STATE_FAILED, vegapb.Proposal_STATE_REJECTED, vegapb.Proposal_STATE_DECLINED},
+			proposal.State,
+		) {
+			return "", fmt.Errorf("proposal '%s' is in wrong state %s: %+v", proposal.Rationale.Title, proposal.State.String(), proposal)
+		}
+
+		// If We provided any proposer check if it matches
+		if proposerPubKey != IgnoreProposer && proposerPubKey != proposal.PartyId {
+			return "", fmt.Errorf(
+				"found proposal for reference(%s) but proposer does not match: expected %s, got %s",
+				reference,
+				proposerPubKey,
+				proposal.PartyId,
+			)
+		}
+
+		return proposal.Id, nil
+	}
+
+	return "", fmt.Errorf("failed to find proposal for reference %s", reference)
 }

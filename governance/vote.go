@@ -24,6 +24,7 @@ func VoteOnProposal(ctx context.Context, voteDescription string, proposalId stri
 			},
 		},
 	}
+
 	if _, err := walletpkg.SendTransaction(ctx, voter, voterPublicKey, &request, dataNodeClient); err != nil {
 		return fmt.Errorf("transaction for proposal %q failed: %w", voteDescription, err)
 	}

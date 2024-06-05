@@ -203,10 +203,11 @@ func NewMainnetSimulationLDOUSDTPerp(
 							AuctionExtension: 1,
 						},
 						LiquidationStrategy: &vega.LiquidationStrategy{
-							DisposalTimeStep:    30,
-							MaxFractionConsumed: "0.1",
-							DisposalFraction:    "0.1",
-							FullDisposalSize:    0,
+							DisposalTimeStep:      30,
+							MaxFractionConsumed:   "0.1",
+							DisposalFraction:      "0.1",
+							FullDisposalSize:      0,
+							DisposalSlippageRange: "0.005",
 						},
 						RiskParameters: &vega.NewMarketConfiguration_LogNormal{
 							LogNormal: &vega.LogNormalRiskModel{

@@ -60,28 +60,28 @@ func runPropose(args ProposeArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+	logger.Info("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
-	logger.Debug("Looking for healthy gRPC endpoints...")
+	logger.Info("Looking for healthy gRPC endpoints...")
 	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
 
-	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	logger.Info("Connecting to a datanode's gRPC endpoint...")
 	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelDialing()
 	datanodeClient.MustDialConnection(dialCtx) // blocking
-	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+	logger.Info("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
 	whaleWallet, err := vega.LoadWallet(cfg.Network.Wallets.VegaTokenWhale.Name, cfg.Network.Wallets.VegaTokenWhale.RecoveryPhrase)
 	if err != nil {
@@ -94,12 +94,12 @@ func runPropose(args ProposeArgs) error {
 
 	whalePublicKey := cfg.Network.Wallets.VegaTokenWhale.PublicKey
 
-	logger.Debug("Retrieving network parameters...")
+	logger.Info("Retrieving network parameters...")
 	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
-	logger.Debug("Network parameters retrieved")
+	logger.Info("Network parameters retrieved")
 
 	networkParamsProposals, err := preMarketDeployProposals(cfg.Name, networkParams)
 	if err != nil {
@@ -107,7 +107,7 @@ func runPropose(args ProposeArgs) error {
 	}
 
 	if len(networkParamsProposals) > 0 {
-		logger.Debug("Updating network parameters...")
+		logger.Info("Updating network parameters...")
 		networkParamsBatchProposal := governance.NewBatchProposal(
 			fmt.Sprintf("%q devopstools network params proposal", cfg.Name.String()),
 			"Update network parameters before markets are proposed",
@@ -116,22 +116,22 @@ func runPropose(args ProposeArgs) error {
 			nil,
 		)
 
-		if err := sendBatchProposal(ctx, datanodeClient, whaleWallet, whalePublicKey, networkParamsBatchProposal); err != nil {
+		if err := sendBatchProposal(ctx, logger, datanodeClient, whaleWallet, whalePublicKey, networkParamsBatchProposal); err != nil {
 			return fmt.Errorf("failed to send batch proposal to update network parameters: %w", err)
 		}
-		logger.Debug("Network parameters updated")
+		logger.Info("Network parameters updated")
 	} else {
-		logger.Debug("Network parameters do not need to be updated")
+		logger.Info("Network parameters do not need to be updated")
 	}
 
-	allMarkets, err := datanodeClient.ListMarkets(ctx)
+	allMarkets, err := datanodeClient.GetAllMarketsWithState(ctx, datanode.ActiveMarkets)
 	if err != nil {
 		return fmt.Errorf("could not retrieve markets from datanode: %w", err)
 	}
 
 	missingMarketsProposals := collectMissingMarkets(allMarkets, ProposalsForEnvironment(cfg.Name), logger)
 
-	if len(missingMarketsProposals) > 0 {
+	if len(missingMarketsProposals) < 1 {
 		logger.Info("No market to propose")
 		return nil
 	}
@@ -149,7 +149,7 @@ func runPropose(args ProposeArgs) error {
 		return nil
 	}
 
-	return sendBatchProposal(ctx, datanodeClient, whaleWallet, whalePublicKey, marketsBatchProposal)
+	return sendBatchProposal(ctx, logger, datanodeClient, whaleWallet, whalePublicKey, marketsBatchProposal)
 }
 
 func collectMissingMarkets(allMarkets []*vegapb.Market, allNetworkProposals []*commandspb.ProposalSubmission, logger *zap.Logger) []*commandspb.ProposalSubmission {
@@ -173,28 +173,40 @@ func collectMissingMarkets(allMarkets []*vegapb.Market, allNetworkProposals []*c
 
 		if !found {
 			result = append(result, allNetworkProposals[idx])
-			logger.Debug("Adding proposal for market creation to batch", zap.String("market-code", marketCode))
+			logger.Info("Adding proposal for market creation to batch", zap.String("market-code", marketCode))
 		} else {
-			logger.Debug("Market already existing on the network", zap.String("market-code", marketCode))
+			logger.Info("Market already existing on the network", zap.String("market-code", marketCode))
 		}
 	}
 
 	return result
 }
 
-func sendBatchProposal(ctx context.Context, datanodeClient *datanode.DataNode, whaleWallet wallet.Wallet, whaleKey string, proposals *commandspb.BatchProposalSubmission) error {
+func sendBatchProposal(ctx context.Context, logger *zap.Logger, datanodeClient *datanode.DataNode, whaleWallet wallet.Wallet, whaleKey string, proposals *commandspb.BatchProposalSubmission) error {
 	walletTxReq := walletpb.SubmitTransactionRequest{
 		Command: &walletpb.SubmitTransactionRequest_BatchProposalSubmission{
 			BatchProposalSubmission: proposals,
 		},
 	}
 
+	logger.Info("Sending transaction to the network")
 	resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whaleKey, &walletTxReq, datanodeClient)
 	if err != nil {
 		return fmt.Errorf("failed to submit batch proposal with signature: %w", err)
 	}
+	logger.Sugar().Infof("Batch proposal transaction ID: %s", resp.TxHash)
 
-	proposalId := resp.TxHash
+	logger.Info("Searching proposal ID")
+	proposalId, err := tools.RetryReturn(5, time.Second*5, func() (string, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		return governance.FindProposalID(ctx, whaleKey, proposals.Reference, datanodeClient)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to find proposal ID: %w", err)
+	}
+	logger.Sugar().Info("Found proposal with the following ID: %s", proposalId)
 
 	if err = tools.RetryRun(10, 6*time.Second, func() error {
 		return governance.VoteOnProposal(ctx, "BatchProposal vote", proposalId, whaleWallet, whaleKey, datanodeClient)
