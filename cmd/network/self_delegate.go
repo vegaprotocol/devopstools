@@ -61,35 +61,35 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
-	logger.Debug("Network file loaded", zap.String("name", cfg.Name.String()))
+	logger.Info("Network file loaded", zap.String("name", cfg.Name.String()))
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
+	logger.Info("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
-	logger.Debug("Looking for healthy gRPC endpoints...")
+	logger.Info("Looking for healthy gRPC endpoints...")
 	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
 		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
 	}
-	logger.Debug("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
+	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
 	datanodeClient := datanode.New(healthyEndpoints, 3*time.Second, args.Logger.Named("datanode"))
 
-	logger.Debug("Connecting to a datanode's gRPC endpoint...")
+	logger.Info("Connecting to a datanode's gRPC endpoint...")
 	dialCtx, cancelDialing := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelDialing()
 	datanodeClient.MustDialConnection(dialCtx) // blocking
-	logger.Debug("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
+	logger.Info("Connected to a datanode's gRPC node", zap.String("node", datanodeClient.Target()))
 
-	logger.Debug("Retrieving network parameters...")
+	logger.Info("Retrieving network parameters...")
 	networkParams, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
 	}
-	logger.Debug("Network parameters retrieved")
+	logger.Info("Network parameters retrieved")
 
 	primaryEthConfig, err := networkParams.PrimaryEthereumConfig()
 	if err != nil {
@@ -108,6 +108,10 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 
 	missingStakeByPubKey := map[string]*types.Amount{}
 	for _, node := range cfg.Nodes {
+		if node.Type != config.TypeValidator {
+			logger.Sugar().Infof("Node %s is not validator, self-delegate not needed", node.ID)
+			continue
+		}
 		nodeKey := node.Secrets.VegaPubKey
 
 		currentStakeAsSubUnit, err := datanodeClient.GetPartyTotalStake(ctx, nodeKey)
@@ -116,13 +120,13 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 		}
 
 		currentStake := types.NewAmountFromSubUnit(currentStakeAsSubUnit, 18)
-		logger.Debug("Current stake for party found",
+		logger.Info("Current stake for party found",
 			zap.String("party-id", nodeKey),
 			zap.String("current-stake", currentStake.String()),
 		)
 
 		if currentStake.Cmp(minValidatorStake) < 0 {
-			logger.Debug("Party needs more stake",
+			logger.Info("Party needs more stake",
 				zap.String("party-id", nodeKey),
 				zap.String("program-minimum-stake", minValidatorStake.String()),
 				zap.String("current-stake", currentStake.String()),
@@ -130,7 +134,7 @@ func RunSelfDelegate(args SelfDelegateArgs) error {
 
 			missingStakeByPubKey[nodeKey] = minValidatorStake.Copy()
 		} else {
-			logger.Debug("Party does not need more stake",
+			logger.Info("Party does not need more stake",
 				zap.String("party-id", nodeKey),
 				zap.String("program-minimum-stake", minValidatorStake.String()),
 				zap.String("current-stake", currentStake.String()),

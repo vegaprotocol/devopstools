@@ -1,5 +1,10 @@
 package config
 
+const (
+	TypeFull      = "full"
+	TypeValidator = "validator"
+)
+
 type Config struct {
 	// Name of the configuration file used. It's extracted from the filename.
 	Name NetworkName
@@ -51,6 +56,7 @@ type EVMBridge struct {
 // Node describes a node on the network.
 type Node struct {
 	ID       string       `toml:"id"`
+	Type     string       `toml:"type"`
 	Metadata NodeMetadata `toml:"metadata"`
 	Secrets  NodeSecrets  `toml:"secrets"`
 	API      NodeAPI      `toml:"api"`
@@ -113,46 +119,46 @@ type NodeAPI struct {
 }
 
 type NodeMetadata struct {
-	Name      string `json:"name"`
-	Country   string `json:"country"`
-	InfoURL   string `json:"info_url"`
-	AvatarURL string `json:"avatar_url"`
+	Name      string `toml:"name"`
+	Country   string `toml:"country"`
+	InfoURL   string `toml:"info_url"`
+	AvatarURL string `toml:"avatar_url"`
 }
 
 type NodeSecrets struct {
 	// Ethereum
-	EthereumAddress    string `json:"ethereum_address"`
-	EthereumPrivateKey string `json:"ethereum_private_key"`
-	EthereumMnemonic   string `json:"ethereum_mnemonic"`
+	EthereumAddress    string `toml:"ethereum_address"`
+	EthereumPrivateKey string `toml:"ethereum_private_key"`
+	EthereumMnemonic   string `toml:"ethereum_mnemonic"`
 	// Vega
-	VegaId             string  `json:"vega_id"`
-	VegaPubKey         string  `json:"vega_public_key"`
-	VegaPrivateKey     string  `json:"vega_private_key"`
-	VegaRecoveryPhrase string  `json:"vega_recovery_phrase"`
-	VegaPubKeyIndex    *uint64 `json:"vega_public_key_index"`
+	VegaId             string  `toml:"vega_id"`
+	VegaPubKey         string  `toml:"vega_public_key"`
+	VegaPrivateKey     string  `toml:"vega_private_key"`
+	VegaRecoveryPhrase string  `toml:"vega_recovery_phrase"`
+	VegaPubKeyIndex    *uint64 `toml:"vega_public_key_index"`
 	// Data-Node DeHistory
-	DeHistoryPeerId          string `json:"de_history_peer_id"`
-	DeHistoryPrivateKey      string `json:"de_history_private_key"`
-	NetworkHistoryPeerId     string `json:"network_history_peer_id"`
-	NetworkHistoryPrivateKey string `json:"network_history_private_key"`
+	DeHistoryPeerId          string `toml:"de_history_peer_id"`
+	DeHistoryPrivateKey      string `toml:"de_history_private_key"`
+	NetworkHistoryPeerId     string `toml:"network_history_peer_id"`
+	NetworkHistoryPrivateKey string `toml:"network_history_private_key"`
 	// Tendermint
-	TendermintNodeId              string `json:"tendermint_node_id"`
-	TendermintNodePubKey          string `json:"tendermint_node_public_key"`
-	TendermintNodePrivateKey      string `json:"tendermint_node_private_key"`
-	TendermintValidatorAddress    string `json:"tendermint_validator_address"`
-	TendermintValidatorPubKey     string `json:"tendermint_validator_public_key"`
-	TendermintValidatorPrivateKey string `json:"tendermint_validator_private_key"`
+	TendermintNodeId              string `toml:"tendermint_node_id"`
+	TendermintNodePubKey          string `toml:"tendermint_node_public_key"`
+	TendermintNodePrivateKey      string `toml:"tendermint_node_private_key"`
+	TendermintValidatorAddress    string `toml:"tendermint_validator_address"`
+	TendermintValidatorPubKey     string `toml:"tendermint_validator_public_key"`
+	TendermintValidatorPrivateKey string `toml:"tendermint_validator_private_key"`
 
 	// Binary wallet file passphrase
-	WalletBinaryPassphrase string         `json:"wallet_binary_passphrase"`
-	BinaryWallets          *BinaryWallets `json:"binary_wallets"`
+	WalletBinaryPassphrase string         `toml:"wallet_binary_passphrase"`
+	BinaryWallets          *BinaryWallets `toml:"binary_wallets"`
 }
 
 type BinaryWallets struct {
-	NodewalletPath       string `json:"nodewallet_path"`
-	NodewalletBase64     string `json:"nodewallet"`
-	VegaWalletPath       string `json:"vegawallet_path"`
-	VegaWalletBase64     string `json:"vegawallet"`
-	EthereumWalletPath   string `json:"ethereumwallet_path"`
-	EthereumWalletBase64 string `json:"ethereumwallet"`
+	NodewalletPath       string `toml:"nodewallet_path"`
+	NodewalletBase64     string `toml:"nodewallet"`
+	VegaWalletPath       string `toml:"vegawallet_path"`
+	VegaWalletBase64     string `toml:"vegawallet"`
+	EthereumWalletPath   string `toml:"ethereumwallet_path"`
+	EthereumWalletBase64 string `toml:"ethereumwallet"`
 }
