@@ -148,7 +148,6 @@ func FindProposalID(ctx context.Context, proposerPubKey string, reference string
 	res, err := client.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
 		Reference: &reference,
 	})
-
 	if err != nil {
 		return "", fmt.Errorf("failed to find any proposal with the %s reference: %w", reference, err)
 	}
