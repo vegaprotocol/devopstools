@@ -268,10 +268,11 @@ func NewMainnetSimulationBitcoinTetherPerpetual(
 							SlaCompetitionFactor:        "0.5",
 						},
 						LiquidationStrategy: &vega.LiquidationStrategy{
-							DisposalTimeStep:    30,
-							DisposalFraction:    "0.1",
-							FullDisposalSize:    0,
-							MaxFractionConsumed: "0.1",
+							DisposalTimeStep:      30,
+							DisposalFraction:      "0.1",
+							FullDisposalSize:      0,
+							MaxFractionConsumed:   "0.1",
+							DisposalSlippageRange: "0.005",
 						},
 						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
 							DecayWeight: "1.0",

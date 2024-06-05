@@ -16,6 +16,7 @@ import (
 var ActiveMarkets = []vega.Market_State{
 	vega.Market_STATE_ACTIVE,
 	vega.Market_STATE_SUSPENDED,
+	vega.Market_STATE_PENDING,
 }
 
 func (n *DataNode) GetAllMarketsWithState(ctx context.Context, states []vega.Market_State) ([]*vega.Market, error) {

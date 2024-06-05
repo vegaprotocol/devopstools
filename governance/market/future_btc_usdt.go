@@ -204,6 +204,7 @@ This proposal requests to list BTC/USDT-231231 as a market with USDT as a settle
 							MaxFractionConsumed: "0.1",
 							DisposalFraction:    "0.1",
 							// FullDisposalSize:    0,
+							DisposalSlippageRange: "0.005",
 						},
 						MarkPriceConfiguration: &vega.CompositePriceConfiguration{
 							CompositePriceType: vega.CompositePriceType_COMPOSITE_PRICE_TYPE_LAST_TRADE,
