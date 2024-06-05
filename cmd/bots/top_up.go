@@ -167,14 +167,17 @@ func TopUpBots(args TopUpArgs) error {
 		logger.Info("Whale has now enough funds to transfer to trading bots")
 	}
 
-	logger.Debug("Preparing network for transfers from whale to trading bots...")
-	updateParams := map[string]string{
-		netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", countTransfersToDo(topUpsByAsset)),
+	transfersToDo := countTransfersToDo(topUpsByAsset)
+	if networkParams.GetMaxTransfersPerEpoch() < int64(transfersToDo) {
+		logger.Debug("Preparing network for transfers from whale to trading bots...")
+		updateParams := map[string]string{
+			netparams.TransferMaxCommandsPerEpoch: fmt.Sprintf("%d", transfersToDo*30),
+		}
+		if _, err := vega.UpdateNetworkParameters(ctx, whaleWallet, whalePublicKey, datanodeClient, updateParams, logger); err != nil {
+			return fmt.Errorf("failed to prepare network for transfers: %w", err)
+		}
+		logger.Info("Network ready for transfers from whale to trading bots")
 	}
-	if _, err := vega.UpdateNetworkParameters(ctx, whaleWallet, whalePublicKey, datanodeClient, updateParams, logger); err != nil {
-		return fmt.Errorf("failed to prepare network for transfers: %w", err)
-	}
-	logger.Info("Network ready for transfers from whale to trading bots")
 
 	logger.Info("Transferring assets from whale to trading bots...")
 	if err := transferAssetsFromWhaleToBots(ctx, datanodeClient, whaleWallet, whalePublicKey, topUpsByAsset, logger); err != nil {
