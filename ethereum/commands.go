@@ -47,20 +47,20 @@ func (c *ChainClient) RemoveMinterStake(ctx context.Context, partyPubKey string)
 			return fmt.Errorf("failed to remove stake from party %s: %w", partyPubKey, err)
 		}
 
-		logger.Debug("Waiting for stake to be removed...",
+		logger.Info("Waiting for stake to be removed...",
 			zap.String("stake", currentStake.String()),
 			zap.String("tx-hash", tx.Hash().Hex()),
 		)
 		if err := WaitForTransaction(ctx, c.client, tx, time.Minute*2); err != nil {
 			return fmt.Errorf("transaction to remove stake from party %s failed: %w", partyPubKey, err)
 		} else {
-			logger.Debug("Stake removed successfully",
+			logger.Info("Stake removed successfully",
 				zap.String("stake", currentStake.String()),
 				zap.String("tx-hash", tx.Hash().Hex()),
 			)
 		}
 	} else {
-		logger.Debug("No stake to remove")
+		logger.Info("No stake to remove")
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func (c *ChainClient) StakeFromMinter(ctx context.Context, stakes map[string]*ty
 
 	txs := map[string]*ethtypes.Transaction{}
 	for partyID, amount := range stakes {
-		logger.Debug("Staking Vega token...",
+		logger.Info("Staking Vega token...",
 			zap.String("party-id", partyID),
 			zap.String("amount", amount.String()),
 		)
@@ -141,7 +141,7 @@ func (c *ChainClient) StakeFromMinter(ctx context.Context, stakes map[string]*ty
 	}
 
 	for partyID, tx := range txs {
-		logger.Debug("Waiting for Ethereum transaction for party to complete...",
+		logger.Info("Waiting for Ethereum transaction for party to complete...",
 			zap.String("party-id", partyID),
 			zap.String("tx-hash", tx.Hash().Hex()),
 		)
@@ -211,7 +211,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 			return fmt.Errorf("could not convert party ID to byte32: %w", err)
 		}
 
-		logger.Debug("Depositing asset...",
+		logger.Info("Depositing asset...",
 			zap.String("party-id", partyID),
 			zap.String("amount", amount.String()),
 		)
@@ -224,7 +224,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 	}
 
 	for partyID, tx := range txs {
-		logger.Debug("Waiting for Ethereum transaction for party to complete...",
+		logger.Info("Waiting for Ethereum transaction for party to complete...",
 			zap.String("party-id", partyID),
 			zap.String("tx-hash", tx.Hash().Hex()),
 		)
@@ -240,28 +240,29 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 }
 
 func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, token *erc20token.ERC20Token, requiredAmountAsSubUnit *big.Int, withAllowanceToCollateral bool, logger *zap.Logger) error {
-	logger.Debug("Retrieving wallet's balance...")
+	logger.Info("Retrieving wallet's balance...")
 	balanceAsSubUnit, err := token.BalanceOf(&bind.CallOpts{Context: ctx}, minterWallet.Address)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve balance from minter's wallet: %w", err)
 	}
-	logger.Debug("Minter's balance retrieved", zap.String("balance-su", balanceAsSubUnit.String()))
+	logger.Info("Minter's balance retrieved", zap.String("balance-su", balanceAsSubUnit.String()))
 
-	if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) > -1 {
-		logger.Debug("No minting required",
+	if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) <= 0 {
+		logger.Info("No minting required",
 			zap.String("current-balance-su", balanceAsSubUnit.String()),
 			zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
 		)
+		return nil
 	}
 
-	amountToMintAsSubUnit := new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit)
+	amountToMintAsSubUnit := big.NewInt(0).Mul(new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit), big.NewInt(20))
 	logger.Info("Minting required",
 		zap.String("current-balance-su", balanceAsSubUnit.String()),
 		zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
 		zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()),
 	)
 
-	logger.Debug("Minting...", zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()))
+	logger.Info("Minting...", zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()))
 
 	mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), minterWallet.Address, amountToMintAsSubUnit)
 	if err != nil {
@@ -274,15 +275,15 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 
 	logger.Info("Minting successful", zap.String("amount-minted-su", amountToMintAsSubUnit.String()))
 
-	logger.Debug("Retrieving bridge allowance...")
+	logger.Info("Retrieving bridge allowance...")
 	allowanceAsSubUnit, err := token.Allowance(&bind.CallOpts{Context: ctx}, minterWallet.Address, c.collateralBridge.Address)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve allowance: %w", err)
 	}
-	logger.Debug("Bridge's allowance retrieved", zap.String("allowance-su", allowanceAsSubUnit.String()))
+	logger.Info("Bridge's allowance retrieved", zap.String("allowance-su", allowanceAsSubUnit.String()))
 
 	if allowanceAsSubUnit.Cmp(requiredAmountAsSubUnit) > -1 {
-		logger.Debug("No allowance increase required",
+		logger.Info("No allowance increase required",
 			zap.String("current-allowance-su", allowanceAsSubUnit.String()),
 			zap.String("required-allowance-su", requiredAmountAsSubUnit.String()),
 		)
@@ -298,7 +299,7 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 			zap.String("increase-by-su", allowanceToIncrease.String()),
 		)
 
-		logger.Debug("Increasing allowance...", zap.String("increase-by-su", allowanceToIncrease.String()))
+		logger.Info("Increasing allowance...", zap.String("increase-by-su", allowanceToIncrease.String()))
 
 		allowanceTx, err := token.IncreaseAllowance(minterWallet.GetTransactOpts(ctx), c.collateralBridge.Address, allowanceToIncrease)
 		if err != nil {
@@ -342,14 +343,14 @@ func (c *ChainClient) ListAsset(ctx context.Context, signers []*Wallet, assetID,
 		return fmt.Errorf("could not generate list an asset message for signing: %w", err)
 	}
 
-	c.logger.Debug("Generating multisig...", zap.ByteString("message", msg))
+	c.logger.Info("Generating multisig...", zap.ByteString("message", msg))
 	signatures, err := generateMultisig(signers, msg)
 	if err != nil {
 		return fmt.Errorf("could not generate signatures to list an asset: %w", err)
 	}
-	c.logger.Debug("Multisig generated", zap.ByteString("signatures", signatures))
+	c.logger.Info("Multisig generated", zap.ByteString("signatures", signatures))
 
-	c.logger.Debug("Listing asset...",
+	c.logger.Info("Listing asset...",
 		zap.String("asset-id", assetID),
 		zap.String("asset-contract-address", assetHexAddress),
 	)
