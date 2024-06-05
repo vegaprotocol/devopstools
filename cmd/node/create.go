@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -46,9 +47,12 @@ func init() {
 }
 
 func RunCreateNode(args CreateArgs) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	logger := args.Logger.Named("command")
 
-	cfg, err := config.Load(args.NetworkFile)
+	cfg, err := config.Load(ctx, args.NetworkFile)
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}

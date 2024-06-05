@@ -52,7 +52,7 @@ func RunVolumeDiscount(args ProposeArgs) error {
 
 	logger := args.Logger.Named("command")
 
-	cfg, err := config.Load(args.NetworkFile)
+	cfg, err := config.Load(ctx, args.NetworkFile)
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
@@ -60,7 +60,7 @@ func RunVolumeDiscount(args ProposeArgs) error {
 
 	endpoints := config.ListDatanodeGRPCEndpoints(cfg)
 	if len(endpoints) == 0 {
-		return fmt.Errorf("no gRPC endpoint found on configured datanodes")
+		return fmt.Errorf("no gRPC endpoint found on configured data nodes")
 	}
 	logger.Debug("gRPC endpoints found in network file", zap.Strings("endpoints", endpoints))
 
