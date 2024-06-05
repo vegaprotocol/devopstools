@@ -67,7 +67,7 @@ func RunDepositToParties(args DepositArgs) error {
 
 	logger := args.Logger.Named("command")
 
-	cfg, err := config.Load(args.NetworkFile)
+	cfg, err := config.Load(ctx, args.NetworkFile)
 	if err != nil {
 		return fmt.Errorf("could not load network file at %q: %w", args.NetworkFile, err)
 	}
