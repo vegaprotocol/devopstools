@@ -31,7 +31,7 @@ import (
 
 const (
 	TopUpFactorForTradingBots = 3.0
-	TopUpFactorForWhale       = 10.0
+	TopUpFactorForWhale       = 30.0
 )
 
 type TopUpArgs struct {
@@ -67,7 +67,7 @@ type AssetToTopUp struct {
 }
 
 func TopUpBots(args TopUpArgs) error {
-	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancelCommand()
 
 	logger := args.Logger.Named("command")
@@ -232,9 +232,11 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 		)
 	}
 
+	logger.Info("Ensuring whale received funds")
 	if err := ensureWhaleReceivedFunds(ctx, datanodeClient, publicKey, whaleTopUpsByAsset); err != nil {
 		return err
 	}
+	logger.Info("Foound ")
 
 	return nil
 }
