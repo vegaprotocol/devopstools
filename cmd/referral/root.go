@@ -1,4 +1,4 @@
-package volumediscount
+package referral
 
 import (
 	"log"
@@ -16,9 +16,8 @@ type Args struct {
 var args Args
 
 var Cmd = &cobra.Command{
-	Use:   "volume-discount",
-	Short: "Manage volume-discounts on the network",
-	Long:  "Submit and vote on Vega Network Proposals",
+	Use:   "referral",
+	Short: "Manage a referral program",
 }
 
 func init() {

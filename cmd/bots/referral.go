@@ -75,7 +75,7 @@ func init() {
 	referralCmd.PersistentFlags().Uint32Var(
 		&referralArgs.NumberOfSets,
 		"max-number-of-teams",
-		10,
+		3,
 		"Maximum number of referral sets. However, we create one referral set per market maker",
 	)
 	referralCmd.PersistentFlags().Uint32Var(
@@ -90,11 +90,13 @@ type Party struct {
 	Name      string
 	Wallet    wallet.Wallet
 	PublicKey string
+	Joined    bool
 }
 
 type ReferralSet struct {
 	Leader   Party
 	Referees []Party
+	ID       string
 }
 
 func NewReferralSet(referrer Party) ReferralSet {
@@ -105,7 +107,7 @@ func NewReferralSet(referrer Party) ReferralSet {
 }
 
 func runReferral(args ReferralArgs) error {
-	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancelCommand := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelCommand()
 
 	logger := args.Logger.Named("command")
@@ -155,7 +157,7 @@ func runReferral(args ReferralArgs) error {
 		return fmt.Errorf("failed to retrieve research bots: %w", err)
 	}
 
-	logger.Info("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
+	logger.Debug("Research bots found", zap.Strings("traders", maps.Keys(researchBots)))
 
 	if err := prepareNetworkParameters(ctx, whaleWallet, datanodeClient, !args.Setup, logger.Named("pepare network parameters")); err != nil {
 		return fmt.Errorf("failed prepare network parameters for referral")
@@ -183,6 +185,8 @@ func runReferral(args ReferralArgs) error {
 		return fmt.Errorf("could not build referral sets topology: %w", err)
 	}
 	logger.Info("Referral sets topology built")
+
+	// newReferralSets, err := checkExistingReferralSets(newReferralSets, datanodeClient)
 
 	for setNo, referralSet := range newReferralSets {
 		var refereesPublicKeys []string
@@ -235,6 +239,11 @@ func runReferral(args ReferralArgs) error {
 		logger.Info("All referral sets are ready")
 	}
 
+	if !args.Setup {
+		logger.Info("DRY RUN: Bots won't be able to join referral sets. Finishing")
+		return nil
+	}
+
 	logger.Info("Referees are joining the referral sets...")
 	if err := joinReferees(ctx, newReferralSets, datanodeClient, !args.Setup, logger); err != nil {
 		return fmt.Errorf("referees failed to join the referral sets: %w", err)
@@ -246,9 +255,12 @@ func runReferral(args ReferralArgs) error {
 	return nil
 }
 
-func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
-	_ = ctx
+// func checkExistingReferralSets(topology []ReferralSet, dataNodeClient datanode.DataNode) ([]ReferralSet, error) {
 
+// 	return []ReferralSet{}, nil
+// }
+
+func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
 	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
@@ -397,7 +409,11 @@ func buildReferralSetsTopology(existingReferralSets map[string]*v2.ReferralSet, 
 	}
 
 	if len(referralSets) < numberOfSets {
-		return nil, fmt.Errorf("not enough traders to create %d referralSets: there should be at least 1 market maker per referral set", numberOfSets)
+		return nil, fmt.Errorf(
+			"not enough traders to create %d referralSets: there should be at least 1 market maker per referral set, found: %d",
+			numberOfSets,
+			len(referralSets),
+		)
 	}
 
 	// add members to the referralSets
@@ -577,6 +593,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 	minStake := types.NewAmount(18)
 
 	logger.Debug("Retrieving current referral program...")
+	// code=Internal message='Internal error' details=[code:10000  message:\"failed to get current referral program\"  inner:\"no rows in result set\"]
 	program, err := datanodeClient.GetCurrentReferralProgram(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve current referral program from datanode: %w", err)
@@ -667,7 +684,8 @@ func createReferralSets(ctx context.Context, newReferralSets []ReferralSet, data
 		if dryRun {
 			logger.Info("DRY RUN - skip creation of referral set for party", zap.String("party-id", referrerKey))
 		} else {
-			if err := createReferralSet(ctx, currentReferralSet.Leader, dataNodeClient); err != nil {
+			logger.Sugar().Infof("Creating referral set for the %s owner", currentReferralSet.Leader.PublicKey)
+			if err := createReferralSet(ctx, currentReferralSet.Leader, dataNodeClient, logger); err != nil {
 				return fmt.Errorf("failed to create referral set %s, %w", referrerKey, err)
 			}
 		}
@@ -676,7 +694,7 @@ func createReferralSets(ctx context.Context, newReferralSets []ReferralSet, data
 	return nil
 }
 
-func createReferralSet(ctx context.Context, creator Party, dataNodeClient vegaapi.DataNodeClient) error {
+func createReferralSet(ctx context.Context, creator Party, dataNodeClient vegaapi.DataNodeClient, logger *zap.Logger) error {
 	teamName, err := generation.GenerateName()
 	if err != nil {
 		return fmt.Errorf("could not generate a name for referral set: %w", err)
@@ -704,8 +722,16 @@ func createReferralSet(ctx context.Context, creator Party, dataNodeClient vegaap
 		},
 	}
 
-	if _, err := walletpkg.SendTransaction(ctx, creator.Wallet, creator.PublicKey, &request, dataNodeClient); err != nil {
+	logger.Sugar().Infof("Creating team %s", teamName)
+	tx, err := walletpkg.SendTransaction(ctx, creator.Wallet, creator.PublicKey, &request, dataNodeClient)
+	if err != nil {
 		return fmt.Errorf("transaction to create a referral set failed: %w", err)
 	}
+	if !tx.Success {
+		return fmt.Errorf("failed to create bots team(%s): transaction is not successful: %s", teamName, tx.Data)
+	}
+
+	logger.Sugar().Infof("Team create transaction for %s: %s", teamName, tx.TxHash)
+
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/vegaprotocol/devopstools/cmd/network"
 	"github.com/vegaprotocol/devopstools/cmd/node"
 	"github.com/vegaprotocol/devopstools/cmd/parties"
+	"github.com/vegaprotocol/devopstools/cmd/referral"
 	"github.com/vegaprotocol/devopstools/cmd/snapshotcompatibility"
 	"github.com/vegaprotocol/devopstools/cmd/validator"
 	"github.com/vegaprotocol/devopstools/cmd/vegacapsule"
@@ -37,4 +38,5 @@ func init() {
 	rootCmd.RootCmd.AddCommand(version.Cmd)
 	rootCmd.RootCmd.AddCommand(volumediscount.Cmd)
 	rootCmd.RootCmd.AddCommand(incentive.Cmd)
+	rootCmd.RootCmd.AddCommand(referral.Cmd)
 }

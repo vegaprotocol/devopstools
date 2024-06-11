@@ -27,6 +27,7 @@ import (
 
 type SelfDelegateArgs struct {
 	*Args
+	timeout time.Duration
 }
 
 var selfDelegateArgs SelfDelegateArgs
@@ -47,12 +48,12 @@ var selfDelegateCmd = &cobra.Command{
 
 func init() {
 	selfDelegateArgs.Args = &args
-
+	Cmd.PersistentFlags().DurationVarP(&selfDelegateArgs.timeout, "timeout", "t", 20*time.Minute, "Timeout for the self-delegation command")
 	Cmd.AddCommand(selfDelegateCmd)
 }
 
 func RunSelfDelegate(args SelfDelegateArgs) error {
-	ctx, cancelCommand := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancelCommand := context.WithTimeout(context.Background(), selfDelegateArgs.timeout)
 	defer cancelCommand()
 
 	logger := args.Logger.Named("command")

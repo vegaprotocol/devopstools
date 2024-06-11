@@ -229,7 +229,7 @@ func (c *ChainClient) depositERC20TokenFromWallet(ctx context.Context, minterWal
 			zap.String("tx-hash", tx.Hash().Hex()),
 		)
 		if err := WaitForTransaction(ctx, c.client, tx, time.Minute); err != nil {
-			return fmt.Errorf("failed to deposit asset %q to party ID (%s): %w", assetContractHexAddress, partyID, err)
+			return fmt.Errorf("failed to deposit asset %q to party ID (%s), tx hash(%s): %w", assetContractHexAddress, partyID, tx.Hash().String(), err)
 		}
 		logger.Info("Asset deposit successful for party",
 			zap.String("party-id", partyID),
@@ -247,33 +247,32 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 	}
 	logger.Info("Minter's balance retrieved", zap.String("balance-su", balanceAsSubUnit.String()))
 
-	if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) <= 0 {
+	if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) >= 0 {
 		logger.Info("No minting required",
 			zap.String("current-balance-su", balanceAsSubUnit.String()),
 			zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
 		)
-		return nil
+	} else {
+		amountToMintAsSubUnit := big.NewInt(0).Mul(new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit), big.NewInt(20))
+		logger.Info("Minting required",
+			zap.String("current-balance-su", balanceAsSubUnit.String()),
+			zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
+			zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()),
+		)
+
+		logger.Info("Minting...", zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()))
+
+		mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), minterWallet.Address, amountToMintAsSubUnit)
+		if err != nil {
+			return fmt.Errorf("could not send transaction to mint wallet: %w", err)
+		}
+
+		if err := WaitForTransaction(ctx, c.client, mintTx, time.Minute); err != nil {
+			return fmt.Errorf("failed to mint wallet: %w", err)
+		}
+
+		logger.Info("Minting successful", zap.String("amount-minted-su", amountToMintAsSubUnit.String()))
 	}
-
-	amountToMintAsSubUnit := big.NewInt(0).Mul(new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit), big.NewInt(20))
-	logger.Info("Minting required",
-		zap.String("current-balance-su", balanceAsSubUnit.String()),
-		zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
-		zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()),
-	)
-
-	logger.Info("Minting...", zap.String("amount-to-mint-su", amountToMintAsSubUnit.String()))
-
-	mintTx, err := token.Mint(minterWallet.GetTransactOpts(ctx), minterWallet.Address, amountToMintAsSubUnit)
-	if err != nil {
-		return fmt.Errorf("could not send transaction to mint wallet: %w", err)
-	}
-
-	if err := WaitForTransaction(ctx, c.client, mintTx, time.Minute); err != nil {
-		return fmt.Errorf("failed to mint wallet: %w", err)
-	}
-
-	logger.Info("Minting successful", zap.String("amount-minted-su", amountToMintAsSubUnit.String()))
 
 	logger.Info("Retrieving bridge allowance...")
 	allowanceAsSubUnit, err := token.Allowance(&bind.CallOpts{Context: ctx}, minterWallet.Address, c.collateralBridge.Address)
@@ -287,11 +286,12 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 			zap.String("current-allowance-su", allowanceAsSubUnit.String()),
 			zap.String("required-allowance-su", requiredAmountAsSubUnit.String()),
 		)
+		return nil
 	}
 
 	allowanceToIncrease := new(big.Int).Sub(requiredAmountAsSubUnit, allowanceAsSubUnit)
-	if !withAllowanceToCollateral || allowanceToIncrease.Cmp(big.NewInt(0)) >= 0 {
-		logger.Info("allowance increase not required")
+	if !withAllowanceToCollateral || allowanceToIncrease.Cmp(big.NewInt(0)) <= 0 {
+		logger.Info("Allowance increase not required")
 	} else {
 		logger.Info("Allowance increase required",
 			zap.String("current-allowance-su", allowanceAsSubUnit.String()),

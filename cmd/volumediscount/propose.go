@@ -28,7 +28,7 @@ type ProposeArgs struct {
 var proposeArgs ProposeArgs
 
 var proposeCmd = &cobra.Command{
-	Use:   "volume-discount",
+	Use:   "propose",
 	Short: "Setup Volume Discount Program",
 	Long:  "Setup Volume Discount Program",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -43,7 +43,7 @@ func init() {
 	proposeArgs.Args = &args
 
 	Cmd.AddCommand(proposeCmd)
-	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.SetupVolumeDiscountProgram, "setup-volume-discount-program", false, "Setup volume discount program. By default, it is dry run.")
+	proposeCmd.PersistentFlags().BoolVar(&proposeArgs.SetupVolumeDiscountProgram, "setup", false, "Setup volume discount program. By default, it is dry run.")
 }
 
 func RunVolumeDiscount(args ProposeArgs) error {

@@ -214,6 +214,23 @@ func sendBatchProposal(ctx context.Context, logger *zap.Logger, datanodeClient *
 		return fmt.Errorf("failed to vote for batch proposal %q: %w", proposalId, err)
 	}
 
+	logger.Info("Waiting until proposal is enacted")
+	if err := tools.RetryRun(15, 10*time.Second, func() error {
+		isEnacted, err := governance.IsProposalEnacted(ctx, proposalId, datanodeClient)
+		if err != nil {
+			return fmt.Errorf("failed to check if proposal is enacted: %w", err)
+		}
+
+		if !isEnacted {
+			return fmt.Errorf("proposal is not enacted yet")
+		}
+
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to wait until proposal is enacted: %w", err)
+	}
+	logger.Info("Found proposal enacted")
+
 	return nil
 }
 
