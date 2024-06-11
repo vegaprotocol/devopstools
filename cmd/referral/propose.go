@@ -67,7 +67,7 @@ func RunProposeReferral(args ProposeArgs) error {
 	logger.Info("Looking for healthy gRPC endpoints...")
 	healthyEndpoints := tools.FilterHealthyGRPCEndpoints(endpoints)
 	if len(healthyEndpoints) == 0 {
-		return fmt.Errorf("no healthy gRPC endpoint found on configured datanodes")
+		return fmt.Errorf("no healthy gRPC endpoint found on configured data nodes")
 	}
 	logger.Info("Healthy gRPC endpoints found", zap.Strings("endpoints", healthyEndpoints))
 
@@ -102,6 +102,7 @@ func RunProposeReferral(args ProposeArgs) error {
 		logger.Info("Current referral program", zap.Any("config", currentReferralProgram))
 	}
 
+	logger.Info("Updating referral program")
 	//
 	// Setup Referral Program
 	//
