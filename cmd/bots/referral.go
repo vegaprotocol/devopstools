@@ -261,8 +261,6 @@ func runReferral(args ReferralArgs) error {
 // }
 
 func prepareNetworkParameters(ctx context.Context, whaleWallet wallet.Wallet, datanodeClient *datanode.DataNode, dryRun bool, logger *zap.Logger) error {
-	_ = ctx
-
 	networkParameters, err := datanodeClient.ListNetworkParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve network parameters from datanode: %w", err)
@@ -595,6 +593,7 @@ func ensureReferrersHaveEnoughStake(ctx context.Context, newReferralSets []Refer
 	minStake := types.NewAmount(18)
 
 	logger.Debug("Retrieving current referral program...")
+	// code=Internal message='Internal error' details=[code:10000  message:\"failed to get current referral program\"  inner:\"no rows in result set\"]
 	program, err := datanodeClient.GetCurrentReferralProgram(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve current referral program from datanode: %w", err)

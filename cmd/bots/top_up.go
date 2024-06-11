@@ -36,6 +36,8 @@ const (
 
 type TopUpArgs struct {
 	*Args
+
+	timeout time.Duration
 }
 
 var topUpArgs TopUpArgs
@@ -55,6 +57,7 @@ var topUpCmd = &cobra.Command{
 func init() {
 	topUpArgs.Args = &args
 
+	topUpCmd.PersistentFlags().DurationVarP(&topUpArgs.timeout, "timeout", "t", 15*time.Minute, "Timeout for the top up command")
 	Cmd.AddCommand(topUpCmd)
 }
 
@@ -67,7 +70,7 @@ type AssetToTopUp struct {
 }
 
 func TopUpBots(args TopUpArgs) error {
-	ctx, cancelCommand := context.WithTimeout(context.Background(), 15*time.Minute)
+	ctx, cancelCommand := context.WithTimeout(context.Background(), topUpArgs.timeout)
 	defer cancelCommand()
 
 	logger := args.Logger.Named("command")
@@ -119,13 +122,13 @@ func TopUpBots(args TopUpArgs) error {
 	if len(assets) == 0 {
 		return errors.New("no asset found on datanode")
 	}
-	logger.Info("Assets found", zap.Strings("assets", maps.Keys(assets)))
+	logger.Debug("Assets found", zap.Strings("assets", maps.Keys(assets)))
 	logger.Sugar().Info("Getting traders from bots API: %s", cfg.Bots.Research.RESTURL)
 	tradingBots, err := bots.RetrieveTradingBots(ctx, cfg.Bots.Research.RESTURL, cfg.Bots.Research.APIKey, logger.Named("trading-bots"))
 	if err != nil {
 		return fmt.Errorf("failed to retrieve trading bots: %w", err)
 	}
-	logger.Info("Trading bots found", zap.Strings("traders", maps.Keys(tradingBots)))
+	logger.Debug("Trading bots found", zap.Strings("traders", maps.Keys(tradingBots)))
 
 	logger.Info("Determining amounts to top up for trading bots...")
 	topUpsByAsset, err := determineAmountsToTopUpByAsset(assets, tradingBots, logger)
@@ -233,7 +236,7 @@ func depositAssetsToWhale(ctx context.Context, whaleTopUpsByAsset map[string]*ty
 	}
 
 	logger.Info("Ensuring whale received funds")
-	if err := ensureWhaleReceivedFunds(ctx, datanodeClient, publicKey, whaleTopUpsByAsset); err != nil {
+	if err := ensureWhaleReceivedFunds(ctx, datanodeClient, publicKey, whaleTopUpsByAsset, logger); err != nil {
 		return err
 	}
 	logger.Info("Foound ")
@@ -370,23 +373,44 @@ func countTransfersToDo(topUpRegistry map[string]AssetToTopUp) int {
 	return transferNumbers + (10 * transferNumbers / 100)
 }
 
-func ensureWhaleReceivedFunds(ctx context.Context, datanodeClient *datanode.DataNode, publicKey string, whaleTopUpsByAsset map[string]*types.Amount) error {
-	for assetID, requiredAmount := range whaleTopUpsByAsset {
-		requiredAmountAsSubUnit := requiredAmount.AsSubUnit()
-		err := tools.RetryRun(15, 6*time.Second, func() error {
+func ensureWhaleReceivedFunds(
+	ctx context.Context,
+	datanodeClient *datanode.DataNode,
+	publicKey string,
+	whaleTopUpsByAsset map[string]*types.Amount,
+	logger *zap.Logger,
+) error {
+	ticker := time.NewTicker(30 * time.Second)
+
+	for {
+		allDepositsFinalized := true
+
+		for assetID, requiredAmount := range whaleTopUpsByAsset {
+			requiredAmountAsSubUnit := requiredAmount.AsSubUnit()
+			logger.Sugar().Infof("Checking if deposit of asset %d has been finalized", assetID)
+
 			balanceAsSubUnit, err := datanodeClient.GeneralAccountBalance(ctx, publicKey, assetID)
 			if err != nil {
-				return fmt.Errorf("failed to retrieve whale's general account balance for asset %q: %w", assetID, err)
+				logger.Warn(fmt.Sprintf("failed to retrieve whale's general account balance for asset %q", assetID), zap.Error(err))
+				allDepositsFinalized = false
 			}
 
 			if balanceAsSubUnit.Cmp(requiredAmountAsSubUnit) < 0 {
-				return fmt.Errorf("whale wallet does not have enough funds for asset %q: expected %s, got %s", assetID, requiredAmountAsSubUnit.String(), balanceAsSubUnit.String())
+				logger.Sugar().Infof("Deposit for asset %s not finalized yet", assetID)
+				allDepositsFinalized = false
 			}
+		}
 
+		if allDepositsFinalized {
+			logger.Info("All deposits finalized")
 			return nil
-		})
-		if err != nil {
-			return err
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			return fmt.Errorf("deposit not finalized in given time")
 		}
 	}
 
