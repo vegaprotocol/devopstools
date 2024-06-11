@@ -67,7 +67,7 @@ func WaitForEnactList(ctx context.Context, descriptionToProposalId map[string]st
 			return err
 		}
 
-		if res.Data.Proposal.State != vega.Proposal_STATE_ENACTED {
+		if res.Data.Proposal.State != vega.Proposal_STATE_ENACTED && res.Data.Proposal.State != vega.Proposal_STATE_PASSED {
 			return fmt.Errorf("proposal '%s' is in wrong state %s: %+v", res.Data.Proposal.Rationale.Title, res.Data.Proposal.State.String(), res.Data.Proposal)
 		}
 	}
