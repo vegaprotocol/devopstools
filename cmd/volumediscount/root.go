@@ -16,7 +16,7 @@ type Args struct {
 var args Args
 
 var Cmd = &cobra.Command{
-	Use:   "propose",
+	Use:   "volume-discount",
 	Short: "Manage volume-discounts on the network",
 	Long:  "Submit and vote on Vega Network Proposals",
 }
