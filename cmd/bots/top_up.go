@@ -413,8 +413,6 @@ func ensureWhaleReceivedFunds(
 			return fmt.Errorf("deposit not finalized in given time")
 		}
 	}
-
-	return nil
 }
 
 func transferAssetsFromWhaleToBots(ctx context.Context, datanodeClient *datanode.DataNode, whaleWallet wallet.Wallet, whalePublicKey string, registry map[string]AssetToTopUp, logger *zap.Logger) error {

@@ -253,7 +253,6 @@ func (c *ChainClient) mintWallet(ctx context.Context, minterWallet *Wallet, toke
 			zap.String("required-balance-su", requiredAmountAsSubUnit.String()),
 		)
 	} else {
-
 		amountToMintAsSubUnit := big.NewInt(0).Mul(new(big.Int).Sub(requiredAmountAsSubUnit, balanceAsSubUnit), big.NewInt(20))
 		logger.Info("Minting required",
 			zap.String("current-balance-su", balanceAsSubUnit.String()),
