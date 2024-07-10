@@ -387,7 +387,7 @@ func ensureWhaleReceivedFunds(
 
 		for assetID, requiredAmount := range whaleTopUpsByAsset {
 			requiredAmountAsSubUnit := requiredAmount.AsSubUnit()
-			logger.Sugar().Infof("Checking if deposit of asset %d has been finalized", assetID)
+			logger.Sugar().Infof("Checking if deposit of asset %s has been finalized", assetID)
 
 			balanceAsSubUnit, err := datanodeClient.GeneralAccountBalance(ctx, publicKey, assetID)
 			if err != nil {
