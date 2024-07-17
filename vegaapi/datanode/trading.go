@@ -56,3 +56,20 @@ func (n *DataNode) ListMarkets(ctx context.Context) ([]*vega.Market, error) {
 	}
 	return result, nil
 }
+
+func AssetsIdsByMarket(market *vega.Market) []string {
+	instrument := market.TradableInstrument.Instrument
+	if instrument.GetFuture() != nil {
+		return []string{instrument.GetFuture().SettlementAsset}
+	}
+
+	if instrument.GetPerpetual() != nil {
+		return []string{instrument.GetPerpetual().SettlementAsset}
+	}
+
+	if instrument.GetSpot() != nil {
+		return []string{instrument.GetSpot().BaseAsset, instrument.GetSpot().QuoteAsset}
+	}
+
+	return []string{}
+}
