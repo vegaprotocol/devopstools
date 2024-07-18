@@ -18,6 +18,9 @@ import (
 
 	"code.vegaprotocol.io/vega/core/netparams"
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
+	v1 "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
+	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 	"code.vegaprotocol.io/vega/wallet/wallet"
 
 	"github.com/spf13/cobra"
@@ -200,6 +203,63 @@ func setupAmm(args AmmArgs) error {
 		return fmt.Errorf("failed to transfer assets from whale to one or more bots: %w", err)
 	}
 	logger.Info("Transfers done")
+
+	marketData, err := datanodeClient.GetLatestMarketDate(ctx, args.marketId)
+	if err != nil {
+		return fmt.Errorf("failed to get market data for market %s: %w", args.marketId, err)
+	}
+
+	markPrice, _ := big.NewFloat(0).SetString(marketData.MarkPrice),
+	upperBound := big.NewFloat(0).Mul(
+		markPrice,
+		big.NewFloat(1.01),
+	).String()
+	lowerBound := big.NewFloat(0).Mul(
+		markPrice,
+		big.NewFloat(0.99),
+	).String()
+	leverage := "10"
+
+	// // Market ID for which to create an AMM.
+	// MarketId string `protobuf:"bytes,1,opt,name=market_id,json=marketId,proto3" json:"market_id,omitempty"`
+	// // Amount to be committed to the AMM.
+	// CommitmentAmount string `protobuf:"bytes,2,opt,name=commitment_amount,json=commitmentAmount,proto3" json:"commitment_amount,omitempty"`
+	// // Slippage tolerance used for rebasing the AMM if its base price crosses with existing order
+	// SlippageTolerance string `protobuf:"bytes,3,opt,name=slippage_tolerance,json=slippageTolerance,proto3" json:"slippage_tolerance,omitempty"`
+	// // Concentrated liquidity parameters defining the shape of the AMM's volume curves.
+	// ConcentratedLiquidityParameters *SubmitAMM_ConcentratedLiquidityParameters `protobuf:"bytes,4,opt,name=concentrated_liquidity_parameters,json=concentratedLiquidityParameters,proto3" json:"concentrated_liquidity_parameters,omitempty"`
+	// // Nominated liquidity fee factor, which is an input to the calculation of taker fees on the market.
+	// ProposedFee string `protobuf:"bytes,5,opt,name=proposed_fee,json=proposedFee,proto3" json:"proposed_fee,omitempty"`
+	for assetId := range topUpRegistry {
+		for partyId, amount := range topUpRegistry[assetId].AmountsByParty {
+
+			walletTxReq := walletpb.SubmitTransactionRequest{
+				Command: &walletpb.SubmitTransactionRequest_SubmitAmm{
+					SubmitAmm: &v1.SubmitAMM{
+						MarketId:          args.marketId,
+						CommitmentAmount:  amount.String(),
+						SlippageTolerance: "0.5",
+						ProposedFee:       "0.001",
+						ConcentratedLiquidityParameters: &v1.SubmitAMM_ConcentratedLiquidityParameters{
+							UpperBound:           &upperBound,
+							LowerBound:           &lowerBound,
+							Base:                 marketData.MarkPrice,
+							LeverageAtUpperBound: &leverage,
+							LeverageAtLowerBound: &leverage,
+						},
+					},
+				},
+			}
+
+			logger.Info("Sending transaction to the network")
+			resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whaleKey, &walletTxReq, datanodeClient)
+			if err != nil {
+				return fmt.Errorf("failed to submit batch proposal with signature: %w", err)
+			}
+			logger.Sugar().Infof("Batch proposal transaction ID: %s", resp.TxHash)
+
+		}
+	}
 
 	return nil
 }
