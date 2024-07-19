@@ -57,7 +57,7 @@ func (n *DataNode) ListMarkets(ctx context.Context) ([]*vega.Market, error) {
 	return result, nil
 }
 
-func (n *DataNode) GetLatestMarketDate(ctx context.Context, marketId string) (*vega.MarketData, error) {
+func (n *DataNode) GetLatestMarketData(ctx context.Context, marketId string) (*vega.MarketData, error) {
 	if n.Client.Conn.GetState() != connectivity.Ready {
 		return nil, e.ErrConnectionNotReady
 	}

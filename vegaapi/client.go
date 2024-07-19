@@ -44,4 +44,5 @@ type DataNodeClient interface {
 	ListReferralSetReferees(ctx context.Context) (map[string]v2.ReferralSetReferee, error)
 	GetCurrentVolumeDiscountProgram(ctx context.Context) (*dataapipb.VolumeDiscountProgram, error)
 	GetLatestMarketData(ctx context.Context, marketId string) (*vega.MarketData, error)
+	ListAMMs(ctx context.Context, partyId *string, marketId *string, activeOnly bool) ([]*vegaeventspb.AMM, error)
 }

@@ -19,6 +19,7 @@ import (
 	"code.vegaprotocol.io/vega/core/netparams"
 	vegapb "code.vegaprotocol.io/vega/protos/vega"
 	v1 "code.vegaprotocol.io/vega/protos/vega/commands/v1"
+	eventspb "code.vegaprotocol.io/vega/protos/vega/events/v1"
 	walletpb "code.vegaprotocol.io/vega/protos/vega/wallet/v1"
 	walletpkg "code.vegaprotocol.io/vega/wallet/pkg"
 	"code.vegaprotocol.io/vega/wallet/wallet"
@@ -204,45 +205,68 @@ func setupAmm(args AmmArgs) error {
 	}
 	logger.Info("Transfers done")
 
-	marketData, err := datanodeClient.GetLatestMarketDate(ctx, args.marketId)
+	marketData, err := datanodeClient.GetLatestMarketData(ctx, args.marketId)
 	if err != nil {
 		return fmt.Errorf("failed to get market data for market %s: %w", args.marketId, err)
 	}
 
-	markPrice, _ := big.NewFloat(0).SetString(marketData.MarkPrice),
-	upperBound := big.NewFloat(0).Mul(
+	submitterPubKeys := submitterWallet.ListPublicKeys()
+
+	markPrice, _ := big.NewFloat(0).SetString(marketData.MarkPrice)
+	upperBound, _ := big.NewFloat(0).Mul(
 		markPrice,
 		big.NewFloat(1.01),
-	).String()
-	lowerBound := big.NewFloat(0).Mul(
+	).Int(nil)
+	upperBoundStr := upperBound.String()
+	lowerBound, _ := big.NewFloat(0).Mul(
 		markPrice,
 		big.NewFloat(0.99),
-	).String()
+	).Int(nil)
+	lowerBoundStr := lowerBound.String()
 	leverage := "10"
 
-	// // Market ID for which to create an AMM.
-	// MarketId string `protobuf:"bytes,1,opt,name=market_id,json=marketId,proto3" json:"market_id,omitempty"`
-	// // Amount to be committed to the AMM.
-	// CommitmentAmount string `protobuf:"bytes,2,opt,name=commitment_amount,json=commitmentAmount,proto3" json:"commitment_amount,omitempty"`
-	// // Slippage tolerance used for rebasing the AMM if its base price crosses with existing order
-	// SlippageTolerance string `protobuf:"bytes,3,opt,name=slippage_tolerance,json=slippageTolerance,proto3" json:"slippage_tolerance,omitempty"`
-	// // Concentrated liquidity parameters defining the shape of the AMM's volume curves.
-	// ConcentratedLiquidityParameters *SubmitAMM_ConcentratedLiquidityParameters `protobuf:"bytes,4,opt,name=concentrated_liquidity_parameters,json=concentratedLiquidityParameters,proto3" json:"concentrated_liquidity_parameters,omitempty"`
-	// // Nominated liquidity fee factor, which is an input to the calculation of taker fees on the market.
-	// ProposedFee string `protobuf:"bytes,5,opt,name=proposed_fee,json=proposedFee,proto3" json:"proposed_fee,omitempty"`
-	for assetId := range topUpRegistry {
-		for partyId, amount := range topUpRegistry[assetId].AmountsByParty {
+	// TODO add more assets when needed (for spot?)
+	settlementAssetDetails := assets[marketAssetsIds[0]]
+	for i := 0; i < args.poolSize; i++ {
+		pubKey := submitterPubKeys[i].Key()
 
-			walletTxReq := walletpb.SubmitTransactionRequest{
-				Command: &walletpb.SubmitTransactionRequest_SubmitAmm{
-					SubmitAmm: &v1.SubmitAMM{
+		activePartySubmissions, err := datanodeClient.ListAMMs(ctx, &pubKey, &args.marketId, true)
+		if err != nil {
+			return fmt.Errorf("failed to check active AMMs for party %s: %w", pubKey, err)
+		}
+
+		walletTxReq := walletpb.SubmitTransactionRequest{
+			Command: &walletpb.SubmitTransactionRequest_SubmitAmm{
+				SubmitAmm: &v1.SubmitAMM{
+					MarketId: args.marketId,
+					CommitmentAmount: big.NewInt(0).Mul(
+						big.NewInt(ammSubmissionAmount),
+						big.NewInt(0).Exp(big.NewInt(10), big.NewInt(int64(settlementAssetDetails.Decimals)), nil),
+					).String(),
+					SlippageTolerance: "0.5",
+					ProposedFee:       "0.001",
+					ConcentratedLiquidityParameters: &v1.SubmitAMM_ConcentratedLiquidityParameters{
+						UpperBound:           &upperBoundStr,
+						LowerBound:           &lowerBoundStr,
+						Base:                 marketData.MarkPrice,
+						LeverageAtUpperBound: &leverage,
+						LeverageAtLowerBound: &leverage,
+					},
+				},
+			},
+		}
+
+		if len(activePartySubmissions) > 0 {
+			walletTxReq = walletpb.SubmitTransactionRequest{
+				Command: &walletpb.SubmitTransactionRequest_AmendAmm{
+					AmendAmm: &v1.AmendAMM{
 						MarketId:          args.marketId,
-						CommitmentAmount:  amount.String(),
+						CommitmentAmount:  nil,
 						SlippageTolerance: "0.5",
-						ProposedFee:       "0.001",
-						ConcentratedLiquidityParameters: &v1.SubmitAMM_ConcentratedLiquidityParameters{
-							UpperBound:           &upperBound,
-							LowerBound:           &lowerBound,
+						ProposedFee:       nil,
+						ConcentratedLiquidityParameters: &v1.AmendAMM_ConcentratedLiquidityParameters{
+							UpperBound:           &upperBoundStr,
+							LowerBound:           &lowerBoundStr,
 							Base:                 marketData.MarkPrice,
 							LeverageAtUpperBound: &leverage,
 							LeverageAtLowerBound: &leverage,
@@ -250,15 +274,54 @@ func setupAmm(args AmmArgs) error {
 					},
 				},
 			}
-
-			logger.Info("Sending transaction to the network")
-			resp, err := walletpkg.SendTransaction(ctx, whaleWallet, whaleKey, &walletTxReq, datanodeClient)
-			if err != nil {
-				return fmt.Errorf("failed to submit batch proposal with signature: %w", err)
-			}
-			logger.Sugar().Infof("Batch proposal transaction ID: %s", resp.TxHash)
-
 		}
+
+		logger.Sugar().Infof("Submitting AMM for party %s", pubKey)
+		resp, err := walletpkg.SendTransaction(ctx, submitterWallet, pubKey, &walletTxReq, datanodeClient)
+		if err != nil {
+			return fmt.Errorf("failed to submit amm with signature: %w", err)
+		}
+
+		if !resp.Success {
+			logger.Sugar().Warnf("failed to submit amm: %s", resp.Data)
+		}
+
+		logger.Sugar().Infof("AMM Submission TX hash: %s", resp.TxHash)
+	}
+
+	// Wait for submissions to show up on te API and get their status
+	logger.Info("Waiting for submission report")
+	time.Sleep(30 * time.Second)
+
+	for i := 0; i < args.poolSize; i++ {
+		pubKey := submitterPubKeys[i].Key()
+
+		amms, err := tools.RetryReturn(6, 5*time.Second, func() ([]*eventspb.AMM, error) {
+			funcCtx, fCtxCancel := context.WithTimeout(ctx, 4*time.Second)
+			defer fCtxCancel()
+
+			amms, err := datanodeClient.ListAMMs(funcCtx, &pubKey, &args.marketId, true)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list amm on report for party %s: %w", pubKey, err)
+			}
+
+			if len(amms) < 1 {
+				return nil, fmt.Errorf("still waiting for active for party %s", pubKey)
+			}
+
+			return amms, nil
+		})
+
+		if err != nil {
+			logger.Sugar().Errorf("no active submission found in api for party %s: %s", pubKey, err.Error())
+		}
+
+		if len(amms) < 1 {
+			logger.Sugar().Warnf("Party %s: Submission is not active", pubKey)
+		} else {
+			logger.Sugar().Warnf("Party %s: AMM is active", pubKey)
+		}
+
 	}
 
 	return nil
