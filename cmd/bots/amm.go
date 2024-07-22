@@ -69,7 +69,6 @@ func init() {
 }
 
 func setupAmm(args AmmArgs) error {
-
 	ctx, cancelCommand := context.WithTimeout(context.Background(), topUpArgs.timeout)
 	defer cancelCommand()
 
