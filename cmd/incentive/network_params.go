@@ -92,6 +92,9 @@ func expectedNetworkParams() []expectedNetworkParameter {
 		{Name: "governance.proposal.updateAsset.minEnact", ExpectedValue: "5s"},
 		{Name: "ethereum.oracles.enabled", ExpectedValue: "1"},
 		{Name: "validators.epoch.length", ExpectedValue: "30m"},
+		{Name: "limits.markets.ammPoolEnabled", ExpectedValue: "1"},
+		{Name: "market.amm.minCommitmentQuantum", ExpectedValue: "1"},
+		{Name: "market.liquidity.maxAmmCalculationLevels", ExpectedValue: "100"},
 	}
 
 	return result

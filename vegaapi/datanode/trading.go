@@ -56,3 +56,39 @@ func (n *DataNode) ListMarkets(ctx context.Context) ([]*vega.Market, error) {
 	}
 	return result, nil
 }
+
+func (n *DataNode) GetLatestMarketData(ctx context.Context, marketId string) (*vega.MarketData, error) {
+	if n.Client.Conn.GetState() != connectivity.Ready {
+		return nil, e.ErrConnectionNotReady
+	}
+
+	c := dataapipb.NewTradingDataServiceClient(n.Client.Conn)
+	reqCtx, cancelRequest := context.WithTimeout(ctx, n.Client.CallTimeout)
+	defer cancelRequest()
+
+	response, err := c.GetLatestMarketData(reqCtx, &dataapipb.GetLatestMarketDataRequest{
+		MarketId: marketId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest market data: %w", err)
+	}
+
+	return response.MarketData, nil
+}
+
+func AssetsIdsByMarket(market *vega.Market) []string {
+	instrument := market.TradableInstrument.Instrument
+	if instrument.GetFuture() != nil {
+		return []string{instrument.GetFuture().SettlementAsset}
+	}
+
+	if instrument.GetPerpetual() != nil {
+		return []string{instrument.GetPerpetual().SettlementAsset}
+	}
+
+	if instrument.GetSpot() != nil {
+		return []string{instrument.GetSpot().BaseAsset, instrument.GetSpot().QuoteAsset}
+	}
+
+	return []string{}
+}
