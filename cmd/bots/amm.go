@@ -310,7 +310,6 @@ func setupAmm(args AmmArgs) error {
 
 			return amms, nil
 		})
-
 		if err != nil {
 			logger.Sugar().Errorf("no active submission found in api for party %s: %s", pubKey, err.Error())
 		}
@@ -320,7 +319,6 @@ func setupAmm(args AmmArgs) error {
 		} else {
 			logger.Sugar().Warnf("Party %s: AMM is active", pubKey)
 		}
-
 	}
 
 	return nil

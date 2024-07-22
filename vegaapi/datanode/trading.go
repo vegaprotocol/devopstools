@@ -69,7 +69,6 @@ func (n *DataNode) GetLatestMarketData(ctx context.Context, marketId string) (*v
 	response, err := c.GetLatestMarketData(reqCtx, &dataapipb.GetLatestMarketDataRequest{
 		MarketId: marketId,
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest market data: %w", err)
 	}

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	e "github.com/vegaprotocol/devopstools/errors"
+
 	dataapipb "code.vegaprotocol.io/vega/protos/data-node/api/v2"
 	v1 "code.vegaprotocol.io/vega/protos/vega/events/v1"
-	e "github.com/vegaprotocol/devopstools/errors"
+
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -32,7 +34,6 @@ func (n *DataNode) ListAMMs(ctx context.Context, partyId *string, marketId *stri
 			NewestFirst: &([]bool{true})[0],
 		},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest market data: %w", err)
 	}
