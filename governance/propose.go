@@ -178,7 +178,7 @@ func FindProposalID(ctx context.Context, proposerPubKey string, reference string
 	return "", fmt.Errorf("failed to find proposal for reference %s", reference)
 }
 
-func IsProposalEnacted(ctx context.Context, proposalId string, client vegaapi.DataNodeClient) (bool, error) {
+func IsProposalEnactedOrPassed(ctx context.Context, proposalId string, client vegaapi.DataNodeClient) (bool, error) {
 	res, err := client.GetGovernanceData(ctx, &v2.GetGovernanceDataRequest{
 		ProposalId: &proposalId,
 	})
@@ -192,5 +192,5 @@ func IsProposalEnacted(ctx context.Context, proposalId string, client vegaapi.Da
 
 	proposal := res.Data.Proposal
 
-	return proposal.State == vega.Proposal_STATE_ENACTED, nil
+	return proposal.State == vega.Proposal_STATE_ENACTED || proposal.State == vega.Proposal_STATE_PASSED, nil
 }
