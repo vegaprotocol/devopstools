@@ -197,7 +197,7 @@ func sendBatchProposal(ctx context.Context, logger *zap.Logger, datanodeClient *
 	logger.Sugar().Infof("Batch proposal transaction ID: %s", resp.TxHash)
 
 	logger.Info("Searching proposal ID")
-	proposalId, err := tools.RetryReturn(5, time.Second*5, func() (string, error) {
+	proposalId, err := tools.RetryReturn(15, time.Second*5, func() (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
