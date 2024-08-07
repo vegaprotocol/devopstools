@@ -240,7 +240,7 @@ func delegateStake(ctx context.Context, nodeSecrets config.NodeSecrets, hasVisib
 	}
 	logger.Info("Wallet request", zap.Any("request", request))
 
-	attemptLeft := 5
+	attemptLeft := 10
 	for 0 < attemptLeft {
 		submitResponse, err := walletpkg.SendTransaction(ctx, vegawallet, nodeSecrets.VegaPubKey, &request, datanodeClient)
 		if err != nil {
