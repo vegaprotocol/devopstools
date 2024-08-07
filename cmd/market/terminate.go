@@ -59,8 +59,9 @@ func init() {
 }
 
 type marketDetails struct {
-	name string
-	id   string
+	name   string
+	id     string
+	isSpot bool
 }
 
 func findMarkets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, allMarkets bool, managedMarkets bool, marketIds []string) ([]marketDetails, error) {
@@ -92,8 +93,9 @@ func findMarkets(ctx context.Context, dataNodeClient vegaapi.DataNodeClient, all
 
 		if allMarkets || slices.Contains(marketIds, market.Id) || (managedMarkets && isManaged(market)) {
 			result = append(result, marketDetails{
-				id:   market.Id,
-				name: market.TradableInstrument.Instrument.Name,
+				id:     market.Id,
+				name:   market.TradableInstrument.Instrument.Name,
+				isSpot: market.TradableInstrument.Instrument.GetSpot() != nil,
 			})
 		}
 	}
@@ -199,13 +201,19 @@ func RunTerminate(args *TerminateArgs) error {
 		time.Sleep(5 * time.Second)
 		logger.Info("Network parameters updated")
 	}
-
+	var staticTerminationPrice string = "10"
 	for _, marketDetails := range marketsToRemove {
 		closingTime := time.Now().Add(time.Second * 20).Add(minClose)
 		enactmentTime := time.Now().Add(time.Second * 30).Add(minClose).Add(minEnact)
 
 		logger.Info("Terminating market", zap.String("market", marketDetails.name))
-		proposal := governance.TerminateMarketProposal(closingTime, enactmentTime, marketDetails.name, marketDetails.id, "10")
+
+		var terminationPrice *string
+		if !marketDetails.isSpot {
+			terminationPrice = &staticTerminationPrice
+		}
+
+		proposal := governance.TerminateMarketProposal(closingTime, enactmentTime, marketDetails.name, marketDetails.id, terminationPrice)
 
 		args.Logger.Info("Terminating market: Sending proposal", zap.String("market", marketDetails.name))
 		proposalRequest := walletpb.SubmitTransactionRequest{
