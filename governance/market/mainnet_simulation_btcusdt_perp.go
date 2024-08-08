@@ -58,7 +58,9 @@ func NewMainnetSimulationBitcoinTetherPerpetual(
 			Change: &vega.ProposalTerms_NewMarket{
 				NewMarket: &vega.NewMarket{
 					Changes: &vega.NewMarketConfiguration{
-						TickSize: "1",
+						TickSize:              "1",
+						PositionDecimalPlaces: 4,
+						DecimalPlaces:         1,
 						Instrument: &vega.InstrumentConfiguration{
 							Name: "Bitcoin / Tether USD (Perpetual)",
 							Code: "BTCUSDT.PERP",

@@ -144,9 +144,14 @@ func ProposalsForEnvironment(environment config.NetworkName) []*commandspb.Propo
 			market.NewMainnetSimulationSNXUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
 			market.NewMainnetSimulationLDOUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
 			market.NewMainnetSimulationINJUSDTPerpWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationSolanaTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkDevnet1].MainnetLikeAsset_USDT),
 		}
 	case config.NetworkStagnet1:
-		return []*commandspb.ProposalSubmission{}
+		return []*commandspb.ProposalSubmission{
+			market.NewMainnetSimulationBitcoinTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkStagnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationEtherTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkStagnet1].MainnetLikeAsset_USDT),
+			market.NewMainnetSimulationSolanaTetherPerpetualWithoutTime(settlementAssetIDs[config.NetworkStagnet1].MainnetLikeAsset_USDT),
+		}
 	case config.NetworkStagnet3:
 		return []*commandspb.ProposalSubmission{}
 	case config.NetworkFairground:
