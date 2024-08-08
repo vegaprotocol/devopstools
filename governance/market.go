@@ -18,7 +18,7 @@ var LiveMarketStates = []vega.Market_State{
 	vega.Market_STATE_SUSPENDED_VIA_GOVERNANCE,
 }
 
-func TerminateMarketProposal(closingTime, enactmentTime time.Time, marketName string, marketId string, price string) *commandspb.ProposalSubmission {
+func TerminateMarketProposal(closingTime, enactmentTime time.Time, marketName string, marketId string, price *string) *commandspb.ProposalSubmission {
 	reference := tools.RandAlphaNumericString(40)
 
 	return &commandspb.ProposalSubmission{
@@ -36,7 +36,7 @@ func TerminateMarketProposal(closingTime, enactmentTime time.Time, marketName st
 					Changes: &vega.UpdateMarketStateConfiguration{
 						MarketId:   marketId,
 						UpdateType: vega.MarketStateUpdateType_MARKET_STATE_UPDATE_TYPE_TERMINATE,
-						Price:      &price,
+						Price:      price,
 					},
 				},
 			},

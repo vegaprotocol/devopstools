@@ -13,15 +13,15 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func NewMainnetSimulationEtherTetherPerpetualWithoutTime(settlementAsset string) *commandspb.ProposalSubmission {
-	return NewMainnetSimulationEtherTetherPerpetual(
+func NewMainnetSimulationSolanaTetherPerpetualWithoutTime(settlementAsset string) *commandspb.ProposalSubmission {
+	return NewMainnetSimulationSolanaTetherPerpetual(
 		settlementAsset,
 		time.Now().Add(30*time.Second),
 		time.Now().Add(45*time.Second),
 	)
 }
 
-func NewMainnetSimulationEtherTetherPerpetual(
+func NewMainnetSimulationSolanaTetherPerpetual(
 	settlementAsset string,
 	closingTime time.Time,
 	enactmentTime time.Time,
@@ -62,8 +62,8 @@ func NewMainnetSimulationEtherTetherPerpetual(
 						PositionDecimalPlaces: 3,
 						DecimalPlaces:         2,
 						Instrument: &vega.InstrumentConfiguration{
-							Name: "Ether / Tether USD (Perpetual)",
-							Code: "ETHUSDT.PERP",
+							Name: "Solana / Tether USD (Perpetual)",
+							Code: "SOLSDT.PERP",
 							Product: &vega.InstrumentConfiguration_Perpetual{
 								Perpetual: &vega.PerpetualProduct{
 									SettlementAsset:          settlementAsset,
@@ -105,11 +105,11 @@ func NewMainnetSimulationEtherTetherPerpetual(
 														Abi:     contractABI,
 														Method:  "getPrice",
 														Args: []*structpb.Value{
-															structpb.NewStringValue("0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"),
+															structpb.NewStringValue("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"),
 														},
 														Normalisers: []*vega.Normaliser{
 															{
-																Name:       "eth.price",
+																Name:       "sol.price",
 																Expression: "$[0]",
 															},
 														},
@@ -124,7 +124,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 														Filters: []*datav1.Filter{
 															{
 																Key: &datav1.PropertyKey{
-																	Name:                "eth.price",
+																	Name:                "sol.price",
 																	Type:                datav1.PropertyKey_TYPE_INTEGER,
 																	NumberDecimalPlaces: ptr.From(uint64(18)),
 																},
@@ -143,7 +143,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 										},
 									},
 									DataSourceSpecBinding: &vega.DataSourceSpecToPerpetualBinding{
-										SettlementDataProperty:     "eth.price",
+										SettlementDataProperty:     "sol.price",
 										SettlementScheduleProperty: "vegaprotocol.builtin.timetrigger",
 									},
 									InternalCompositePriceConfiguration: &vega.CompositePriceConfiguration{
@@ -167,7 +167,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 																Abi:     contractABI,
 																Method:  "getPrice",
 																Args: []*structpb.Value{
-																	structpb.NewStringValue("0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"),
+																	structpb.NewStringValue("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"),
 																},
 																Trigger: &vega.EthCallTrigger{
 																	Trigger: &vega.EthCallTrigger_TimeTrigger{
@@ -180,7 +180,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 																Filters: []*datav1.Filter{
 																	{
 																		Key: &datav1.PropertyKey{
-																			Name:                "eth.price",
+																			Name:                "sol.price",
 																			Type:                datav1.PropertyKey_TYPE_INTEGER,
 																			NumberDecimalPlaces: ptr.From(uint64(18)),
 																		},
@@ -194,7 +194,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 																},
 																Normalisers: []*vega.Normaliser{
 																	{
-																		Name:       "eth.price",
+																		Name:       "sol.price",
 																		Expression: "$[0]",
 																	},
 																},
@@ -207,7 +207,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 										},
 										DataSourcesSpecBinding: []*vega.SpecBindingForCompositePrice{
 											{
-												PriceSourceProperty: "eth.price",
+												PriceSourceProperty: "sol.price",
 											},
 										},
 									},
@@ -215,7 +215,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 							},
 						},
 						Metadata: []string{
-							"base:ETH",
+							"base:SOL",
 							"quote:USD",
 							"oracle:pyth",
 							"chain:gnosis",
@@ -226,19 +226,94 @@ func NewMainnetSimulationEtherTetherPerpetual(
 						PriceMonitoringParameters: &vega.PriceMonitoringParameters{
 							Triggers: []*vega.PriceMonitoringTrigger{
 								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
+									Horizon:          21600,
+									Probability:      "0.9999999",
+									AuctionExtension: 3600,
+								},
+								{
 									Horizon:          4320,
-									Probability:      "0.99",
-									AuctionExtension: 300,
+									Probability:      "0.9999999",
+									AuctionExtension: 900,
+								},
+								{
+									Horizon:          4320,
+									Probability:      "0.9999999",
+									AuctionExtension: 900,
+								},
+								{
+									Horizon:          4320,
+									Probability:      "0.9999999",
+									AuctionExtension: 900,
+								},
+								{
+									Horizon:          4320,
+									Probability:      "0.9999999",
+									AuctionExtension: 900,
 								},
 								{
 									Horizon:          1440,
-									Probability:      "0.99",
-									AuctionExtension: 180,
+									Probability:      "0.9999999",
+									AuctionExtension: 450,
+								},
+								{
+									Horizon:          1440,
+									Probability:      "0.9999999",
+									AuctionExtension: 450,
+								},
+								{
+									Horizon:          1440,
+									Probability:      "0.9999999",
+									AuctionExtension: 450,
+								},
+								{
+									Horizon:          1440,
+									Probability:      "0.9999999",
+									AuctionExtension: 450,
 								},
 								{
 									Horizon:          360,
-									Probability:      "0.99",
-									AuctionExtension: 120,
+									Probability:      "0.9999999",
+									AuctionExtension: 75,
+								},
+								{
+									Horizon:          360,
+									Probability:      "0.9999999",
+									AuctionExtension: 75,
+								},
+								{
+									Horizon:          360,
+									Probability:      "0.9999999",
+									AuctionExtension: 75,
+								},
+								{
+									Horizon:          360,
+									Probability:      "0.9999999",
+									AuctionExtension: 75,
 								},
 							},
 						},
@@ -297,7 +372,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 													Abi:     contractABI,
 													Method:  "getPrice",
 													Args: []*structpb.Value{
-														structpb.NewStringValue("0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"),
+														structpb.NewStringValue("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"),
 													},
 													Trigger: &vega.EthCallTrigger{
 														Trigger: &vega.EthCallTrigger_TimeTrigger{
@@ -310,7 +385,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 													Filters: []*datav1.Filter{
 														{
 															Key: &datav1.PropertyKey{
-																Name:                "eth.price",
+																Name:                "sol.price",
 																Type:                datav1.PropertyKey_TYPE_INTEGER,
 																NumberDecimalPlaces: ptr.From(uint64(18)),
 															},
@@ -324,7 +399,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 													},
 													Normalisers: []*vega.Normaliser{
 														{
-															Name:       "eth.price",
+															Name:       "sol.price",
 															Expression: "$[0]",
 														},
 													},
@@ -337,7 +412,7 @@ func NewMainnetSimulationEtherTetherPerpetual(
 							},
 							DataSourcesSpecBinding: []*vega.SpecBindingForCompositePrice{
 								{
-									PriceSourceProperty: "eth.price",
+									PriceSourceProperty: "sol.price",
 								},
 							},
 						},

@@ -197,7 +197,7 @@ func sendBatchProposal(ctx context.Context, logger *zap.Logger, datanodeClient *
 	logger.Sugar().Infof("Batch proposal transaction ID: %s", resp.TxHash)
 
 	logger.Info("Searching proposal ID")
-	proposalId, err := tools.RetryReturn(5, time.Second*5, func() (string, error) {
+	proposalId, err := tools.RetryReturn(15, time.Second*5, func() (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
@@ -216,7 +216,7 @@ func sendBatchProposal(ctx context.Context, logger *zap.Logger, datanodeClient *
 
 	logger.Info("Waiting until proposal is enacted")
 	if err := tools.RetryRun(15, 10*time.Second, func() error {
-		isEnacted, err := governance.IsProposalEnacted(ctx, proposalId, datanodeClient)
+		isEnacted, err := governance.IsProposalEnactedOrPassed(ctx, proposalId, datanodeClient)
 		if err != nil {
 			return fmt.Errorf("failed to check if proposal is enacted: %w", err)
 		}
