@@ -42,17 +42,23 @@ type Bridges struct {
 }
 
 type PrimaryBridge struct {
-	ClientURL     string        `toml:"client_url"`
-	BlockExplorer Etherscan     `toml:"block_explorer"`
-	Wallets       BridgeWallets `toml:"wallets"`
-	Signers       []string      `toml:"signers"`
+	ClientURL     string          `toml:"client_url"`
+	BlockExplorer Etherscan       `toml:"block_explorer"`
+	Wallets       BridgeWallets   `toml:"wallets"`
+	Signers       []string        `toml:"signers"`
+	Versions      BridgesVersions `toml:"versions"`
 }
 
 type EVMBridge struct {
-	ClientURL     string        `toml:"client_url"`
-	BlockExplorer Etherscan     `toml:"block_explorer"`
-	Wallets       BridgeWallets `toml:"wallets"`
-	Signers       []string      `toml:"signers"`
+	ClientURL     string          `toml:"client_url"`
+	BlockExplorer Etherscan       `toml:"block_explorer"`
+	Wallets       BridgeWallets   `toml:"wallets"`
+	Signers       []string        `toml:"signers"`
+	Versions      BridgesVersions `toml:"versions"`
+}
+
+type BridgesVersions struct {
+	Staking string `toml:"staking"`
 }
 
 // Node describes a node on the network.

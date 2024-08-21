@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	StakingBridge_V1 "github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge/v1"
+	StakingBridge_V2 "github.com/vegaprotocol/devopstools/smartcontracts/stakingbridge/v2"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -28,6 +29,7 @@ type StakingBridge struct {
 
 	// Minimal implementation
 	v1 *StakingBridge_V1.StakingBridge
+	v2 *StakingBridge_V2.StakingBridge
 }
 
 func NewStakingBridge(
@@ -48,6 +50,12 @@ func NewStakingBridge(
 			return nil, err
 		}
 		result.Common = result.v1
+	case V2:
+		result.v2, err = StakingBridge_V2.NewStakingBridge(result.Address, result.client)
+		if err != nil {
+			return nil, err
+		}
+		result.Common = result.v2
 	}
 
 	return result, nil
