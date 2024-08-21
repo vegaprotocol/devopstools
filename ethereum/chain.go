@@ -126,7 +126,7 @@ func NewPrimaryChainClient(ctx context.Context, cfg config.PrimaryBridge, ethCon
 		return nil, fmt.Errorf("failed to initialize multisig control client: %w", err)
 	}
 
-	stakingBridge, err := stakingbridge.NewStakingBridge(client, ethConfig.StakingBridgeContract.Address, stakingbridge.V1)
+	stakingBridge, err := stakingbridge.NewStakingBridge(client, ethConfig.StakingBridgeContract.Address, stakingbridge.StdVersion(cfg.Versions.Staking))
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize collateral bridge client: %w", err)
 	}
